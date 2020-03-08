@@ -22,11 +22,11 @@ packages like `python-snappy` becomes difficult because of system level dependen
 Available algorithms:
 
 - [X] Snappy
-- [ ] Brotli
-- [ ] Lz4
-- [ ] Gzip
-- [ ] Lzo
-- [ ] ZSTD
+- [X] Brotli
+- [X] Lz4
+- [X] Gzip
+- [X] Deflate
+- [X] ZSTD
 
 All available for use as:
 

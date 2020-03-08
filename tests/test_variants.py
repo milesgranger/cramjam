@@ -3,13 +3,15 @@ import pytest
 import cramjam
 
 
-@pytest.mark.parametrize("variant", ("snappy",))
+@pytest.mark.parametrize(
+    "variant", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
+)
 def test_variants_simple(variant):
 
     compress = getattr(cramjam, f"{variant}_compress")
     decompress = getattr(cramjam, f"{variant}_decompress")
 
-    uncompressed = b"some bytes to compress"
+    uncompressed = b"some bytes to compress 123" * 1000
 
     compressed = compress(uncompressed)
     assert compressed != uncompressed
