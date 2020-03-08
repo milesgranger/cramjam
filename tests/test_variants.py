@@ -3,7 +3,9 @@ import pytest
 import cramjam
 
 
-@pytest.mark.parametrize("variant", ("snappy", "brotli", "lz4", "gzip", "deflate"))
+@pytest.mark.parametrize(
+    "variant", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
+)
 def test_variants_simple(variant):
 
     compress = getattr(cramjam, f"{variant}_compress")

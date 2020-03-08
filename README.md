@@ -26,7 +26,7 @@ Available algorithms:
 - [X] Lz4
 - [X] Gzip
 - [X] Deflate
-
+- [X] ZSTD
 
 All available for use as:
 

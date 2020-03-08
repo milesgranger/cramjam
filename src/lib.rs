@@ -3,6 +3,7 @@ pub mod deflate;
 pub mod gzip;
 pub mod lz4;
 pub mod snappy;
+pub mod zstd;
 
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -71,6 +72,19 @@ fn deflate_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> P
     Ok(PyBytes::new(py, &compressed))
 }
 
+#[pyfunction]
+fn zstd_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
+    let decompressed = zstd::decompress(data);
+    Ok(PyBytes::new(py, &decompressed))
+}
+
+#[pyfunction]
+fn zstd_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<i32>) -> PyResult<&'a PyBytes> {
+    let level = level.unwrap_or_else(|| 0);  // 0 will use zstd's default, currently 11
+    let compressed = zstd::compress(data, level);
+    Ok(PyBytes::new(py, &compressed))
+}
+
 #[pymodule]
 fn cramjam(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(snappy_compress))?;
@@ -87,6 +101,9 @@ fn cramjam(_py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add_wrapped(wrap_pyfunction!(deflate_compress))?;
     m.add_wrapped(wrap_pyfunction!(deflate_decompress))?;
+
+    m.add_wrapped(wrap_pyfunction!(zstd_compress))?;
+    m.add_wrapped(wrap_pyfunction!(zstd_decompress))?;
 
     Ok(())
 }
