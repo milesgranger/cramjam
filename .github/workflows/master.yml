@@ -37,7 +37,7 @@ jobs:
           docker run --rm -v $(pwd):/io milesg/maturin:latest sh -c "source ~/.cargo/env && maturin build --release --out wheels"
 
       - name: Build Wheels - Non-Linux
-        if: !startsWith(matrix.os, 'ubuntu')
+        if: ! startsWith(matrix.os, 'ubuntu')
         run: |
           pip install maturin
           maturin build --release --out wheels
