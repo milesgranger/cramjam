@@ -30,10 +30,17 @@ jobs:
     - name: Install Dev requirements
       run: pip install -r dev-requirements.txt
 
-    - name: Build Wheels
+    - name: Build Wheels - Linux
+      if: startsWith(matrix.os, 'ubuntu')
       run: |
         docker build . -t milesg/maturin:latest
         docker run --rm -v $(pwd):/io milesg/maturin:latest sh -c "source ~/.cargo/env && maturin build --release --out wheels"
+
+    - name: Build Wheels - Non-Linux
+      if: !startsWith(matrix.os, 'ubuntu')
+      run: |
+        pip install maturin
+        maturin build --release --out wheels
 
     - name: Publish
       env:
