@@ -1,0 +1,38 @@
+name: ReleaseCI
+
+on:
+  release:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build-n-publish:
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: [3.7]
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        components: clippy
+        override: true
+
+    - uses: actions/setup-python@v1
+      with:
+        python-version: ${{ matrix.python-version }}
+        architecture: 'x64'
+
+    - name: Install Dev requirements
+      run: pip install dev-requirements.txt
+
+    - name: Build & Publish
+      env:
+        TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+      run: |
+        maturin build --release --out wheels
+        twine upload -u milesg --skip-existing wheels/*
