@@ -1,4 +1,4 @@
-use snap::raw::{Encoder, Decoder};
+use snap::raw::{Decoder, Encoder};
 
 /// Decompress snappy data
 pub fn decompress_snappy(data: &[u8]) -> Vec<u8> {
