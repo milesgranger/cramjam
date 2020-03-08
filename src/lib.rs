@@ -1,4 +1,5 @@
 pub mod brotli;
+pub mod lz4;
 pub mod snappy;
 
 use pyo3::prelude::*;
@@ -30,6 +31,18 @@ fn brotli_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> Py
     Ok(PyBytes::new(py, &compressed))
 }
 
+#[pyfunction]
+fn lz4_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
+    let decompressed = lz4::decompress(data);
+    Ok(PyBytes::new(py, &decompressed))
+}
+
+#[pyfunction]
+fn lz4_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
+    let compressed = lz4::compress(data);
+    Ok(PyBytes::new(py, &compressed))
+}
+
 #[pymodule]
 fn cramjam(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(snappy_compress))?;
@@ -37,6 +50,9 @@ fn cramjam(_py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add_wrapped(wrap_pyfunction!(brotli_compress))?;
     m.add_wrapped(wrap_pyfunction!(brotli_decompress))?;
+
+    m.add_wrapped(wrap_pyfunction!(lz4_compress))?;
+    m.add_wrapped(wrap_pyfunction!(lz4_decompress))?;
 
     Ok(())
 }
