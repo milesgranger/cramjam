@@ -1,6 +1,6 @@
 [package]
 name = "cramjam"
-version = "1.0.0"
+version = "1.0.1"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2018"
 
