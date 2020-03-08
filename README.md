@@ -24,9 +24,9 @@ Available algorithms:
 - [X] Snappy
 - [X] Brotli
 - [X] Lz4
-- [ ] Gzip
-- [ ] Lzo
-- [ ] ZSTD
+- [X] Gzip
+- [X] Deflate
+
 
 All available for use as:
 
