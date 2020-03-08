@@ -30,8 +30,12 @@ jobs:
       - name: Python Dev Install
         run: pip install -r dev-requirements.txt
 
-      - name: Maturin Develop
-        run: maturin develop
+      - name: Build and install wheels
+        run: |
+          maturin build --out wheels
+          pip install cramjam --no-index --find-links wheels
 
       - name: Test
         run: python -m pytest -v
+
+
