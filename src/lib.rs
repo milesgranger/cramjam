@@ -1,4 +1,6 @@
 pub mod brotli;
+pub mod deflate;
+pub mod gzip;
 pub mod lz4;
 pub mod snappy;
 
@@ -43,6 +45,32 @@ fn lz4_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
     Ok(PyBytes::new(py, &compressed))
 }
 
+#[pyfunction]
+fn gzip_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
+    let decompressed = gzip::decompress(data);
+    Ok(PyBytes::new(py, &decompressed))
+}
+
+#[pyfunction]
+fn gzip_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
+    let level = level.unwrap_or_else(|| 6);
+    let compressed = gzip::compress(data, level);
+    Ok(PyBytes::new(py, &compressed))
+}
+
+#[pyfunction]
+fn deflate_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
+    let decompressed = deflate::decompress(data);
+    Ok(PyBytes::new(py, &decompressed))
+}
+
+#[pyfunction]
+fn deflate_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
+    let level = level.unwrap_or_else(|| 6);
+    let compressed = deflate::compress(data, level);
+    Ok(PyBytes::new(py, &compressed))
+}
+
 #[pymodule]
 fn cramjam(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(snappy_compress))?;
@@ -53,6 +81,12 @@ fn cramjam(_py: Python, m: &PyModule) -> PyResult<()> {
 
     m.add_wrapped(wrap_pyfunction!(lz4_compress))?;
     m.add_wrapped(wrap_pyfunction!(lz4_decompress))?;
+
+    m.add_wrapped(wrap_pyfunction!(gzip_compress))?;
+    m.add_wrapped(wrap_pyfunction!(gzip_decompress))?;
+
+    m.add_wrapped(wrap_pyfunction!(deflate_compress))?;
+    m.add_wrapped(wrap_pyfunction!(deflate_decompress))?;
 
     Ok(())
 }
