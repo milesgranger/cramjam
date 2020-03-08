@@ -3,7 +3,7 @@ import pytest
 import cramjam
 
 
-@pytest.mark.parametrize("variant", ("snappy",))
+@pytest.mark.parametrize("variant", ("snappy", "brotli",))
 def test_variants_simple(variant):
 
     compress = getattr(cramjam, f"{variant}_compress")
