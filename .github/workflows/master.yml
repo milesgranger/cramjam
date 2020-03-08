@@ -30,10 +30,13 @@ jobs:
       - name: Python Dev Install
         run: pip install -r dev-requirements.txt
 
-      - name: Build and install wheels
+      - name: Build Wheels
         run: |
-          maturin build --out wheels
-          pip install cramjam --no-index --find-links wheels
+          docker build . -t milesg/maturin:latest
+          docker run --rm -v $(pwd):/io milesg/maturin:latest sh -c "source ~/.cargo/env && maturin build --release --out wheels"
+
+      - name: Install wheel
+        run: pip install cramjam --no-index --find-links wheels
 
       - name: Test
         run: python -m pytest -v
