@@ -30,10 +30,21 @@ jobs:
     - name: Install Dev requirements
       run: pip install -r dev-requirements.txt
 
-    - name: Build & Publish
+    - name: Build Wheels - Linux
+      if: startsWith(matrix.os, 'ubuntu')
+      run: |
+        docker build . -t milesg/maturin:latest
+        docker run --rm -v $(pwd):/io milesg/maturin:latest sh -c "source ~/.cargo/env && maturin build --release --out wheels"
+
+    - name: Build Wheels - Non-Linux
+      if: startsWith(matrix.os, 'windows') || startsWith(matrix.os, 'macos')
+      run: |
+        pip install maturin
+        maturin build --release --out wheels
+
+    - name: Publish
       env:
         TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
       run: |
         pip install twine
-        maturin build --release --out wheels
         twine upload -u milesg --skip-existing wheels/*
