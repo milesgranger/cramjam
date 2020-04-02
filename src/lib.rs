@@ -22,6 +22,18 @@ fn snappy_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> 
 }
 
 #[pyfunction]
+fn snappy_decompress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
+    let decompressed = snappy::decompress_raw(data);
+    Ok(PyBytes::new(py, &decompressed))
+}
+
+#[pyfunction]
+fn snappy_compress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
+    let compressed = snappy::compress_raw(data);
+    Ok(PyBytes::new(py, &compressed))
+}
+
+#[pyfunction]
 fn brotli_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
     let decompressed = brotli::decompress(data);
     Ok(PyBytes::new(py, &decompressed))
@@ -89,6 +101,8 @@ fn zstd_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<i32>) -> PyRe
 fn cramjam(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(snappy_compress))?;
     m.add_wrapped(wrap_pyfunction!(snappy_decompress))?;
+    m.add_wrapped(wrap_pyfunction!(snappy_compress_raw))?;
+    m.add_wrapped(wrap_pyfunction!(snappy_decompress_raw))?;
 
     m.add_wrapped(wrap_pyfunction!(brotli_compress))?;
     m.add_wrapped(wrap_pyfunction!(brotli_decompress))?;
