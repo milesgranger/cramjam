@@ -1,8 +1,10 @@
 [package]
 name = "cramjam"
-version = "1.0.1"
+version = "1.1.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2018"
+license-file = "LICENSE"
+description = "Thin Python bindings to de/compression algorithms in Rust"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
