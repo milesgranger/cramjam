@@ -13,6 +13,7 @@
 
 mod brotli;
 mod deflate;
+mod exceptions;
 mod gzip;
 mod lz4;
 mod snappy;
@@ -21,6 +22,14 @@ mod zstd;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
+
+use exceptions::{CompressionError, DecompressionError};
+
+macro_rules! to_py_err {
+    ($error:ident -> $expr:expr) => {
+        $expr.map_err(|err| PyErr::new::<$error, _>(err.to_string()))
+    };
+}
 
 /// Snappy decompression.
 ///
@@ -31,7 +40,7 @@ use pyo3::wrap_pyfunction;
 /// ```
 #[pyfunction]
 pub fn snappy_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = snappy::decompress(data);
+    let decompressed = to_py_err!(DecompressionError -> snappy::decompress(data))?;
     Ok(PyBytes::new(py, &decompressed))
 }
 
@@ -44,7 +53,7 @@ pub fn snappy_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyB
 /// ```
 #[pyfunction]
 pub fn snappy_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let compressed = snappy::compress(data);
+    let compressed = to_py_err!(CompressionError -> snappy::compress(data))?;
     Ok(PyBytes::new(py, &compressed))
 }
 
@@ -58,7 +67,7 @@ pub fn snappy_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyByt
 /// ```
 #[pyfunction]
 pub fn snappy_decompress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = snappy::decompress_raw(data);
+    let decompressed = to_py_err!(DecompressionError -> snappy::decompress_raw(data))?;
     Ok(PyBytes::new(py, &decompressed))
 }
 
@@ -72,7 +81,7 @@ pub fn snappy_decompress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a
 /// ```
 #[pyfunction]
 pub fn snappy_compress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let compressed = snappy::compress_raw(data);
+    let compressed = to_py_err!(CompressionError -> snappy::compress_raw(data))?;
     Ok(PyBytes::new(py, &compressed))
 }
 
@@ -85,7 +94,7 @@ pub fn snappy_compress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a P
 /// ```
 #[pyfunction]
 pub fn brotli_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = brotli::decompress(data);
+    let decompressed = to_py_err!(DecompressionError -> brotli::decompress(data))?;
     Ok(PyBytes::new(py, &decompressed))
 }
 
@@ -99,7 +108,7 @@ pub fn brotli_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyB
 #[pyfunction]
 pub fn brotli_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
     let level = level.unwrap_or_else(|| 11);
-    let compressed = brotli::compress(data, level);
+    let compressed = to_py_err!(CompressionError -> brotli::compress(data, level))?;
     Ok(PyBytes::new(py, &compressed))
 }
 
@@ -112,7 +121,7 @@ pub fn brotli_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -
 /// ```
 #[pyfunction]
 pub fn lz4_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = lz4::decompress(data);
+    let decompressed = to_py_err!(DecompressionError -> lz4::decompress(data))?;
     Ok(PyBytes::new(py, &decompressed))
 }
 
@@ -124,8 +133,9 @@ pub fn lz4_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyByte
 /// >>> lz4_compress(b'some bytes here')
 /// ```
 #[pyfunction]
-pub fn lz4_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let compressed = lz4::compress(data);
+pub fn lz4_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
+    let level = level.unwrap_or_else(|| 4);
+    let compressed = to_py_err!(CompressionError -> lz4::compress(data, level))?;
     Ok(PyBytes::new(py, &compressed))
 }
 
@@ -138,7 +148,7 @@ pub fn lz4_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes>
 /// ```
 #[pyfunction]
 pub fn gzip_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = gzip::decompress(data);
+    let decompressed = to_py_err!(DecompressionError -> gzip::decompress(data))?;
     Ok(PyBytes::new(py, &decompressed))
 }
 
@@ -152,7 +162,7 @@ pub fn gzip_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyByt
 #[pyfunction]
 pub fn gzip_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
     let level = level.unwrap_or_else(|| 6);
-    let compressed = gzip::compress(data, level);
+    let compressed = to_py_err!(CompressionError -> gzip::compress(data, level))?;
     Ok(PyBytes::new(py, &compressed))
 }
 
@@ -165,7 +175,7 @@ pub fn gzip_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> 
 /// ```
 #[pyfunction]
 pub fn deflate_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = deflate::decompress(data);
+    let decompressed = to_py_err!(DecompressionError -> deflate::decompress(data))?;
     Ok(PyBytes::new(py, &decompressed))
 }
 
@@ -179,7 +189,7 @@ pub fn deflate_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a Py
 #[pyfunction]
 pub fn deflate_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
     let level = level.unwrap_or_else(|| 6);
-    let compressed = deflate::compress(data, level);
+    let compressed = to_py_err!(CompressionError -> deflate::compress(data, level))?;
     Ok(PyBytes::new(py, &compressed))
 }
 
@@ -192,7 +202,7 @@ pub fn deflate_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) 
 /// ```
 #[pyfunction]
 pub fn zstd_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = zstd::decompress(data);
+    let decompressed = to_py_err!(DecompressionError -> zstd::decompress(data))?;
     Ok(PyBytes::new(py, &decompressed))
 }
 
@@ -206,12 +216,15 @@ pub fn zstd_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyByt
 #[pyfunction]
 pub fn zstd_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<i32>) -> PyResult<&'a PyBytes> {
     let level = level.unwrap_or_else(|| 0); // 0 will use zstd's default, currently 11
-    let compressed = zstd::compress(data, level);
+    let compressed = to_py_err!(CompressionError -> zstd::compress(data, level))?;
     Ok(PyBytes::new(py, &compressed))
 }
 
 #[pymodule]
-fn cramjam(_py: Python, m: &PyModule) -> PyResult<()> {
+fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add("CompressionError", py.get_type::<CompressionError>())?;
+    m.add("DecompressionError", py.get_type::<DecompressionError>())?;
+
     m.add_wrapped(wrap_pyfunction!(snappy_compress))?;
     m.add_wrapped(wrap_pyfunction!(snappy_decompress))?;
     m.add_wrapped(wrap_pyfunction!(snappy_compress_raw))?;
