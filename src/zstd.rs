@@ -1,9 +1,11 @@
+use std::io::Error;
+
 /// Decompress gzip data
-pub fn decompress(data: &[u8]) -> Vec<u8> {
-    zstd::stream::decode_all(data).unwrap()
+pub fn decompress(data: &[u8]) -> Result<Vec<u8>, Error> {
+    zstd::stream::decode_all(data)
 }
 
 /// Compress gzip data
-pub fn compress(data: &[u8], level: i32) -> Vec<u8> {
-    zstd::stream::encode_all(data, level).unwrap()
+pub fn compress(data: &[u8], level: i32) -> Result<Vec<u8>, Error> {
+    zstd::stream::encode_all(data, level)
 }

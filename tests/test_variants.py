@@ -1,6 +1,7 @@
 import pytest
 
 import cramjam
+from cramjam import DecompressionError, CompressionError
 
 
 @pytest.mark.parametrize(
@@ -18,3 +19,11 @@ def test_variants_simple(variant):
 
     decompressed = decompress(compressed)
     assert decompressed == uncompressed
+
+
+@pytest.mark.parametrize(
+    "variant", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
+)
+def test_variants_raise_exception(variant):
+    with pytest.raises(cramjam.DecompressionError):
+        getattr(cramjam, f"{variant}_decompress")(b'sknow')
