@@ -7,7 +7,7 @@ ENV PATH $HOME/.cargo/bin:$PATH
 ENV USER root
 
 RUN curl https://sh.rustup.rs -sSf | \
-    sh -s -- --default-toolchain nightly -y
+    sh -s -- --default-toolchain stable -y
 
 # Add all supported python versions
 ENV PATH /opt/python/cp35-cp35m/bin/:/opt/python/cp36-cp36m/bin/:/opt/python/cp37-cp37m/bin/:/opt/python/cp38-cp38/bin/:$PATH
