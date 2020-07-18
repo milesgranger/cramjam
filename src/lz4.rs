@@ -1,22 +1,14 @@
 use std::error::Error;
-use std::io::{Read, Write};
 
 /// Decompress lz4 data
 pub fn decompress(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut decoder = lz4::Decoder::new(data)?;
-    let mut buf = vec![];
-    decoder.read_to_end(&mut buf)?;
-    let (_, result) = decoder.finish(); // Weird API...
-    result?;
-    Ok(buf)
+    lz_fear::framed::decompress_frame(data).map_err(|err| err.into())
 }
 
 /// Compress lz4 data
-pub fn compress(data: &[u8], level: u32) -> Result<Vec<u8>, Box<dyn Error>> {
+// TODO: lz-fear does not yet support level
+pub fn compress(data: &[u8], _level: u32) -> Result<Vec<u8>, Box<dyn Error>> {
     let mut buf = vec![];
-    let mut encoder = lz4::EncoderBuilder::new().level(level).build(&mut buf)?;
-    encoder.write_all(data)?;
-    let (_, result) = encoder.finish(); // Weird API...
-    result?;
+    lz_fear::framed::CompressionSettings::default().compress(data, &mut buf)?;
     Ok(buf)
 }
