@@ -46,6 +46,4 @@ jobs:
         run: pip install cramjam --no-index --find-links wheels
 
       - name: Test
-        run: python -m pytest -v
-
-
+        run: make test

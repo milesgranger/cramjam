@@ -20,6 +20,12 @@ packages like `python-snappy` becomes difficult because of system level dependen
 
 ---
 
+##### Benchmarks
+
+Some basic benchmarks are available [in the benchmarks directory](./benchmarks/README.md)
+
+---
+
 Available algorithms:
 
 - [X] Snappy
