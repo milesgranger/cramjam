@@ -18,6 +18,9 @@ bench-gzip:
 bench-brotli:
 	$(BASE_BENCH_CMD) brotli
 
+bench-zstd:
+	$(BASE_BENCH_CMD) zstd
+
 dev-install:
 	rm -rf ./wheels
 	maturin build --release --out wheels --interpreter $(shell which python)

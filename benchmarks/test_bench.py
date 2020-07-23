@@ -114,3 +114,24 @@ def test_brotli(benchmark, file, use_cramjam: bool):
             decompress=brotli.decompress,
             data=data,
         )
+
+
+@pytest.mark.parametrize(
+    "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "zstd"
+)
+@pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
+def test_zstd(benchmark, file, use_cramjam: bool):
+    import zstd
+
+    data = file.read_bytes()
+    if use_cramjam:
+        benchmark(
+            round_trip,
+            compress=cramjam.zstd_compress,
+            decompress=cramjam.zstd_decompress,
+            data=data,
+        )
+    else:
+        benchmark(
+            round_trip, compress=zstd.compress, decompress=zstd.decompress, data=data,
+        )
