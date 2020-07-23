@@ -17,3 +17,9 @@ bench-gzip:
 
 bench-brotli:
 	$(BASE_BENCH_CMD) brotli
+
+dev-install:
+	rm -rf ./wheels
+	maturin build --release --out wheels --interpreter $(shell which python)
+	pip uninstall cramjam -y
+	pip install --no-index wheels/*
