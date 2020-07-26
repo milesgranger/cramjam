@@ -11,6 +11,8 @@
 //! assert data == decompressed
 //! ```
 
+use std::io::Write;
+
 mod brotli;
 mod deflate;
 mod exceptions;
@@ -55,6 +57,41 @@ pub fn snappy_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyB
 pub fn snappy_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
     let compressed = to_py_err!(CompressionError -> snappy::compress(data))?;
     Ok(PyBytes::new(py, &compressed))
+}
+
+/// Snappy stream compression.
+///
+/// Python Example
+/// --------------
+/// ```python
+/// >>> snappy_compress_stream(b'some bytes here')
+/// ```
+#[pyfunction]
+pub fn snappy_compress_stream<'a>(
+    py: Python<'a>,
+    stream: &'a PyAny,
+    out: &'a PyAny,
+    chunk_size: Option<i32>,
+) -> PyResult<()> {
+    let chunk_size = chunk_size.unwrap_or_else(|| -1);
+
+    // TODO: add chunking logic to stream output rather than buffer
+    let mut buf = Vec::new();
+    {
+        let mut encoder = snap::write::FrameEncoder::new(&mut buf);
+
+        loop {
+            let data: Vec<u8> = stream.call_method1("read", (chunk_size,))?.extract()?;
+            match data.len() {
+                0 => break,
+                _ => {
+                    encoder.write(data.as_slice())?;
+                }
+            }
+        }
+    }
+    out.call_method1("write", (buf.as_slice(),))?;
+    Ok(())
 }
 
 /// Snappy decompression, raw
@@ -229,6 +266,7 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_wrapped(wrap_pyfunction!(snappy_decompress))?;
     m.add_wrapped(wrap_pyfunction!(snappy_compress_raw))?;
     m.add_wrapped(wrap_pyfunction!(snappy_decompress_raw))?;
+    m.add_wrapped(wrap_pyfunction!(snappy_compress_stream))?;
 
     m.add_wrapped(wrap_pyfunction!(brotli_compress))?;
     m.add_wrapped(wrap_pyfunction!(brotli_decompress))?;
