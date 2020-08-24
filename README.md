@@ -5,6 +5,7 @@
 
 [API Documentation](https://docs.rs/cramjam)
 
+Test
 ### Install
 ```commandline
 pip install --upgrade cramjam  # Requires no Python or system dependencies!
