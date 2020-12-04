@@ -33,8 +33,7 @@ jobs:
     - name: Build Wheels - Linux
       if: startsWith(matrix.os, 'ubuntu')
       run: |
-        docker build . -t milesg/maturin:latest
-        docker run --rm -v $(pwd):/io milesg/maturin:latest sh -c "source ~/.cargo/env && maturin build --release --out wheels"
+        docker run --rm -v $(pwd):/io konstin2/maturin build --release --out wheels
 
     - name: Build Wheels - Non-Linux
       if: startsWith(matrix.os, 'windows') || startsWith(matrix.os, 'macos')
