@@ -31,16 +31,18 @@ jobs:
         run: pip install -r dev-requirements.txt
 
       - name: Build Wheels - Linux
+        env:
+          PYTHON_VERSION: python${{ matrix.python-version }}
         if: startsWith(matrix.os, 'ubuntu')
         run: |
-          docker run --rm -v $(pwd):/io konstin2/maturin build --release --out wheels
+          docker run --rm -v $(pwd):/io konstin2/maturin build -i $PYTHON_VERSION --release --out wheels
           ls -l wheels
 
       - name: Build Wheels - Non-Linux
         if: startsWith(matrix.os, 'windows') || startsWith(matrix.os, 'macos')
         run: |
           pip install maturin
-          maturin build --release --out wheels
+          maturin build -i python --release --out wheels
           maturin sdist --out wheels
           ls -l wheels
 
