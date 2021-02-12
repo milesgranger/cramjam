@@ -25,4 +25,5 @@ dev-install:
 	rm -rf ./wheels
 	maturin build --release --out wheels --interpreter $(shell which python)
 	pip uninstall cramjam -y
+	rm wheels/*.tar.gz
 	pip install --no-index wheels/*

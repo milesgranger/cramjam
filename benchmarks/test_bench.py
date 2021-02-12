@@ -19,7 +19,7 @@ def round_trip(compress, decompress, data, **kwargs):
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "snappy"
 )
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
-def test_snappy_raw(benchmark, file, use_cramjam: bool):
+def test_snappy(benchmark, file, use_cramjam: bool):
     """
     Uses the non-framed format for snappy compression
     """
@@ -29,8 +29,8 @@ def test_snappy_raw(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.snappy_compress_raw,
-            decompress=cramjam.snappy_decompress_raw,
+            compress=cramjam.snappy_compress,
+            decompress=cramjam.snappy_decompress,
             data=data,
         )
     else:

@@ -40,8 +40,14 @@ macro_rules! to_py_err {
 /// ```
 #[pyfunction]
 pub fn snappy_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = to_py_err!(DecompressionError -> snappy::decompress(data))?;
-    Ok(PyBytes::new(py, &decompressed))
+    use snap::raw::decompress_len;
+    let length = to_py_err!(DecompressionError -> decompress_len(data))?;
+    let pybytes = PyBytes::new_with(
+        py,
+        length,
+        |output| to_py_err!(DecompressionError -> snappy::decompress(data, output)),
+    );
+
 }
 
 /// Snappy compression.
@@ -53,8 +59,13 @@ pub fn snappy_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyB
 /// ```
 #[pyfunction]
 pub fn snappy_compress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let compressed = to_py_err!(CompressionError -> snappy::compress(data))?;
-    Ok(PyBytes::new(py, &compressed))
+    use snap::raw::max_compress_len;
+    let length = max_compress_len(data.len());
+    PyBytes::new_with(
+        py,
+        length,
+        |output| to_py_err!(CompressionError -> snappy::compress(data, output)),
+    )
 }
 
 /// Snappy decompression, raw

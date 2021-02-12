@@ -15,17 +15,15 @@ pub fn compress_raw(data: &[u8]) -> Result<Vec<u8>, snap::Error> {
 }
 
 /// Decompress snappy data framed
-pub fn decompress(data: &[u8]) -> Result<Vec<u8>, Error> {
-    let mut buf = vec![];
+pub fn decompress(data: &[u8], output: &mut [u8]) -> Result<(), Error> {
     let mut decoder = FrameDecoder::new(data);
-    decoder.read_to_end(&mut buf)?;
-    Ok(buf)
+    decoder.read(output)?;
+    Ok(())
 }
 
 /// Decompress snappy data framed
-pub fn compress(data: &[u8]) -> Result<Vec<u8>, Error> {
-    let mut buf = vec![];
+pub fn compress(data: &[u8], output: &mut [u8]) -> Result<(), Error> {
     let mut encoder = FrameEncoder::new(data);
-    encoder.read_to_end(&mut buf)?;
-    Ok(buf)
+    encoder.read(output)?;
+    Ok(())
 }
