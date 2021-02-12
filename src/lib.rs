@@ -42,11 +42,11 @@ macro_rules! to_py_err {
 pub fn snappy_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
     use snap::raw::decompress_len;
     let length = to_py_err!(DecompressionError -> decompress_len(data))?;
-    let pybytes = PyBytes::new_with(
+    PyBytes::new_with(
         py,
         length,
         |output| to_py_err!(DecompressionError -> snappy::decompress(data, output)),
-    );
+    )
 
 }
 
