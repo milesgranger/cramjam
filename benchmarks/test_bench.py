@@ -12,7 +12,7 @@ FILES = [
 
 
 def round_trip(compress, decompress, data, **kwargs):
-    return decompress(compress(data, **kwargs))
+    return decompress(compress(bytearray(data), **kwargs))
 
 
 @pytest.mark.parametrize(
