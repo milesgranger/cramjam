@@ -1,3 +1,4 @@
+use either::Either;
 use snap::raw::{Decoder, Encoder};
 use snap::read::{FrameDecoder, FrameEncoder};
 use std::io::{Error, Read};
@@ -15,15 +16,19 @@ pub fn compress_raw(data: &[u8]) -> Result<Vec<u8>, snap::Error> {
 }
 
 /// Decompress snappy data framed
-pub fn decompress(data: &[u8], output: &mut [u8]) -> Result<usize, Error> {
+pub fn decompress(data: &[u8], output: Either<&mut [u8], &mut Vec<u8>>) -> Result<usize, Error> {
     let mut decoder = FrameDecoder::new(data);
-    let size = decoder.read(output)?;
-    Ok(size)
+    match output {
+        Either::Left(slice) => decoder.read(slice),
+        Either::Right(v) => decoder.read_to_end(v),
+    }
 }
 
 /// Decompress snappy data framed
-pub fn compress(data: &[u8], output: &mut [u8]) -> Result<usize, Error> {
+pub fn compress(data: &[u8], output: Either<&mut [u8], &mut Vec<u8>>) -> Result<usize, Error> {
     let mut encoder = FrameEncoder::new(data);
-    let size = encoder.read(output)?;
-    Ok(size)
+    match output {
+        Either::Left(slice) => encoder.read(slice),
+        Either::Right(v) => encoder.read_to_end(v),
+    }
 }

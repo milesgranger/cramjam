@@ -12,7 +12,7 @@ FILES = [
 
 
 def round_trip(compress, decompress, data, **kwargs):
-    return decompress(compress(bytearray(data), **kwargs))
+    return decompress(compress(data, **kwargs))
 
 
 @pytest.mark.parametrize(
@@ -25,7 +25,7 @@ def test_snappy(benchmark, file, use_cramjam: bool):
     """
     import snappy
 
-    data = file.read_bytes()
+    data = bytearray(file.read_bytes())  # bytearray avoids double allocation in cramjam snappy
     if use_cramjam:
         benchmark(
             round_trip,

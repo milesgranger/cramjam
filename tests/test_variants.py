@@ -13,8 +13,6 @@ def test_variants_simple(variant):
 
     uncompressed = b"some bytes to compress 123" * 1000
 
-    if variant == 'snappy':
-        breakpoint()
     compressed = compress(uncompressed)
     assert compressed != uncompressed
 

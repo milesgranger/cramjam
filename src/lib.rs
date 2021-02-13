@@ -19,26 +19,28 @@ mod lz4;
 mod snappy;
 mod zstd;
 
+use either::Either;
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyByteArray};
+use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
+use snap::raw::decompress_len;
+use snap::raw::max_compress_len;
 
 use exceptions::{CompressionError, DecompressionError};
-
 
 #[derive(FromPyObject)]
 pub enum BytesType<'a> {
     #[pyo3(transparent, annotation = "bytes")]
     Bytes(&'a PyBytes),
     #[pyo3(transparent, annotation = "bytearray")]
-    ByteArray(&'a PyByteArray)
+    ByteArray(&'a PyByteArray),
 }
 
 impl<'a> IntoPy<PyObject> for BytesType<'a> {
     fn into_py(self, py: Python) -> PyObject {
         match self {
-            Self::Bytes(bytes) => bytes.into_py(py),
-            Self::ByteArray(byte_array) => byte_array.into_py(py)
+            Self::Bytes(bytes) => bytes.to_object(py),
+            Self::ByteArray(byte_array) => byte_array.to_object(py),
         }
     }
 }
@@ -54,42 +56,32 @@ macro_rules! to_py_err {
 /// Python Example
 /// --------------
 /// ```python
-/// >>> snappy_decompress(compressed_bytes)
+/// >>> snappy_decompress(compressed_bytes)  # bytes or bytearray; bytearray is faster
 /// ```
 #[pyfunction]
 pub fn snappy_decompress<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
-    use snap::raw::decompress_len;
     let result = match data {
         BytesType::Bytes(bytes) => {
-            unsafe {
+            let estimated_len = to_py_err!(DecompressionError -> decompress_len(bytes.as_bytes()))?;
+            let mut buffer = Vec::with_capacity(estimated_len);
 
-                let length = to_py_err!(DecompressionError -> decompress_len(bytes.as_bytes()))?;
-                let mut buffer = Vec::with_capacity(length);
-                let size = to_py_err!(DecompressionError -> snappy::decompress(bytes.as_bytes(), &mut buffer)).unwrap();
+            let _ = to_py_err!(DecompressionError -> snappy::decompress(bytes.as_bytes(), Either::Right(&mut buffer)))?;
 
-                let pybytes = PyBytes::new(py, &buffer);
-                BytesType::Bytes(pybytes)
-            }
-        },
-        BytesType::ByteArray(bytes_array) => {
-            unsafe {
-                let length = to_py_err!(DecompressionError -> decompress_len(bytes_array.as_bytes()))?;
-                let mut size = 0;
-                let pybytes = PyByteArray::new_with(
-                    py,
-                    length,
-                    |output| {
-                        size = to_py_err!(DecompressionError -> snappy::decompress(bytes_array.as_bytes(), output)).unwrap();
-                        Ok(())
-                    },
-                ).unwrap();
-                pybytes.resize(size).unwrap();
-                BytesType::ByteArray(pybytes)
-            }
+            let pybytes = PyBytes::new(py, &buffer);
+            BytesType::Bytes(pybytes)
         }
+        BytesType::ByteArray(bytes_array) => unsafe {
+            let estimated_len = to_py_err!(DecompressionError -> decompress_len(bytes_array.as_bytes()))?;
+            let mut actual_len = 0;
+            let pybytes = PyByteArray::new_with(py, estimated_len, |output| {
+                actual_len = to_py_err!(DecompressionError -> snappy::decompress(bytes_array.as_bytes(), Either::Left(output)))?;
+                Ok(())
+            })?;
+            pybytes.resize(actual_len)?;
+            BytesType::ByteArray(pybytes)
+        },
     };
     Ok(result)
-
 }
 
 /// Snappy compression.
@@ -97,41 +89,32 @@ pub fn snappy_decompress<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<By
 /// Python Example
 /// --------------
 /// ```python
-/// >>> snappy_compress(b'some bytes here')
+/// >>> _ = snappy_compress(b'some bytes here')
+/// >>> _ = snappy_compress(bytearray(b'this avoids double allocation, and thus faster!'))  # <- use bytearray where possible
 /// ```
 #[pyfunction]
 pub fn snappy_compress<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
-    use snap::raw::max_compress_len;
-
-
     let result = match data {
         BytesType::Bytes(bytes) => {
-            unsafe {
+            let estimated_len = max_compress_len(bytes.as_bytes().len());
+            let mut buffer = Vec::with_capacity(estimated_len);
 
-                let length = max_compress_len(bytes.as_bytes().len());
-                let mut buffer = Vec::with_capacity(length);
-                let _ = to_py_err!(CompressionError -> snappy::compress(bytes.as_bytes(), &mut buffer)).unwrap();
+            let _ = to_py_err!(CompressionError -> snappy::compress(bytes.as_bytes(), Either::Right(&mut buffer)))?;
 
-                let pybytes = PyBytes::new(py, &buffer);
-                BytesType::Bytes(pybytes)
-            }
-        },
-        BytesType::ByteArray(bytes_array) => {
-            unsafe {
-                let length = max_compress_len(bytes_array.as_bytes().len());
-                let mut size = 0;
-                let pybytes = PyByteArray::new_with(
-                    py,
-                    length,
-                    |output| {
-                        size = to_py_err!(CompressionError -> snappy::compress(bytes_array.as_bytes(), output)).unwrap();
-                        Ok(())
-                    },
-                ).unwrap();
-                pybytes.resize(size).unwrap();
-                BytesType::ByteArray(pybytes)
-            }
+            let pybytes = PyBytes::new(py, &buffer);
+            BytesType::Bytes(pybytes)
         }
+        BytesType::ByteArray(bytes_array) => unsafe {
+            let estimated_len = max_compress_len(bytes_array.as_bytes().len());
+            let mut actual_len = 0;
+            let pybytes = PyByteArray::new_with(py, estimated_len, |output| {
+                actual_len = to_py_err!(CompressionError -> snappy::compress(bytes_array.as_bytes(), Either::Left(output)))
+                    .unwrap();
+                Ok(())
+            })?;
+            pybytes.resize(actual_len)?;
+            BytesType::ByteArray(pybytes)
+        },
     };
     Ok(result)
 }
