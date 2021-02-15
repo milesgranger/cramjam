@@ -11,6 +11,15 @@
 //! assert data == decompressed
 //! ```
 
+// TODO: There is a lot of very similar, but slightly different code for each variant
+// time should be spent perhaps with a macro or other alternative.
+// Each variant is similar, but sometimes has subtly different APIs/logic.
+
+// TODO: Add output size estimation for each variant, now it's just snappy
+// allow for resizing PyByteArray if over allocated; cannot resize PyBytes yet.
+
+// TODO: Convert to modules
+
 mod brotli;
 mod deflate;
 mod exceptions;
@@ -19,7 +28,6 @@ mod lz4;
 mod snappy;
 mod zstd;
 
-use either::Either;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
@@ -36,6 +44,18 @@ pub enum BytesType<'a> {
     ByteArray(&'a PyByteArray),
 }
 
+impl<'a> BytesType<'a> {
+    fn len(&self) -> usize {
+        self.as_bytes().len()
+    }
+    fn as_bytes(&self) -> &'a [u8] {
+        match self {
+            Self::Bytes(b) => b.as_bytes(),
+            Self::ByteArray(b) => unsafe { b.as_bytes() },
+        }
+    }
+}
+
 impl<'a> IntoPy<PyObject> for BytesType<'a> {
     fn into_py(self, py: Python) -> PyObject {
         match self {
@@ -43,6 +63,14 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
             Self::ByteArray(byte_array) => byte_array.to_object(py),
         }
     }
+}
+
+/// Buffer to de/compression algorithms' output.
+/// ::Vector used when the output len cannot be determined, and/or resulting
+/// python object cannot be resized to what the actual bytes decoded was.
+pub enum Output<'a> {
+    Slice(&'a mut [u8]),
+    Vector(&'a mut Vec<u8>),
 }
 
 macro_rules! to_py_err {
@@ -59,22 +87,32 @@ macro_rules! to_py_err {
 /// >>> snappy_decompress(compressed_bytes)  # bytes or bytearray; bytearray is faster
 /// ```
 #[pyfunction]
-pub fn snappy_decompress<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
+pub fn snappy_decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    let estimated_len = match output_len {
+        Some(len) => len,
+        None => to_py_err!(DecompressionError -> decompress_len(data.as_bytes()))?,
+    };
+
     let result = match data {
         BytesType::Bytes(bytes) => {
-            let estimated_len = to_py_err!(DecompressionError -> decompress_len(bytes.as_bytes()))?;
-            let mut buffer = Vec::with_capacity(estimated_len);
+            let pybytes = if output_len.is_some() {
+                PyBytes::new_with(py, estimated_len, |buffer| {
+                    to_py_err!(DecompressionError -> snappy::decompress(bytes.as_bytes(), Output::Slice(buffer)))?;
+                    Ok(())
+                })?
+            } else {
+                let mut buffer = Vec::with_capacity(estimated_len);
 
-            let _ = to_py_err!(DecompressionError -> snappy::decompress(bytes.as_bytes(), Either::Right(&mut buffer)))?;
-
-            let pybytes = PyBytes::new(py, &buffer);
+                to_py_err!(DecompressionError -> snappy::decompress(bytes.as_bytes(), Output::Vector(&mut buffer)))?;
+                PyBytes::new(py, &buffer)
+            };
             BytesType::Bytes(pybytes)
         }
         BytesType::ByteArray(bytes_array) => unsafe {
-            let estimated_len = to_py_err!(DecompressionError -> decompress_len(bytes_array.as_bytes()))?;
             let mut actual_len = 0;
             let pybytes = PyByteArray::new_with(py, estimated_len, |output| {
-                actual_len = to_py_err!(DecompressionError -> snappy::decompress(bytes_array.as_bytes(), Either::Left(output)))?;
+                actual_len =
+                    to_py_err!(DecompressionError -> snappy::decompress(bytes_array.as_bytes(), Output::Slice(output)))?;
                 Ok(())
             })?;
             pybytes.resize(actual_len)?;
@@ -93,28 +131,40 @@ pub fn snappy_decompress<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<By
 /// >>> _ = snappy_compress(bytearray(b'this avoids double allocation, and thus faster!'))  # <- use bytearray where possible
 /// ```
 #[pyfunction]
-pub fn snappy_compress<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
+pub fn snappy_compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    // Prefer the user's output_len, fallback to estimate the output len
+    let estimated_len = output_len.unwrap_or_else(|| max_compress_len(data.len()));
+
     let result = match data {
         BytesType::Bytes(bytes) => {
-            let estimated_len = max_compress_len(bytes.as_bytes().len());
-            let mut buffer = Vec::with_capacity(estimated_len);
+            // user provided the exact output len
+            if output_len.is_some() {
+                let pybytes = PyBytes::new_with(py, estimated_len, |buffer| {
+                    to_py_err!(CompressionError -> snappy::compress(bytes.as_bytes(), Output::Slice(buffer)))?;
+                    Ok(())
+                })?;
+                BytesType::Bytes(pybytes)
 
-            let _ = to_py_err!(CompressionError -> snappy::compress(bytes.as_bytes(), Either::Right(&mut buffer)))?;
+            // we can use the estimated length, but need to use buffer as we don't know for sure the length
+            } else {
+                let mut buffer = Vec::with_capacity(estimated_len);
 
-            let pybytes = PyBytes::new(py, &buffer);
-            BytesType::Bytes(pybytes)
+                to_py_err!(CompressionError -> snappy::compress(bytes.as_bytes(), Output::Vector(&mut buffer)))?;
+
+                let pybytes = PyBytes::new(py, &buffer);
+                BytesType::Bytes(pybytes)
+            }
         }
-        BytesType::ByteArray(bytes_array) => unsafe {
-            let estimated_len = max_compress_len(bytes_array.as_bytes().len());
+        BytesType::ByteArray(bytes_array) => {
+            let bytes = unsafe { bytes_array.as_bytes() };
             let mut actual_len = 0;
             let pybytes = PyByteArray::new_with(py, estimated_len, |output| {
-                actual_len = to_py_err!(CompressionError -> snappy::compress(bytes_array.as_bytes(), Either::Left(output)))
-                    .unwrap();
+                actual_len = to_py_err!(CompressionError -> snappy::compress(bytes, Output::Slice(output)))?;
                 Ok(())
             })?;
             pybytes.resize(actual_len)?;
             BytesType::ByteArray(pybytes)
-        },
+        }
     };
     Ok(result)
 }
@@ -128,9 +178,17 @@ pub fn snappy_compress<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<Byte
 /// >>> snappy_decompress_raw(compressed_raw_bytes)
 /// ```
 #[pyfunction]
-pub fn snappy_decompress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = to_py_err!(DecompressionError -> snappy::decompress_raw(data))?;
-    Ok(PyBytes::new(py, &decompressed))
+pub fn snappy_decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
+    match data {
+        BytesType::Bytes(input) => {
+            let out = to_py_err!(DecompressionError -> snappy::decompress_raw(input.as_bytes()))?;
+            Ok(BytesType::Bytes(PyBytes::new(py, &out)))
+        }
+        BytesType::ByteArray(input) => {
+            let out = to_py_err!(DecompressionError -> snappy::decompress_raw(unsafe { input.as_bytes() }))?;
+            Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
+        }
+    }
 }
 
 /// Snappy compression raw.
@@ -142,9 +200,17 @@ pub fn snappy_decompress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a
 /// >>> snappy_compress_raw(b'some bytes here')
 /// ```
 #[pyfunction]
-pub fn snappy_compress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let compressed = to_py_err!(CompressionError -> snappy::compress_raw(data))?;
-    Ok(PyBytes::new(py, &compressed))
+pub fn snappy_compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
+    match data {
+        BytesType::Bytes(input) => {
+            let out = to_py_err!(CompressionError -> snappy::compress_raw(input.as_bytes()))?;
+            Ok(BytesType::Bytes(PyBytes::new(py, &out)))
+        }
+        BytesType::ByteArray(input) => {
+            let out = to_py_err!(CompressionError -> snappy::compress_raw(unsafe { input.as_bytes() }))?;
+            Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
+        }
+    }
 }
 
 /// Brotli decompression.
@@ -155,9 +221,43 @@ pub fn snappy_compress_raw<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a P
 /// >>> brotli_decompress(compressed_bytes)
 /// ```
 #[pyfunction]
-pub fn brotli_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = to_py_err!(DecompressionError -> brotli::decompress(data))?;
-    Ok(PyBytes::new(py, &decompressed))
+pub fn brotli_decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    match data {
+        BytesType::Bytes(input) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    to_py_err!(DecompressionError -> brotli::decompress(input.as_bytes(), output))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(DecompressionError -> brotli::decompress(input.as_bytes(), output))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(input) => match output_len {
+            Some(len) => {
+                let mut size = 0;
+                let pybytes = PyByteArray::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    size = to_py_err!(DecompressionError -> brotli::decompress(unsafe { input.as_bytes() }, output))?;
+                    Ok(())
+                })?;
+                pybytes.resize(size)?;
+                Ok(BytesType::ByteArray(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(DecompressionError -> brotli::decompress(unsafe { input.as_bytes() }, output))?;
+                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
+            }
+        },
+    }
 }
 
 /// Brotli compression.
@@ -168,10 +268,49 @@ pub fn brotli_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyB
 /// >>> brotli_compress(b'some bytes here', level=9)  # level defaults to 11
 /// ```
 #[pyfunction]
-pub fn brotli_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
+pub fn brotli_compress<'a>(
+    py: Python<'a>,
+    data: BytesType<'a>,
+    level: Option<u32>,
+    output_len: Option<usize>,
+) -> PyResult<BytesType<'a>> {
     let level = level.unwrap_or_else(|| 11);
-    let compressed = to_py_err!(CompressionError -> brotli::compress(data, level))?;
-    Ok(PyBytes::new(py, &compressed))
+    match data {
+        BytesType::Bytes(input) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    to_py_err!(CompressionError -> brotli::compress(input.as_bytes(), output, level))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(CompressionError -> brotli::compress(input.as_bytes(), output, level))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(input) => match output_len {
+            Some(len) => {
+                let mut size = 0;
+                let pybytes = PyByteArray::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    size = to_py_err!(CompressionError -> brotli::compress(unsafe { input.as_bytes() }, output, level))?;
+                    Ok(())
+                })?;
+                pybytes.resize(size)?;
+                Ok(BytesType::ByteArray(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(CompressionError -> brotli::compress(unsafe { input.as_bytes() }, output, level))?;
+                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
+            }
+        },
+    }
 }
 
 /// LZ4 compression.
@@ -182,9 +321,18 @@ pub fn brotli_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -
 /// >>> lz4_decompress(compressed_bytes)
 /// ```
 #[pyfunction]
-pub fn lz4_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = to_py_err!(DecompressionError -> lz4::decompress(data))?;
-    Ok(PyBytes::new(py, &decompressed))
+#[allow(unused_variables)] // TODO: Make use of output_len for lz4
+pub fn lz4_decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    match data {
+        BytesType::Bytes(input) => {
+            let out = to_py_err!(DecompressionError -> lz4::decompress(input.as_bytes()))?;
+            Ok(BytesType::Bytes(PyBytes::new(py, &out)))
+        }
+        BytesType::ByteArray(input) => {
+            let out = to_py_err!(DecompressionError -> lz4::decompress(unsafe { input.as_bytes() }))?;
+            Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
+        }
+    }
 }
 
 /// lZ4 compression.
@@ -195,10 +343,25 @@ pub fn lz4_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyByte
 /// >>> lz4_compress(b'some bytes here')
 /// ```
 #[pyfunction]
-pub fn lz4_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
+#[allow(unused_variables)]
+pub fn lz4_compress<'a>(
+    py: Python<'a>,
+    data: BytesType<'a>,
+    level: Option<u32>,
+    output_len: Option<usize>,
+) -> PyResult<BytesType<'a>> {
     let level = level.unwrap_or_else(|| 4);
-    let compressed = to_py_err!(CompressionError -> lz4::compress(data, level))?;
-    Ok(PyBytes::new(py, &compressed))
+
+    match data {
+        BytesType::Bytes(input) => {
+            let out = to_py_err!(CompressionError -> lz4::compress(input.as_bytes(), level))?;
+            Ok(BytesType::Bytes(PyBytes::new(py, &out)))
+        }
+        BytesType::ByteArray(input) => {
+            let out = to_py_err!(CompressionError -> lz4::compress(unsafe { input.as_bytes() }, level))?;
+            Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
+        }
+    }
 }
 
 /// Gzip decompression.
@@ -209,9 +372,43 @@ pub fn lz4_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> P
 /// >>> gzip_decompress(compressed_bytes)
 /// ```
 #[pyfunction]
-pub fn gzip_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = to_py_err!(DecompressionError -> gzip::decompress(data))?;
-    Ok(PyBytes::new(py, &decompressed))
+pub fn gzip_decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    match data {
+        BytesType::Bytes(input) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    to_py_err!(DecompressionError -> gzip::decompress(input.as_bytes(), output))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(DecompressionError -> gzip::decompress(input.as_bytes(), output))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(input) => match output_len {
+            Some(len) => {
+                let mut size = 0;
+                let pybytes = PyByteArray::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    size = to_py_err!(DecompressionError -> gzip::decompress(unsafe { input.as_bytes() }, output))?;
+                    Ok(())
+                })?;
+                pybytes.resize(size)?;
+                Ok(BytesType::ByteArray(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(DecompressionError -> gzip::decompress(unsafe { input.as_bytes() }, output))?;
+                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
+            }
+        },
+    }
 }
 
 /// Gzip compression.
@@ -222,10 +419,49 @@ pub fn gzip_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyByt
 /// >>> gzip_compress(b'some bytes here', level=2)  # Level defaults to 6
 /// ```
 #[pyfunction]
-pub fn gzip_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
+pub fn gzip_compress<'a>(
+    py: Python<'a>,
+    data: BytesType<'a>,
+    level: Option<u32>,
+    output_len: Option<usize>,
+) -> PyResult<BytesType<'a>> {
     let level = level.unwrap_or_else(|| 6);
-    let compressed = to_py_err!(CompressionError -> gzip::compress(data, level))?;
-    Ok(PyBytes::new(py, &compressed))
+    match data {
+        BytesType::Bytes(input) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    to_py_err!(CompressionError -> gzip::compress(input.as_bytes(), output, level))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(CompressionError -> gzip::compress(input.as_bytes(), output, level))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(input) => match output_len {
+            Some(len) => {
+                let mut size = 0;
+                let pybytes = PyByteArray::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    size = to_py_err!(CompressionError -> gzip::compress(unsafe { input.as_bytes() }, output, level))?;
+                    Ok(())
+                })?;
+                pybytes.resize(size)?;
+                Ok(BytesType::ByteArray(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(CompressionError -> gzip::compress(unsafe { input.as_bytes() }, output, level))?;
+                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
+            }
+        },
+    }
 }
 
 /// Deflate decompression.
@@ -236,9 +472,47 @@ pub fn gzip_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> 
 /// >>> deflate_decompress(compressed_bytes)
 /// ```
 #[pyfunction]
-pub fn deflate_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = to_py_err!(DecompressionError -> deflate::decompress(data))?;
-    Ok(PyBytes::new(py, &decompressed))
+pub fn deflate_decompress<'a>(
+    py: Python<'a>,
+    data: BytesType<'a>,
+    output_len: Option<usize>,
+) -> PyResult<BytesType<'a>> {
+    match data {
+        BytesType::Bytes(input) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    to_py_err!(DecompressionError -> deflate::decompress(input.as_bytes(), output))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(DecompressionError -> deflate::decompress(input.as_bytes(), output))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(input) => match output_len {
+            Some(len) => {
+                let mut size = 0;
+                let pybytes = PyByteArray::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    size = to_py_err!(DecompressionError -> deflate::decompress(unsafe { input.as_bytes() }, output))?;
+                    Ok(())
+                })?;
+                pybytes.resize(size)?;
+                Ok(BytesType::ByteArray(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(DecompressionError -> deflate::decompress(unsafe { input.as_bytes() }, output))?;
+                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
+            }
+        },
+    }
 }
 
 /// Deflate compression.
@@ -249,10 +523,50 @@ pub fn deflate_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a Py
 /// >>> deflate_compress(b'some bytes here', level=5)  # level defaults to 6
 /// ```
 #[pyfunction]
-pub fn deflate_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) -> PyResult<&'a PyBytes> {
+pub fn deflate_compress<'a>(
+    py: Python<'a>,
+    data: BytesType<'a>,
+    level: Option<u32>,
+    output_len: Option<usize>,
+) -> PyResult<BytesType<'a>> {
     let level = level.unwrap_or_else(|| 6);
-    let compressed = to_py_err!(CompressionError -> deflate::compress(data, level))?;
-    Ok(PyBytes::new(py, &compressed))
+    match data {
+        BytesType::Bytes(input) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    to_py_err!(CompressionError -> deflate::compress(input.as_bytes(), output, level))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(CompressionError -> deflate::compress(input.as_bytes(), output, level))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(input) => match output_len {
+            Some(len) => {
+                let mut size = 0;
+                let pybytes = PyByteArray::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    size =
+                        to_py_err!(CompressionError -> deflate::compress(unsafe { input.as_bytes() }, output, level))?;
+                    Ok(())
+                })?;
+                pybytes.resize(size)?;
+                Ok(BytesType::ByteArray(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(CompressionError -> deflate::compress(unsafe { input.as_bytes() }, output, level))?;
+                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
+            }
+        },
+    }
 }
 
 /// ZSTD decompression.
@@ -263,9 +577,43 @@ pub fn deflate_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<u32>) 
 /// >>> zstd_decompress(compressed_bytes)
 /// ```
 #[pyfunction]
-pub fn zstd_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyBytes> {
-    let decompressed = to_py_err!(DecompressionError -> zstd::decompress(data))?;
-    Ok(PyBytes::new(py, &decompressed))
+pub fn zstd_decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    match data {
+        BytesType::Bytes(input) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    to_py_err!(DecompressionError -> zstd::decompress(input.as_bytes(), output))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(DecompressionError -> zstd::decompress(input.as_bytes(), output))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(input) => match output_len {
+            Some(len) => {
+                let mut size = 0;
+                let pybytes = PyByteArray::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    size = to_py_err!(DecompressionError -> zstd::decompress(unsafe { input.as_bytes() }, output))?;
+                    Ok(())
+                })?;
+                pybytes.resize(size)?;
+                Ok(BytesType::ByteArray(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(DecompressionError -> zstd::decompress(unsafe { input.as_bytes() }, output))?;
+                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
+            }
+        },
+    }
 }
 
 /// ZSTD compression.
@@ -276,10 +624,50 @@ pub fn zstd_decompress<'a>(py: Python<'a>, data: &'a [u8]) -> PyResult<&'a PyByt
 /// >>> zstd_compress(b'some bytes here', level=0)  # level defaults to 11
 /// ```
 #[pyfunction]
-pub fn zstd_compress<'a>(py: Python<'a>, data: &'a [u8], level: Option<i32>) -> PyResult<&'a PyBytes> {
+pub fn zstd_compress<'a>(
+    py: Python<'a>,
+    data: BytesType<'a>,
+    level: Option<i32>,
+    output_len: Option<usize>,
+) -> PyResult<BytesType<'a>> {
     let level = level.unwrap_or_else(|| 0); // 0 will use zstd's default, currently 11
-    let compressed = to_py_err!(CompressionError -> zstd::compress(data, level))?;
-    Ok(PyBytes::new(py, &compressed))
+
+    match data {
+        BytesType::Bytes(input) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    to_py_err!(CompressionError -> zstd::compress(input.as_bytes(), output, level))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(CompressionError -> zstd::compress(input.as_bytes(), output, level))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(input) => match output_len {
+            Some(len) => {
+                let mut size = 0;
+                let pybytes = PyByteArray::new_with(py, len, |buffer| {
+                    let output = Output::Slice(buffer);
+                    size = to_py_err!(CompressionError -> zstd::compress(unsafe { input.as_bytes() }, output, level))?;
+                    Ok(())
+                })?;
+                pybytes.resize(size)?;
+                Ok(BytesType::ByteArray(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                let output = Output::Vector(&mut buffer);
+                to_py_err!(CompressionError -> zstd::compress(unsafe { input.as_bytes() }, output, level))?;
+                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
+            }
+        },
+    }
 }
 
 #[pymodule]

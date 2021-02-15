@@ -1,19 +1,22 @@
+use crate::Output;
 use brotli2::read::{BrotliDecoder, BrotliEncoder};
-use std::error::Error;
 use std::io::prelude::*;
+use std::io::Error;
 
 /// Decompress via Brotli
-pub fn decompress(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn decompress<'a>(data: &[u8], output: Output<'a>) -> Result<usize, Error> {
     let mut decoder = BrotliDecoder::new(data);
-    let mut buf = vec![];
-    decoder.read_to_end(&mut buf)?;
-    Ok(buf)
+    match output {
+        Output::Slice(slice) => decoder.read(slice),
+        Output::Vector(v) => decoder.read_to_end(v),
+    }
 }
 
 /// Compress via Brotli
-pub fn compress(data: &[u8], level: u32) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn compress<'a>(data: &'a [u8], output: Output<'a>, level: u32) -> Result<usize, Error> {
     let mut encoder = BrotliEncoder::new(data, level);
-    let mut buf = vec![];
-    encoder.read_to_end(&mut buf)?;
-    Ok(buf)
+    match output {
+        Output::Slice(slice) => encoder.read(slice),
+        Output::Vector(v) => encoder.read_to_end(v),
+    }
 }

@@ -16,7 +16,7 @@ def test_variants_simple(variant):
     compressed = compress(uncompressed)
     assert compressed != uncompressed
 
-    decompressed = decompress(compressed)
+    decompressed = decompress(compressed, output_len=len(uncompressed))
     assert decompressed == uncompressed
 
 
