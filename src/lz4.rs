@@ -16,7 +16,8 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// Python Example
 /// --------------
 /// ```python
-/// >>> lz4_decompress(compressed_bytes)
+/// >>> # Note, output_len is currently ignored; underlying algorithm does not support reading to slice at this time
+/// >>> cramjam.lz4.decompress(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
 #[allow(unused_variables)] // TODO: Make use of output_len for lz4
@@ -38,7 +39,8 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 /// Python Example
 /// --------------
 /// ```python
-/// >>> lz4_compress(b'some bytes here')
+/// >>> # Note, output_len is currently ignored; underlying algorithm does not support reading to slice at this time
+/// >>> cramjam.lz4.compress(b'some bytes here', output_len=Optional[int])
 /// ```
 #[pyfunction]
 #[allow(unused_variables)]

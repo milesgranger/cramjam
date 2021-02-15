@@ -16,7 +16,7 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// Python Example
 /// --------------
 /// ```python
-/// >>> zstd_decompress(compressed_bytes)
+/// >>> cramjam.zstd.decompress(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
 pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
@@ -63,7 +63,7 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 /// Python Example
 /// --------------
 /// ```python
-/// >>> zstd_compress(b'some bytes here', level=0)  # level defaults to 11
+/// >>> cramjam.zstd.compress(b'some bytes here', level=0, output_len=Optional[int])  # level defaults to 11
 /// ```
 #[pyfunction]
 pub fn compress<'a>(

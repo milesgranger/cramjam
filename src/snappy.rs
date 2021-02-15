@@ -19,7 +19,8 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// Python Example
 /// --------------
 /// ```python
-/// >>> snappy_decompress(compressed_bytes)  # bytes or bytearray; bytearray is faster
+/// >>> # bytes or bytearray; bytearray is faster
+/// >>> cramjam.snappy.decompress(compressed_bytes, output_len=Optional[None])
 /// ```
 #[pyfunction]
 pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
@@ -60,8 +61,8 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 /// Python Example
 /// --------------
 /// ```python
-/// >>> _ = snappy_compress(b'some bytes here')
-/// >>> _ = snappy_compress(bytearray(b'this avoids double allocation, and thus faster!'))  # <- use bytearray where possible
+/// >>> _ = cramjam.snappy.compress(b'some bytes here')
+/// >>> _ = cramjam.snappy.compress(bytearray(b'this avoids double allocation in rust side, and thus faster!'))  # <- use bytearray where possible
 /// ```
 #[pyfunction]
 pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
@@ -108,7 +109,7 @@ pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usiz
 /// Python Example
 /// --------------
 /// ```python
-/// >>> snappy_decompress_raw(compressed_raw_bytes)
+/// >>> cramjam.snappy.decompress_raw(compressed_raw_bytes)
 /// ```
 #[pyfunction]
 pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
@@ -130,7 +131,7 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<Bytes
 /// Python Example
 /// --------------
 /// ```python
-/// >>> snappy_compress_raw(b'some bytes here')
+/// >>> cramjam.snappy.compress_raw(b'some bytes here')
 /// ```
 #[pyfunction]
 pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {

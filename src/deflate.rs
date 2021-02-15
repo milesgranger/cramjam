@@ -16,7 +16,7 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// Python Example
 /// --------------
 /// ```python
-/// >>> deflate_decompress(compressed_bytes)
+/// >>> cramjam.deflate.decompress(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
 pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
@@ -63,7 +63,7 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 /// Python Example
 /// --------------
 /// ```python
-/// >>> deflate_compress(b'some bytes here', level=5)  # level defaults to 6
+/// >>> cramjam.deflate.compress(b'some bytes here', level=5, output_len=Optional[int])  # level defaults to 6
 /// ```
 #[pyfunction]
 pub fn compress<'a>(

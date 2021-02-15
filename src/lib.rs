@@ -1,13 +1,13 @@
 //! CramJam documentation of python exported functions for (de)compression of bytes
 //!
-//! The API follows `<<compression algorithm>>_compress` and `<<compression algorithm>>_decompress`
+//! The API follows cramjam.`<<compression algorithm>>.compress` and cramjam.`<<compression algorithm>>.decompress`
 //!
 //! Python Example:
 //!
 //! ```python
 //! data = b'some bytes here'
-//! compressed = cramjam.snappy_compress(data)
-//! decompressed = cramjam.snappy_decompress(compressed)
+//! compressed = cramjam.snappy.compress(data)
+//! decompressed = cramjam.snappy.decompress(compressed)
 //! assert data == decompressed
 //! ```
 
