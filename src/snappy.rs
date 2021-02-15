@@ -1,10 +1,12 @@
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::{to_py_err, BytesType, Output};
+use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
 use snap::raw::{decompress_len, max_compress_len};
+
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -12,6 +14,7 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress_raw, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_raw, m)?)?;
     m.add_function(wrap_pyfunction!(compress_into, m)?)?;
+    m.add_function(wrap_pyfunction!(decompress_into, m)?)?;
     Ok(())
 }
 
@@ -148,24 +151,46 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
     }
 }
 
-use ndarray::ArrayViewMut1;
-use numpy::{IntoPyArray, PyArray1};
+macro_rules! de_compress_into_body {
+    ($op:ident -> $py_err:ident) => {
+        let mut array_mut = unsafe { array.as_array_mut() };
+
+        let mut buffer: &mut [u8] = to_py_err!($py_err -> array_mut.as_slice_mut().ok_or_else(|| {
+            pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
+        }))?;
+
+        let output = Output::Slice(&mut buffer);
+        let size = to_py_err!($py_err -> self::internal::$op(data.as_bytes(), output))?;
+        Ok(size)
+    }
+}
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<()> {
-
+pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
     let mut array_mut = unsafe { array.as_array_mut() };
 
-    let mut buffer = array_mut.as_slice_mut().ok_or_else(|| {
-        Err(pyo3::exceptions::PyBufferError::new_err(
-            "Unable to gain mutable slice to array.",
-        ))
-    })?;
+    let mut buffer: &mut [u8] = to_py_err!(CompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
+        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
+    }))?;
 
     let output = Output::Slice(&mut buffer);
-    self::internal::compress(data.as_bytes(), output)?;
-    Ok(())
+    let size = to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), output))?;
+    Ok(size)
+}
+
+/// Decompress directly into an output buffer
+#[pyfunction]
+pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
+    let mut array_mut = unsafe { array.as_array_mut() };
+
+    let mut buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
+        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
+    }))?;
+
+    let output = Output::Slice(&mut buffer);
+    let size = to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), output))?;
+    Ok(size)
 }
 
 mod internal {
