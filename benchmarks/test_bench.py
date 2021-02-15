@@ -25,8 +25,8 @@ def test_snappy(benchmark, file, use_cramjam: bool):
     """
     import snappy
 
-    data = bytearray(file.read_bytes())  # bytearray avoids double allocation in cramjam snappy
-    # Can be even faster if passing output_len to compress/decompress ops
+    data = bytearray(file.read_bytes())  # bytearray avoids double allocation in cramjam snappy by default
+    # Can be slightly faster if passing output_len to compress/decompress ops
     if use_cramjam:
         benchmark(
             round_trip,
@@ -46,17 +46,27 @@ def test_snappy(benchmark, file, use_cramjam: bool):
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "gzip"
 )
+@pytest.mark.parametrize("set_output_len", (True, False), ids=lambda val: f"used-output_len={val}")
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
-def test_gzip(benchmark, file, use_cramjam: bool):
+def test_gzip(benchmark, file, use_cramjam: bool, set_output_len: bool):
     data = file.read_bytes()
     if use_cramjam:
-        benchmark(
-            round_trip,
-            compress=cramjam.gzip.compress,
-            decompress=cramjam.gzip.decompress,
-            data=data,
-            level=9,
-        )
+        if set_output_len:
+            compressed_len = len(cramjam.gzip.compress(data))
+            benchmark(
+                round_trip,
+                compress=lambda bytes: cramjam.gzip.compress(bytes, level=9, output_len=compressed_len),
+                decompress=lambda bytes: cramjam.gzip.decompress(bytes, output_len=len(data)),
+                data=data,
+            )
+        else:
+            benchmark(
+                round_trip,
+                compress=cramjam.gzip.compress,
+                decompress=cramjam.gzip.decompress,
+                data=data,
+                level=9,
+            )
     else:
         benchmark(
             round_trip,
