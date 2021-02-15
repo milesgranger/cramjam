@@ -1,14 +1,80 @@
-use std::error::Error;
+use crate::exceptions::{CompressionError, DecompressionError};
+use crate::{to_py_err, BytesType};
+use pyo3::prelude::*;
+use pyo3::types::{PyByteArray, PyBytes};
+use pyo3::wrap_pyfunction;
+use pyo3::{PyResult, Python};
 
-/// Decompress lz4 data
-pub fn decompress(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
-    lz_fear::framed::decompress_frame(data).map_err(|err| err.into())
+pub fn init_py_module(m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(compress, m)?)?;
+    m.add_function(wrap_pyfunction!(decompress, m)?)?;
+    Ok(())
 }
 
-/// Compress lz4 data
-// TODO: lz-fear does not yet support level
-pub fn compress(data: &[u8], _level: u32) -> Result<Vec<u8>, Box<dyn Error>> {
-    let mut buf = vec![];
-    lz_fear::framed::CompressionSettings::default().compress(data, &mut buf)?;
-    Ok(buf)
+/// LZ4 compression.
+///
+/// Python Example
+/// --------------
+/// ```python
+/// >>> lz4_decompress(compressed_bytes)
+/// ```
+#[pyfunction]
+#[allow(unused_variables)] // TODO: Make use of output_len for lz4
+pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    match data {
+        BytesType::Bytes(input) => {
+            let out = to_py_err!(DecompressionError -> self::internal::decompress(input.as_bytes()))?;
+            Ok(BytesType::Bytes(PyBytes::new(py, &out)))
+        }
+        BytesType::ByteArray(input) => {
+            let out = to_py_err!(DecompressionError -> self::internal::decompress(unsafe { input.as_bytes() }))?;
+            Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
+        }
+    }
+}
+
+/// lZ4 compression.
+///
+/// Python Example
+/// --------------
+/// ```python
+/// >>> lz4_compress(b'some bytes here')
+/// ```
+#[pyfunction]
+#[allow(unused_variables)]
+pub fn compress<'a>(
+    py: Python<'a>,
+    data: BytesType<'a>,
+    level: Option<u32>,
+    output_len: Option<usize>,
+) -> PyResult<BytesType<'a>> {
+    let level = level.unwrap_or_else(|| 4);
+
+    match data {
+        BytesType::Bytes(input) => {
+            let out = to_py_err!(CompressionError -> self::internal::compress(input.as_bytes(), level))?;
+            Ok(BytesType::Bytes(PyBytes::new(py, &out)))
+        }
+        BytesType::ByteArray(input) => {
+            let out = to_py_err!(CompressionError -> self::internal::compress(unsafe { input.as_bytes() }, level))?;
+            Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
+        }
+    }
+}
+
+mod internal {
+    use std::error::Error;
+
+    /// Decompress lz4 data
+    pub fn decompress(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+        lz_fear::framed::decompress_frame(data).map_err(|err| err.into())
+    }
+
+    /// Compress lz4 data
+    // TODO: lz-fear does not yet support level
+    pub fn compress(data: &[u8], _level: u32) -> Result<Vec<u8>, Box<dyn Error>> {
+        let mut buf = vec![];
+        lz_fear::framed::CompressionSettings::default().compress(data, &mut buf)?;
+        Ok(buf)
+    }
 }

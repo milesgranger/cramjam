@@ -30,8 +30,8 @@ def test_snappy(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.snappy_compress,
-            decompress=cramjam.snappy_decompress,
+            compress=cramjam.snappy.compress,
+            decompress=cramjam.snappy.decompress,
             data=data,
         )
     else:
@@ -52,8 +52,8 @@ def test_gzip(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.gzip_compress,
-            decompress=cramjam.gzip_decompress,
+            compress=cramjam.gzip.compress,
+            decompress=cramjam.gzip.decompress,
             data=data,
             level=9,
         )
@@ -78,8 +78,8 @@ def test_lz4(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.lz4_compress,
-            decompress=cramjam.lz4_decompress,
+            compress=cramjam.lz4.compress,
+            decompress=cramjam.lz4.decompress,
             data=data,
             level=4,
         )
@@ -104,8 +104,8 @@ def test_brotli(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.brotli_compress,
-            decompress=cramjam.brotli_decompress,
+            compress=cramjam.brotli.compress,
+            decompress=cramjam.brotli.decompress,
             data=data,
         )
     else:
@@ -128,8 +128,8 @@ def test_zstd(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.zstd_compress,
-            decompress=cramjam.zstd_decompress,
+            compress=cramjam.zstd.compress,
+            decompress=cramjam.zstd.decompress,
             data=data
         )
     else:
