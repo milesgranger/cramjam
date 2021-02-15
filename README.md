@@ -39,10 +39,20 @@ All available for use as:
 
 ```python
 >>> import cramjam
->>> compessed = cramjam.snappy_compress(b"bytes here")
->>> cramjam.snappy_decompress(compressed)
+>>> compessed = cramjam.snappy.compress(b"bytes here")
+>>> cramjam.snappy.decompress(compressed)
 b"bytes here"
 ```
 
-Where the API is `cramjam.<compression-variant>_compress/decompress` and only accepts
-python `byte` strings
+Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts
+both `bytes` and `bytearray` objects.
+
+**Special note!**  
+If you know the length of the de/compress output, you
+can provide `output_len=<<some int>>` to any `de/compress`
+to get ~1.5-3x performance increase as this allows single 
+buffer allocation. 
+
+For `snappy` with `bytearray`s, it's only a mild improvement
+as we currently are able to estimate the buffer size and can
+resize the resulting `bytearray` to the correct size.
