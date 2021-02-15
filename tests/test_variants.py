@@ -1,29 +1,28 @@
 import pytest
 
 import cramjam
-from cramjam import DecompressionError, CompressionError
 
 
 @pytest.mark.parametrize(
-    "variant", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
+    "variant_str", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
 )
-def test_variants_simple(variant):
+def test_variants_simple(variant_str):
 
-    compress = getattr(cramjam, f"{variant}_compress")
-    decompress = getattr(cramjam, f"{variant}_decompress")
+    variant = getattr(cramjam, variant_str)
 
     uncompressed = b"some bytes to compress 123" * 1000
 
-    compressed = compress(uncompressed)
+    compressed = variant.compress(uncompressed)
     assert compressed != uncompressed
 
-    decompressed = decompress(compressed)
+    decompressed = variant.decompress(compressed, output_len=len(uncompressed))
     assert decompressed == uncompressed
 
 
 @pytest.mark.parametrize(
-    "variant", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
+    "variant_str", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
 )
-def test_variants_raise_exception(variant):
+def test_variants_raise_exception(variant_str):
+    variant = getattr(cramjam, variant_str)
     with pytest.raises(cramjam.DecompressionError):
-        getattr(cramjam, f"{variant}_decompress")(b'sknow')
+        variant.decompress(b'sknow')

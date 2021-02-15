@@ -19,18 +19,19 @@ def round_trip(compress, decompress, data, **kwargs):
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "snappy"
 )
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
-def test_snappy_raw(benchmark, file, use_cramjam: bool):
+def test_snappy(benchmark, file, use_cramjam: bool):
     """
     Uses the non-framed format for snappy compression
     """
     import snappy
 
-    data = file.read_bytes()
+    data = bytearray(file.read_bytes())  # bytearray avoids double allocation in cramjam snappy by default
+    # Can be slightly faster if passing output_len to compress/decompress ops
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.snappy_compress_raw,
-            decompress=cramjam.snappy_decompress_raw,
+            compress=cramjam.snappy.compress,
+            decompress=cramjam.snappy.decompress,
             data=data,
         )
     else:
@@ -45,17 +46,27 @@ def test_snappy_raw(benchmark, file, use_cramjam: bool):
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "gzip"
 )
+@pytest.mark.parametrize("set_output_len", (True, False), ids=lambda val: f"used-output_len={val}")
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
-def test_gzip(benchmark, file, use_cramjam: bool):
+def test_gzip(benchmark, file, use_cramjam: bool, set_output_len: bool):
     data = file.read_bytes()
     if use_cramjam:
-        benchmark(
-            round_trip,
-            compress=cramjam.gzip_compress,
-            decompress=cramjam.gzip_decompress,
-            data=data,
-            level=9,
-        )
+        if set_output_len:
+            compressed_len = len(cramjam.gzip.compress(data))
+            benchmark(
+                round_trip,
+                compress=lambda bytes: cramjam.gzip.compress(bytes, level=9, output_len=compressed_len),
+                decompress=lambda bytes: cramjam.gzip.decompress(bytes, output_len=len(data)),
+                data=data,
+            )
+        else:
+            benchmark(
+                round_trip,
+                compress=cramjam.gzip.compress,
+                decompress=cramjam.gzip.decompress,
+                data=data,
+                level=9,
+            )
     else:
         benchmark(
             round_trip,
@@ -77,8 +88,8 @@ def test_lz4(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.lz4_compress,
-            decompress=cramjam.lz4_decompress,
+            compress=cramjam.lz4.compress,
+            decompress=cramjam.lz4.decompress,
             data=data,
             level=4,
         )
@@ -103,8 +114,8 @@ def test_brotli(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.brotli_compress,
-            decompress=cramjam.brotli_decompress,
+            compress=cramjam.brotli.compress,
+            decompress=cramjam.brotli.decompress,
             data=data,
         )
     else:
@@ -127,9 +138,9 @@ def test_zstd(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.zstd_compress,
-            decompress=cramjam.zstd_decompress,
-            data=data,
+            compress=cramjam.zstd.compress,
+            decompress=cramjam.zstd.decompress,
+            data=data
         )
     else:
         benchmark(
