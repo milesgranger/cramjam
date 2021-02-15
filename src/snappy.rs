@@ -11,6 +11,7 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decompress, m)?)?;
     m.add_function(wrap_pyfunction!(compress_raw, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_raw, m)?)?;
+    m.add_function(wrap_pyfunction!(compress_into, m)?)?;
     Ok(())
 }
 
@@ -145,6 +146,20 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
             Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
         }
     }
+}
+
+use ndarray::ArrayViewMut1;
+use numpy::{IntoPyArray, PyArray1};
+
+/// Compress directly into an output buffer
+#[pyfunction]
+pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<()> {
+    let mut array_mut = unsafe { array.as_array_mut() };
+    let mut buffer = array_mut.as_slice_mut().unwrap();
+
+    let output = Output::Slice(&mut buffer);
+    self::internal::compress(data.as_bytes(), output)?;
+    Ok(())
 }
 
 mod internal {
