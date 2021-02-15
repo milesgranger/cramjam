@@ -154,8 +154,14 @@ use numpy::{IntoPyArray, PyArray1};
 /// Compress directly into an output buffer
 #[pyfunction]
 pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<()> {
+
     let mut array_mut = unsafe { array.as_array_mut() };
-    let mut buffer = array_mut.as_slice_mut().unwrap();
+
+    let mut buffer = array_mut.as_slice_mut().ok_or_else(|| {
+        Err(pyo3::exceptions::PyBufferError::new_err(
+            "Unable to gain mutable slice to array.",
+        ))
+    })?;
 
     let output = Output::Slice(&mut buffer);
     self::internal::compress(data.as_bytes(), output)?;
