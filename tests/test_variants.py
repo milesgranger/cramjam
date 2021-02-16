@@ -37,7 +37,7 @@ def test_variants_de_compress_into(variant_str):
 
     variant = getattr(cramjam, variant_str)
 
-    uncompressed = b"some bytes to compress 123 " * 10
+    uncompressed = b"some bytes to compress 123 " * 5
     uncompressed_len = len(uncompressed)
 
     # Get output len of compressed
@@ -46,5 +46,8 @@ def test_variants_de_compress_into(variant_str):
 
     compress_into_buffer = np.zeros(compressed_len, dtype=np.uint8)
     size = variant.compress_into(uncompressed, compress_into_buffer)
-    if size != compressed_len:
-        breakpoint()
+    assert size == compressed_len
+
+    decompress_into_buffer = np.zeros(uncompressed_len, dtype=np.uint8)
+    size = variant.decompress_into(compressed, decompress_into_buffer)
+    assert size == uncompressed_len
