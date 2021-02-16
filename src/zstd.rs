@@ -1,10 +1,10 @@
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::{to_py_err, BytesType, Output};
+use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use numpy::PyArray1;
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -75,7 +75,6 @@ pub fn compress<'a>(
     level: Option<i32>,
     output_len: Option<usize>,
 ) -> PyResult<BytesType<'a>> {
-
     match data {
         BytesType::Bytes(input) => match output_len {
             Some(len) => {

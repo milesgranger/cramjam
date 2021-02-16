@@ -1,10 +1,10 @@
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::{to_py_err, BytesType, Output};
+use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use numpy::PyArray1;
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -134,7 +134,8 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
 
 mod internal {
     use crate::Output;
-    use flate2::read::{GzDecoder, GzEncoder};
+    use flate2::bufread::GzDecoder;
+    use flate2::write::GzEncoder;
     use flate2::Compression;
     use std::io::prelude::*;
     use std::io::Error;
@@ -151,10 +152,19 @@ mod internal {
     /// Compress gzip data
     pub fn compress<'a>(data: &'a [u8], output: Output<'a>, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| 6);
-        let mut encoder = GzEncoder::new(data, Compression::new(level));
         match output {
-            Output::Slice(slice) => encoder.read(slice),
-            Output::Vector(v) => encoder.read_to_end(v),
+            Output::Slice(slice) => {
+                let len = slice.len();
+                let mut encoder = GzEncoder::new(slice, Compression::new(level));
+                encoder.write_all(data)?;
+                encoder.finish()?;
+                Ok(len)
+            }
+            Output::Vector(v) => {
+                let mut encoder = GzEncoder::new(v, Compression::new(level));
+                encoder.write_all(data)?;
+                encoder.finish().map(|v| v.len())
+            }
         }
     }
 }
