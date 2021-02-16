@@ -7,7 +7,6 @@ use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
 use snap::raw::{decompress_len, max_compress_len};
 
-
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
     m.add_function(wrap_pyfunction!(decompress, m)?)?;
@@ -151,46 +150,16 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
     }
 }
 
-macro_rules! de_compress_into_body {
-    ($op:ident -> $py_err:ident) => {
-        let mut array_mut = unsafe { array.as_array_mut() };
-
-        let mut buffer: &mut [u8] = to_py_err!($py_err -> array_mut.as_slice_mut().ok_or_else(|| {
-            pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
-        }))?;
-
-        let output = Output::Slice(&mut buffer);
-        let size = to_py_err!($py_err -> self::internal::$op(data.as_bytes(), output))?;
-        Ok(size)
-    }
-}
-
 /// Compress directly into an output buffer
 #[pyfunction]
 pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    let mut array_mut = unsafe { array.as_array_mut() };
-
-    let mut buffer: &mut [u8] = to_py_err!(CompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
-        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
-    }))?;
-
-    let output = Output::Slice(&mut buffer);
-    let size = to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), output))?;
-    Ok(size)
+    crate::de_compress_into(data.as_bytes(), array, self::internal::compress)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    let mut array_mut = unsafe { array.as_array_mut() };
-
-    let mut buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
-        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
-    }))?;
-
-    let output = Output::Slice(&mut buffer);
-    let size = to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), output))?;
-    Ok(size)
+pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyArray1<u8>) -> PyResult<usize> {
+    crate::de_compress_into(data.as_bytes(), array, self::internal::decompress)
 }
 
 mod internal {
