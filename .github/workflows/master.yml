@@ -12,14 +12,14 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: [3.6, 3.7, 3.8, 3.9]
+        python-version: [3.6, 3.7, 3.8, 3.9, pypy-3.6]
     steps:
       - uses: actions/checkout@v2
 
-      - uses: actions/setup-python@v1
+      - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: 'x64'
+          architecture: x64
 
       - uses: actions-rs/toolchain@v1
         with:
@@ -27,27 +27,49 @@ jobs:
           components: clippy
           override: true
 
-      - name: Python Dev Install
+      - name: Python Maturin Install
         run: |
           pip install --upgrade pip
-          pip install -r dev-requirements.txt
+          pip install maturin
 
-      - name: Build Wheels - Linux
-        if: startsWith(matrix.os, 'ubuntu')
+      - name: Build Wheels - Linux - CPython
+        if: ${{ startsWith(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'pypy')  }}
         run: |
           docker run --rm -v $(pwd):/io konstin2/maturin build --release --out wheels
           ls -l wheels
 
-      - name: Build Wheels - Non-Linux
-        if: startsWith(matrix.os, 'windows') || startsWith(matrix.os, 'macos')
+      - name: Build Wheels - Windows and OSX - CPython
+        if: ${{ !startsWith(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'pypy') }}
         run: |
           pip install maturin
           maturin build --release --out wheels
           maturin sdist --out wheels
           ls -l wheels
 
-      - name: Install wheel
-        run: pip install cramjam --no-index --find-links wheels
+      - name: Build Wheels - Linux and OSX - PyPy
+        if: ${{ !startsWith(matrix.os, 'windows') && startsWith(matrix.python-version, 'pypy')  }}
+        run: |
+          make pypy-build
+          ls -l wheels
 
-      - name: Test
-        run: make test
+      # TODO: Windows PyPy not supported - ref: https://github.com/PyO3/maturin/issues/115
+      #- name: Build Wheels - Windows - PyPy
+      #  if: ${{ startsWith(matrix.os, 'windows') && startsWith(matrix.python-version, 'pypy')  }}
+      #  run: |
+      #    maturin build -i $(where pypy3) --release --out wheels --no-sdist
+      #    ls wheels
+
+      - name: Install wheel
+        if: ${{ !(startsWith(matrix.os, 'windows') && startsWith(matrix.python-version, 'pypy'))  }}
+        run: pip install cramjam --no-index --find-links wheels/
+
+      - name: Test - CPython
+        if: ${{ !startsWith(matrix.python-version, 'pypy') }}
+        run: |
+          pip install --upgrade pip
+          pip install -r dev-requirements.txt
+          make test
+
+      - name: Test - PyPy
+        if: ${{ startsWith(matrix.python-version, 'pypy') && !startsWith(matrix.os, 'windows') }}
+        run: pypy -c "import cramjam"
