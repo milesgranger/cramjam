@@ -57,6 +57,7 @@ jobs:
           ls -l wheels
 
       - name: Publish
+        if: ${{ !(startsWith(matrix.os, 'windows') && startsWith(matrix.python-version, 'pypy')) }}
         env:
           TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
         run: |
