@@ -132,16 +132,26 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
     crate::de_compress_into(data.as_bytes(), array, self::internal::decompress)
 }
 
-mod internal {
+pub(crate) mod internal {
 
     use crate::Output;
-    use std::io::{Error, Read};
+    use std::io::{Cursor, Error, Read, Write};
 
     /// Decompress gzip data
     pub fn decompress<'a>(data: &'a [u8], output: Output<'a>) -> Result<usize, Error> {
         let mut decoder = zstd::stream::read::Decoder::new(data)?;
         match output {
-            Output::Slice(slice) => decoder.read(slice),
+            Output::Slice(slice) => {
+                let mut n_bytes = 0;
+                loop {
+                    let count = decoder.read(&mut slice[n_bytes..])?;
+                    if count == 0 {
+                        break;
+                    }
+                    n_bytes += count;
+                }
+                Ok(n_bytes)
+            }
             Output::Vector(v) => decoder.read_to_end(v),
         }
     }
@@ -149,10 +159,18 @@ mod internal {
     /// Compress gzip data
     pub fn compress<'a>(data: &'a [u8], output: Output<'a>, level: Option<i32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| 0); // 0 will use zstd's default, currently 11
-        let mut encoder = zstd::stream::read::Encoder::new(data, level)?;
         match output {
-            Output::Slice(slice) => encoder.read(slice),
-            Output::Vector(v) => encoder.read_to_end(v),
+            Output::Slice(slice) => {
+                let buffer = Cursor::new(slice);
+                let mut encoder = zstd::stream::write::Encoder::new(buffer, level)?;
+                encoder.write_all(data)?;
+                let buffer = encoder.finish()?;
+                Ok(buffer.position() as usize)
+            }
+            Output::Vector(v) => {
+                let mut encoder = zstd::stream::read::Encoder::new(data, level)?;
+                encoder.read_to_end(v)
+            }
         }
     }
 }

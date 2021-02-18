@@ -132,20 +132,28 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
     crate::de_compress_into(data.as_bytes(), array, self::internal::decompress)
 }
 
-mod internal {
+pub(crate) mod internal {
     use crate::Output;
     use flate2::read::GzDecoder;
-    use flate2::read::GzEncoder;
     use flate2::Compression;
-    use flate2::Crc;
     use std::io::prelude::*;
-    use std::io::Error;
+    use std::io::{Cursor, Error};
 
     /// Decompress gzip data
     pub fn decompress<'a>(data: &'a [u8], output: Output<'a>) -> Result<usize, Error> {
         let mut decoder = GzDecoder::new(data);
         match output {
-            Output::Slice(slice) => decoder.read(slice),
+            Output::Slice(slice) => {
+                let mut n_bytes = 0;
+                loop {
+                    let count = decoder.read(&mut slice[n_bytes..])?;
+                    if count == 0 {
+                        break;
+                    }
+                    n_bytes += count;
+                }
+                Ok(n_bytes)
+            }
             Output::Vector(v) => decoder.read_to_end(v),
         }
     }
@@ -157,27 +165,15 @@ mod internal {
             Output::Slice(slice) => {
                 // GzEncoder::read does not output the 'tail' of the gzip encoding. So we need to
                 // calculate the checksum and the data length manually.
-
-                // compute checksum
-                let mut crc = Crc::new();
-                crc.update(&data);
-
-                // Encode
-                let mut encoder = GzEncoder::new(data, Compression::new(level));
-                let n_bytes = encoder.read(slice)?;
-
-                // insert checksum as bytes into output
-                let mut checksum_bytes = crc.sum().to_le_bytes();
-                slice[n_bytes..n_bytes + 4].swap_with_slice(&mut checksum_bytes);
-
-                // insert data len as bytes into output
-                let mut data_len_bytes = (data.len() as u32).to_le_bytes();
-                slice[n_bytes + 4..n_bytes + 8].swap_with_slice(&mut data_len_bytes);
-
-                // Ka-pow, total bytes affected output
-                Ok(n_bytes + checksum_bytes.len() + data_len_bytes.len())
+                use flate2::write::GzEncoder;
+                let cursor = Cursor::new(slice);
+                let mut encoder = GzEncoder::new(cursor, Compression::new(level));
+                encoder.write_all(data)?;
+                let writer = encoder.finish()?;
+                Ok(writer.position() as usize)
             }
             Output::Vector(v) => {
+                use flate2::read::GzEncoder;
                 let mut encoder = GzEncoder::new(data, Compression::new(level));
                 encoder.read_to_end(v)
             }

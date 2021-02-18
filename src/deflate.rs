@@ -132,19 +132,29 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
     crate::de_compress_into(data.as_bytes(), array, self::internal::decompress)
 }
 
-mod internal {
+pub(crate) mod internal {
 
     use crate::Output;
     use flate2::read::{DeflateDecoder, DeflateEncoder};
     use flate2::Compression;
     use std::io::prelude::*;
-    use std::io::Error;
+    use std::io::{Cursor, Error};
 
     /// Decompress gzip data
     pub fn decompress<'a>(data: &[u8], output: Output<'a>) -> Result<usize, Error> {
         let mut decoder = DeflateDecoder::new(data);
         match output {
-            Output::Slice(slice) => decoder.read(slice),
+            Output::Slice(slice) => {
+                let mut n_bytes = 0;
+                loop {
+                    let count = decoder.read(&mut slice[n_bytes..])?;
+                    if count == 0 {
+                        break;
+                    }
+                    n_bytes += count;
+                }
+                Ok(n_bytes)
+            }
             Output::Vector(v) => decoder.read_to_end(v),
         }
     }
@@ -152,10 +162,19 @@ mod internal {
     /// Compress gzip data
     pub fn compress<'a>(data: &'a [u8], output: Output<'a>, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| 6);
-        let mut encoder = DeflateEncoder::new(data, Compression::new(level));
+
         match output {
-            Output::Slice(slice) => encoder.read(slice),
-            Output::Vector(v) => encoder.read_to_end(v),
+            Output::Slice(slice) => {
+                let buffer = Cursor::new(slice);
+                let mut encoder = flate2::write::DeflateEncoder::new(buffer, Compression::new(level));
+                encoder.write_all(data)?;
+                let buffer = encoder.finish()?;
+                Ok(buffer.position() as usize)
+            }
+            Output::Vector(v) => {
+                let mut encoder = DeflateEncoder::new(data, Compression::new(level));
+                encoder.read_to_end(v)
+            }
         }
     }
 }
