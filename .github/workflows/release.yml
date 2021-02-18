@@ -3,7 +3,7 @@ name: ReleaseCI
 on:
   release:
     types:
-      - published
+      - released
       - prereleased
   push:
     tags:
