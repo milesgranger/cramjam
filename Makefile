@@ -9,6 +9,9 @@ bench:
 bench-snappy:
 	$(BASE_BENCH_CMD) snappy
 
+bench-snappy-compress-into:
+	$(BASE_BENCH_CMD) snappy_de_compress_into
+
 bench-lz4:
 	$(BASE_BENCH_CMD) lz4
 
