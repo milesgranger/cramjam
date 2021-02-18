@@ -30,6 +30,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 
 use exceptions::{CompressionError, DecompressionError};
+use numpy::PyArray1;
 
 #[derive(FromPyObject)]
 pub enum BytesType<'a> {
@@ -66,6 +67,26 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
 pub enum Output<'a> {
     Slice(&'a mut [u8]),
     Vector(&'a mut Vec<u8>),
+}
+
+/// Expose de/compression_into(data: BytesType<'_>, array: &PyArray1<u8>) -> PyResult<usize>
+/// functions to allow de/compress bytes into a pre-allocated Python array.
+///
+/// This will handle gaining access to the Python's array as a buffer for an underlying de/compression
+/// function which takes the normal `&[u8]` and `Output` types
+pub fn de_compress_into<F>(data: &[u8], array: &PyArray1<u8>, func: F) -> PyResult<usize>
+where
+    F: for<'a> FnOnce(&'a [u8], Output<'a>) -> std::io::Result<usize>,
+{
+    let mut array_mut = unsafe { array.as_array_mut() };
+
+    let buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
+        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
+    }))?;
+
+    let output = Output::Slice(buffer);
+    let size = to_py_err!(DecompressionError -> func(data, output))?;
+    Ok(size)
 }
 
 #[macro_export]

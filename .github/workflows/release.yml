@@ -56,9 +56,10 @@ jobs:
           make pypy-build
           ls -l wheels
 
-    - name: Publish
-      env:
-        TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
-      run: |
-        pip install twine
-        twine upload -u milesg --skip-existing wheels/*
+      - name: Publish
+        if: ${{ !(startsWith(matrix.os, 'windows') && startsWith(matrix.python-version, 'pypy')) }}
+        env:
+          TWINE_PASSWORD: ${{ secrets.TWINE_PASSWORD }}
+        run: |
+          pip install twine
+          twine upload -u milesg --skip-existing wheels/*

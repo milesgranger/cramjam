@@ -47,6 +47,20 @@ b"bytes here"
 Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts
 both `bytes` and `bytearray` objects.
 
+**de/compress_into**
+Additionally, all variants except for lz4, support `decompress_into` and `compress_into`.
+If you have a numpy array preallocated, that can be used as the output location for de/compression.  
+Ex.
+```python 
+>>> from cramjam import snappy
+>>> import numpy as np
+>>> compressed_data  # some data that we know the size of when decompressed
+>>> output = np.zeros(<<output length>>, dtype=np.uint8)
+>>> snappy.decompress_into(compressed_data, output)  # returns number of bytes decoded
+<<int: the number of bytes affected>>
+```
+This is very fast, as it avoids any buffer allocations on the rust side.
+
 **Special note!**  
 If you know the length of the de/compress output, you
 can provide `output_len=<<some int>>` to any `de/compress`

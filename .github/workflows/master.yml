@@ -41,7 +41,7 @@ jobs:
       - name: Build Wheels - Windows and OSX - CPython
         if: ${{ !startsWith(matrix.os, 'ubuntu') && !startsWith(matrix.python-version, 'pypy') }}
         run: |
-          pip install maturin
+          pip install --upgrade maturin
           maturin build --release --out wheels
           maturin sdist --out wheels
           ls -l wheels

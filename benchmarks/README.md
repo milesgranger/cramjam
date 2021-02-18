@@ -135,6 +135,45 @@ test_snappy[urls.10K-snappy]                       1,934.9160 (126.27)   2,981.1
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 ```
 
+##### Benchmarks for using `compress_into` and `decompress_into`
+All variants except `lz4` for now, implement a `compress_into` and `decompress_into`
+This is where, if you have a Python numpy array pre-allocated to the size of the
+de/compress data output, we can place the bytes directly into that buffer.
+
+Again, since basically no variants implement similar functionality as we saw in the Gzip `output_len`
+benchmarks, this benchmark is specific to `cramjam`
+
+```bash
+-------------------------------------------------------------------------------------------------------------------- benchmark: 24 tests ---------------------------------------------------------------------------------------------------------------------
+Name (time in us)                                                                        Min                 Max                Mean             StdDev              Median                IQR            Outliers  OPS (Kops/s)            Rounds  Iterations
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+test_cramjam_snappy_de_compress_into[Mark.Twain-Tom.Sawyer.txt-compress_into]        41.7650 (2.38)     104.0260 (1.76)      46.2884 (2.42)      6.5739 (2.29)      43.9400 (2.39)      1.6860 (4.70)    2130;2781       21.6037 (0.41)      17246           1
+test_cramjam_snappy_de_compress_into[Mark.Twain-Tom.Sawyer.txt-decompress_into]      21.3400 (1.22)      61.8010 (1.04)      23.0667 (1.21)      3.2925 (1.14)      22.2090 (1.21)      0.3585 (1.0)      974;2318       43.3526 (0.83)      13000           1
+test_cramjam_snappy_de_compress_into[alice29.txt-compress_into]                     205.7540 (11.72)    510.2070 (8.62)     223.4270 (11.67)    20.4450 (7.11)     214.1430 (11.66)    14.0580 (39.21)     557;474        4.4757 (0.09)       4574           1
+test_cramjam_snappy_de_compress_into[alice29.txt-decompress_into]                    83.6290 (4.76)     216.7800 (3.66)      91.1061 (4.76)     12.1865 (4.24)      86.5520 (4.71)      2.8550 (7.96)     880;1660       10.9762 (0.21)       8572           1
+test_cramjam_snappy_de_compress_into[asyoulik.txt-compress_into]                    220.0860 (12.54)    616.0500 (10.41)    241.1679 (12.60)    25.5963 (8.90)     229.8620 (12.52)    16.8125 (46.89)     394;349        4.1465 (0.08)       3348           1
+test_cramjam_snappy_de_compress_into[asyoulik.txt-decompress_into]                   87.8920 (5.01)     178.8330 (3.02)      95.8756 (5.01)     11.5868 (4.03)      91.4080 (4.98)      3.2860 (9.17)     949;1703       10.4302 (0.20)       8875           1
+test_cramjam_snappy_de_compress_into[fireworks.jpeg-compress_into]                   25.6260 (1.46)      63.8190 (1.08)      27.7547 (1.45)      3.7059 (1.29)      26.6040 (1.45)      0.7890 (2.20)    2774;3234       36.0300 (0.69)      28518           1
+test_cramjam_snappy_de_compress_into[fireworks.jpeg-decompress_into]                 17.5530 (1.0)       59.1750 (1.0)       19.1416 (1.0)       2.8766 (1.0)       18.3660 (1.0)       0.4600 (1.28)    3385;4030       52.2422 (1.0)       41681           1
+test_cramjam_snappy_de_compress_into[geo.protodata-compress_into]                    62.9040 (3.58)     139.3470 (2.35)      68.9734 (3.60)      8.2557 (2.87)      65.8000 (3.58)      2.5645 (7.15)    1312;2267       14.4983 (0.28)      12772           1
+test_cramjam_snappy_de_compress_into[geo.protodata-decompress_into]                  35.1860 (2.00)      82.0800 (1.39)      38.0429 (1.99)      4.8740 (1.69)      36.5620 (1.99)      1.1445 (3.19)    2212;2524       26.2861 (0.50)      20812           1
+test_cramjam_snappy_de_compress_into[html-compress_into]                             93.2700 (5.31)     192.9050 (3.26)     101.1416 (5.28)     10.3539 (3.60)      97.0850 (5.29)      3.9940 (11.14)   1048;1560        9.8871 (0.19)       9303           1
+test_cramjam_snappy_de_compress_into[html-decompress_into]                           45.6410 (2.60)     109.9500 (1.86)      49.4838 (2.59)      5.8214 (2.02)      47.5050 (2.59)      1.6060 (4.48)    2094;2462       20.2087 (0.39)      17202           1
+test_cramjam_snappy_de_compress_into[html_x_4-compress_into]                         92.9150 (5.29)     198.6570 (3.36)     101.2886 (5.29)     11.0534 (3.84)      96.9960 (5.28)      3.7150 (10.36)   1016;1618        9.8728 (0.19)       9170           1
+test_cramjam_snappy_de_compress_into[html_x_4-decompress_into]                       45.4800 (2.59)     118.9590 (2.01)      49.8765 (2.61)      6.6306 (2.31)      47.4450 (2.58)      1.5590 (4.35)    2276;2776       20.0495 (0.38)      17336           1
+test_cramjam_snappy_de_compress_into[kppkn.gtb-compress_into]                       127.1530 (7.24)     223.4660 (3.78)     137.4548 (7.18)     12.9390 (4.50)     131.7830 (7.18)      7.1705 (20.00)     844;886        7.2751 (0.14)       6095           1
+test_cramjam_snappy_de_compress_into[kppkn.gtb-decompress_into]                      69.3210 (3.95)     162.5740 (2.75)      76.7793 (4.01)     10.2444 (3.56)      73.8570 (4.02)      2.7220 (7.59)    1118;2146       13.0243 (0.25)      11894           1
+test_cramjam_snappy_de_compress_into[lcet10.txt-compress_into]                      191.7940 (10.93)    338.6870 (5.72)     207.6322 (10.85)    18.0247 (6.27)     199.7430 (10.88)    11.4570 (31.96)     587;531        4.8162 (0.09)       5000           1
+test_cramjam_snappy_de_compress_into[lcet10.txt-decompress_into]                     77.7750 (4.43)     338.1339 (5.71)      84.4765 (4.41)     10.4472 (3.63)      80.7050 (4.39)      2.7620 (7.70)     984;2034       11.8376 (0.23)      10322           1
+test_cramjam_snappy_de_compress_into[paper-100k.pdf-compress_into]                   26.6640 (1.52)     242.2140 (4.09)      29.3447 (1.53)      4.2104 (1.46)      28.1900 (1.53)      0.9080 (2.53)    2437;2960       34.0777 (0.65)      26911           1
+test_cramjam_snappy_de_compress_into[paper-100k.pdf-decompress_into]                 21.8910 (1.25)     244.9150 (4.14)      23.8577 (1.25)      3.6118 (1.26)      22.8060 (1.24)      0.8357 (2.33)    2815;3565       41.9152 (0.80)      30571           1
+test_cramjam_snappy_de_compress_into[plrabn12.txt-compress_into]                    232.9760 (13.27)    423.5980 (7.16)     252.4664 (13.19)    22.3262 (7.76)     242.1575 (13.19)    16.2451 (45.31)     452;341        3.9609 (0.08)       3832           1
+test_cramjam_snappy_de_compress_into[plrabn12.txt-decompress_into]                   93.4720 (5.33)     191.9320 (3.24)     100.7861 (5.27)     10.8995 (3.79)      96.8360 (5.27)      3.2852 (9.16)     680;1188        9.9220 (0.19)       6673           1
+test_cramjam_snappy_de_compress_into[urls.10K-compress_into]                        140.6160 (8.01)     267.2590 (4.52)     152.2335 (7.95)     14.4990 (5.04)     146.4630 (7.97)      6.3553 (17.73)     682;938        6.5689 (0.13)       5901           1
+test_cramjam_snappy_de_compress_into[urls.10K-decompress_into]                       58.6630 (3.34)     126.4510 (2.14)      63.6568 (3.33)      7.5369 (2.62)      60.9710 (3.32)      1.9845 (5.54)    1022;1536       15.7092 (0.30)       9257           1
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+```
+
 #### Lz4
 
 `make bench-lz4`

@@ -1,5 +1,6 @@
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::{to_py_err, BytesType, Output};
+use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
@@ -11,6 +12,8 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decompress, m)?)?;
     m.add_function(wrap_pyfunction!(compress_raw, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_raw, m)?)?;
+    m.add_function(wrap_pyfunction!(compress_into, m)?)?;
+    m.add_function(wrap_pyfunction!(decompress_into, m)?)?;
     Ok(())
 }
 
@@ -145,6 +148,18 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
             Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
         }
     }
+}
+
+/// Compress directly into an output buffer
+#[pyfunction]
+pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
+    crate::de_compress_into(data.as_bytes(), array, self::internal::compress)
+}
+
+/// Decompress directly into an output buffer
+#[pyfunction]
+pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyArray1<u8>) -> PyResult<usize> {
+    crate::de_compress_into(data.as_bytes(), array, self::internal::decompress)
 }
 
 mod internal {
