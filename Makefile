@@ -26,4 +26,8 @@ dev-install:
 	maturin build --release --out wheels --interpreter $(shell which python)
 	pip uninstall cramjam -y
 	rm wheels/*.tar.gz
-	pip install --no-index wheels/*
+	pip install cramjam --no-index --find-links wheels/
+
+pypy-build:
+	maturin build -i $(shell which pypy) --release --out wheels
+	pypy ./pypy_patch.py
