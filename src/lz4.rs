@@ -64,7 +64,7 @@ pub fn compress<'a>(
     }
 }
 
-mod internal {
+pub(crate) mod internal {
     use std::error::Error;
 
     /// Decompress lz4 data

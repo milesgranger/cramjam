@@ -7,7 +7,29 @@ on:
   pull_request:
 
 jobs:
-  test:
+
+  rust-build-n-test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          components: clippy
+          override: true
+
+      - name: Build
+        run: cargo build
+
+      - name: Tests
+        run: cargo test
+
+  python-build-n-test:
+    needs: rust-build-n-test
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

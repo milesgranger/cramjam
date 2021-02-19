@@ -118,3 +118,57 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+
+    use super::Output;
+
+    // Default testing data
+    fn gen_data() -> Vec<u8> {
+        (0..1000000)
+            .map(|_| "oh what a beautiful morning, oh what a beautiful day!!")
+            .collect::<String>()
+            .into_bytes()
+    }
+
+    // Single test generation
+    macro_rules! round_trip {
+        ($name:ident($compress_output:ident -> $decompress_output:ident), variant=$variant:ident, compressed_len=$compressed_len:literal, $(level=$level:tt)?) => {
+            #[test]
+            fn $name() {
+                let data = gen_data();
+                let mut compressed = if stringify!($compress_output) == "Slice" { vec![0; $compressed_len] } else { Vec::new() };
+                let compressed_size = crate::$variant::internal::compress(&data, Output::$compress_output(&mut compressed) $(, $level)? ).unwrap();
+                assert_eq!(compressed_size, $compressed_len);
+
+                let mut decompressed = if stringify!($decompress_output) == "Slice" { vec![0; data.len()] } else { Vec::new() };
+                let decompressed_size = crate::$variant::internal::decompress(&compressed, Output::$decompress_output(&mut decompressed)).unwrap();
+                assert_eq!(decompressed_size, data.len());
+                if &decompressed[..decompressed_size] != &data {
+                    panic!("Decompressed and original data do not match! :-(")
+                }
+            }
+        }
+    }
+
+    // macro to generate each variation of Output::* roundtrip.
+    macro_rules! test_variant {
+        ($variant:ident, compressed_len=$compressed_len:literal, $(level=$level:tt)?) => {
+         #[cfg(test)]
+         mod $variant {
+            use super::*;
+            round_trip!(roundtrip_compress_via_slice_decompress_via_slice(Slice -> Slice), variant=$variant, compressed_len=$compressed_len, $(level=$level)? );
+            round_trip!(roundtrip_compress_via_slice_decompress_via_vector(Slice -> Vector), variant=$variant, compressed_len=$compressed_len, $(level=$level)? );
+            round_trip!(roundtrip_compress_via_vector_decompress_via_slice(Vector -> Slice), variant=$variant, compressed_len=$compressed_len, $(level=$level)? );
+            round_trip!(roundtrip_compress_via_vector_decompress_via_vector(Vector -> Vector), variant=$variant, compressed_len=$compressed_len, $(level=$level)? );
+         }
+        }
+    }
+
+    test_variant!(snappy, compressed_len = 2572398,);
+    test_variant!(gzip, compressed_len = 157192, level = None);
+    test_variant!(brotli, compressed_len = 729, level = None);
+    test_variant!(deflate, compressed_len = 157174, level = None);
+    test_variant!(zstd, compressed_len = 4990, level = None);
+}

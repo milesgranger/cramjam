@@ -1,7 +1,10 @@
 import pytest
 import numpy as np
 import cramjam
+import hashlib
 
+def same_same(a, b):
+    return hashlib.md5(a).hexdigest() == hashlib.md5(b).hexdigest()
 
 @pytest.mark.parametrize(
     "variant_str", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
@@ -37,19 +40,15 @@ def test_variants_de_compress_into(variant_str):
 
     variant = getattr(cramjam, variant_str)
 
-    uncompressed = b"some bytes to compress 123 " * 5
-    uncompressed_len = len(uncompressed)
+    data = b"oh what a beautiful morning, oh what a beautiful day!!" * 1000000
 
-    # Get output len of compressed
-    compressed = variant.compress(uncompressed)
-    compressed_len = len(compressed)
+    compressed_array = np.zeros(len(data), dtype=np.uint8)  # plenty of space
+    compressed_size = variant.compress_into(data, compressed_array)
+    decompressed = variant.decompress(compressed_array[:compressed_size].tobytes())
+    assert same_same(decompressed, data)
 
-    compress_into_buffer = np.zeros(compressed_len, dtype=np.uint8)
-    size = variant.compress_into(uncompressed, compress_into_buffer)
-    assert size == compressed_len
-    assert compress_into_buffer.tobytes() == compressed
-
-    decompress_into_buffer = np.zeros(uncompressed_len, dtype=np.uint8)
-    size = variant.decompress_into(compressed, decompress_into_buffer)
-    assert size == uncompressed_len
-    assert decompress_into_buffer.tobytes() == uncompressed
+    compressed = variant.compress(data)
+    decompressed_array = np.zeros(len(data), np.uint8)
+    decompressed_size = variant.decompress_into(compressed, decompressed_array)
+    decompressed = decompressed_array[:decompressed_size].tobytes()
+    assert same_same(decompressed, data)

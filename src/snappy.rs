@@ -162,10 +162,10 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
     crate::de_compress_into(data.as_bytes(), array, self::internal::decompress)
 }
 
-mod internal {
+pub(crate) mod internal {
     use snap::raw::{Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Error, Read};
+    use std::io::{Cursor, Error, Read, Write};
 
     use crate::Output;
 
@@ -185,7 +185,18 @@ mod internal {
     pub fn decompress<'a>(data: &'a [u8], output: Output<'a>) -> Result<usize, Error> {
         let mut decoder = FrameDecoder::new(data);
         match output {
-            Output::Slice(slice) => decoder.read(slice),
+            Output::Slice(slice) => {
+                let mut decoder = FrameDecoder::new(data);
+                let mut n_bytes = 0;
+                loop {
+                    let count = decoder.read(&mut slice[n_bytes..])?;
+                    if count == 0 {
+                        break;
+                    }
+                    n_bytes += count;
+                }
+                Ok(n_bytes)
+            }
             Output::Vector(v) => decoder.read_to_end(v),
         }
     }
@@ -194,7 +205,12 @@ mod internal {
     pub fn compress<'a>(data: &'a [u8], output: Output<'a>) -> Result<usize, Error> {
         let mut encoder = FrameEncoder::new(data);
         match output {
-            Output::Slice(slice) => encoder.read(slice),
+            Output::Slice(slice) => {
+                let buffer = Cursor::new(slice);
+                let mut encoder = snap::write::FrameEncoder::new(buffer);
+                encoder.write_all(data)?;
+                Ok(encoder.get_ref().position() as usize)
+            }
             Output::Vector(v) => encoder.read_to_end(v),
         }
     }
