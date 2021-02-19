@@ -3,23 +3,30 @@ import numpy as np
 import cramjam
 import hashlib
 
+
 def same_same(a, b):
     return hashlib.md5(a).hexdigest() == hashlib.md5(b).hexdigest()
 
+
+@pytest.mark.parametrize("is_bytearray", (True, False))
 @pytest.mark.parametrize(
     "variant_str", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
 )
-def test_variants_simple(variant_str):
+def test_variants_simple(variant_str, is_bytearray):
 
     variant = getattr(cramjam, variant_str)
 
     uncompressed = b"some bytes to compress 123" * 1000
+    if is_bytearray:
+        uncompressed = bytearray(uncompressed)
 
     compressed = variant.compress(uncompressed)
     assert compressed != uncompressed
+    assert type(compressed) == type(uncompressed)
 
     decompressed = variant.decompress(compressed, output_len=len(uncompressed))
     assert decompressed == uncompressed
+    assert type(decompressed) == type(uncompressed)
 
 
 @pytest.mark.parametrize(
@@ -28,12 +35,10 @@ def test_variants_simple(variant_str):
 def test_variants_raise_exception(variant_str):
     variant = getattr(cramjam, variant_str)
     with pytest.raises(cramjam.DecompressionError):
-        variant.decompress(b'sknow')
+        variant.decompress(b"sknow")
 
 
-@pytest.mark.parametrize(
-    "variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd")
-)
+@pytest.mark.parametrize("variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd"))
 def test_variants_de_compress_into(variant_str):
 
     # TODO: support lz4 de/compress_into

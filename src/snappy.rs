@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use snap::raw::{decompress_len, max_compress_len};
+use snap::raw::max_compress_len;
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -27,34 +27,43 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// ```
 #[pyfunction]
 pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
-    let estimated_len = match output_len {
-        Some(len) => len,
-        None => to_py_err!(DecompressionError -> decompress_len(data.as_bytes()))?,
-    };
     let result = match data {
         BytesType::Bytes(bytes) => {
-            let pybytes = if output_len.is_some() {
-                PyBytes::new_with(py, estimated_len, |buffer| {
-                    to_py_err!(DecompressionError -> self::internal::decompress(bytes.as_bytes(), Output::Slice(buffer)))?;
+            let pybytes = match output_len {
+                Some(len) => PyBytes::new_with(py, len, |output| {
+                    to_py_err!(DecompressionError -> self::internal::decompress(bytes.as_bytes(), Output::Slice(output)))?;
                     Ok(())
-                })?
-            } else {
-                let mut buffer = Vec::with_capacity(estimated_len);
+                })?,
+                None => {
+                    let mut output = Vec::with_capacity(data.len());
 
-                to_py_err!(DecompressionError -> self::internal::decompress(bytes.as_bytes(), Output::Vector(&mut buffer)))?;
-                PyBytes::new(py, &buffer)
+                    to_py_err!(DecompressionError -> self::internal::decompress(bytes.as_bytes(), Output::Vector(&mut output)))?;
+                    PyBytes::new(py, &output)
+                }
             };
             BytesType::Bytes(pybytes)
         }
-        BytesType::ByteArray(bytes_array) => unsafe {
-            let mut actual_len = 0;
-            let pybytes = PyByteArray::new_with(py, estimated_len, |output| {
-                actual_len = to_py_err!(DecompressionError -> self::internal::decompress(bytes_array.as_bytes(), Output::Slice(output)))?;
-                Ok(())
-            })?;
-            pybytes.resize(actual_len)?;
-            BytesType::ByteArray(pybytes)
-        },
+        BytesType::ByteArray(bytes_array) => {
+            let bytes = unsafe { bytes_array.as_bytes() };
+            match output_len {
+                Some(len) => {
+                    let mut actual_len = 0;
+                    let pybytes = PyByteArray::new_with(py, len, |output| {
+                        actual_len =
+                            to_py_err!(DecompressionError -> self::internal::decompress(bytes, Output::Slice(output)))?;
+                        Ok(())
+                    })?;
+                    pybytes.resize(actual_len)?;
+                    BytesType::ByteArray(pybytes)
+                }
+                None => {
+                    let mut output = Vec::with_capacity(data.len());
+                    to_py_err!(DecompressionError -> self::internal::decompress(bytes, Output::Vector(&mut output)))?;
+                    let pybytes = PyByteArray::new(py, &output);
+                    BytesType::ByteArray(pybytes)
+                }
+            }
+        }
     };
     Ok(result)
 }
@@ -165,7 +174,7 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
 pub(crate) mod internal {
     use snap::raw::{Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Cursor, Error, Read, Write};
+    use std::io::{Error, Cursor};
 
     use crate::Output;
 
@@ -186,18 +195,15 @@ pub(crate) mod internal {
         let mut decoder = FrameDecoder::new(data);
         match output {
             Output::Slice(slice) => {
-                let mut decoder = FrameDecoder::new(data);
-                let mut n_bytes = 0;
-                loop {
-                    let count = decoder.read(&mut slice[n_bytes..])?;
-                    if count == 0 {
-                        break;
-                    }
-                    n_bytes += count;
-                }
-                Ok(n_bytes)
+                let mut wtr = Cursor::new(slice);
+                let n_bytes = std::io::copy(&mut decoder, &mut wtr)?;
+                Ok(n_bytes as usize)
             }
-            Output::Vector(v) => decoder.read_to_end(v),
+            Output::Vector(v) => {
+                let mut wtr = Cursor::new(v);
+                let n_bytes = std::io::copy(&mut decoder, &mut wtr)?;
+                Ok(n_bytes as usize)
+            },
         }
     }
 
@@ -206,12 +212,15 @@ pub(crate) mod internal {
         let mut encoder = FrameEncoder::new(data);
         match output {
             Output::Slice(slice) => {
-                let buffer = Cursor::new(slice);
-                let mut encoder = snap::write::FrameEncoder::new(buffer);
-                encoder.write_all(data)?;
-                Ok(encoder.get_ref().position() as usize)
+                let mut wtr = Cursor::new(slice);
+                let n_bytes = std::io::copy(&mut encoder, &mut wtr)?;
+                Ok(n_bytes as usize)
             }
-            Output::Vector(v) => encoder.read_to_end(v),
+            Output::Vector(v) => {
+                let mut wtr = Cursor::new(v);
+                let n_bytes = std::io::copy(&mut encoder, &mut wtr)?;
+                Ok(n_bytes as usize)
+            },
         }
     }
 }
