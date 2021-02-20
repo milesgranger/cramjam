@@ -26,10 +26,7 @@ def test_snappy(benchmark, file, use_cramjam: bool):
     """
     import snappy
 
-    data = bytearray(
-        file.read_bytes()
-    )  # bytearray avoids double allocation in cramjam snappy by default
-    # Can be slightly faster if passing output_len to compress/decompress ops
+    data = file.read_bytes()
     if use_cramjam:
         benchmark(
             round_trip,
@@ -54,7 +51,7 @@ def test_cramjam_snappy_de_compress_into(benchmark, op, file):
     """
     from cramjam import snappy
 
-    data = bytearray(file.read_bytes())
+    data = file.read_bytes()
     compressed_data = cramjam.snappy.compress(data)
 
     operation = getattr(snappy, op)

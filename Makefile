@@ -7,7 +7,7 @@ bench:
 	python -m pytest -v --benchmark-only --benchmark-sort name benchmarks/
 
 bench-snappy:
-	$(BASE_BENCH_CMD) snappy
+	$(BASE_BENCH_CMD) test_snappy
 
 bench-snappy-compress-into:
 	$(BASE_BENCH_CMD) snappy_de_compress_into
