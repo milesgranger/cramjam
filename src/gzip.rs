@@ -1,10 +1,11 @@
 use crate::exceptions::{CompressionError, DecompressionError};
-use crate::{to_py_err, BytesType, Output};
+use crate::{to_py_err, BytesType, WriteablePyByteArray};
 use numpy::PyArray1;
 use pyo3::prelude::*;
-use pyo3::types::{PyByteArray, PyBytes};
+use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
+use std::io::Cursor;
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -24,40 +25,26 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
 #[pyfunction]
 pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
     match data {
-        BytesType::Bytes(input) => match output_len {
+        BytesType::Bytes(_) => match output_len {
             Some(len) => {
                 let pybytes = PyBytes::new_with(py, len, |buffer| {
-                    let output = Output::Slice(buffer);
-                    to_py_err!(DecompressionError -> self::internal::decompress(input.as_bytes(), output))?;
+                    let mut cursor = Cursor::new(buffer);
+                    to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), &mut cursor))?;
                     Ok(())
                 })?;
                 Ok(BytesType::Bytes(pybytes))
             }
             None => {
-                let mut buffer = Vec::with_capacity(data.len() / 10);
-                let output = Output::Vector(&mut buffer);
-                to_py_err!(DecompressionError -> self::internal::decompress(input.as_bytes(), output))?;
+                let mut buffer = Vec::with_capacity(data.len());
+                to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), &mut buffer))?;
                 Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
             }
         },
-        BytesType::ByteArray(input) => match output_len {
-            Some(len) => {
-                let mut size = 0;
-                let pybytes = PyByteArray::new_with(py, len, |buffer| {
-                    let output = Output::Slice(buffer);
-                    size = to_py_err!(DecompressionError -> self::internal::decompress(unsafe { input.as_bytes() }, output))?;
-                    Ok(())
-                })?;
-                pybytes.resize(size)?;
-                Ok(BytesType::ByteArray(pybytes))
-            }
-            None => {
-                let mut buffer = Vec::with_capacity(data.len() / 10);
-                let output = Output::Vector(&mut buffer);
-                to_py_err!(DecompressionError -> self::internal::decompress(unsafe { input.as_bytes() }, output))?;
-                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
-            }
-        },
+        BytesType::ByteArray(_) => {
+            let mut pybytes = WriteablePyByteArray::new(py, output_len.unwrap_or_else(|| 0));
+            to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), &mut pybytes))?;
+            Ok(BytesType::ByteArray(pybytes.into_inner()?))
+        }
     }
 }
 
@@ -76,40 +63,26 @@ pub fn compress<'a>(
     output_len: Option<usize>,
 ) -> PyResult<BytesType<'a>> {
     match data {
-        BytesType::Bytes(input) => match output_len {
+        BytesType::Bytes(_) => match output_len {
             Some(len) => {
                 let pybytes = PyBytes::new_with(py, len, |buffer| {
-                    let output = Output::Slice(buffer);
-                    to_py_err!(CompressionError -> self::internal::compress(input.as_bytes(), output, level))?;
+                    let mut cursor = Cursor::new(buffer);
+                    to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut cursor, level))?;
                     Ok(())
                 })?;
                 Ok(BytesType::Bytes(pybytes))
             }
             None => {
                 let mut buffer = Vec::with_capacity(data.len() / 10);
-                let output = Output::Vector(&mut buffer);
-                to_py_err!(CompressionError -> self::internal::compress(input.as_bytes(), output, level))?;
+                to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut buffer, level))?;
                 Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
             }
         },
-        BytesType::ByteArray(input) => match output_len {
-            Some(len) => {
-                let mut size = 0;
-                let pybytes = PyByteArray::new_with(py, len, |buffer| {
-                    let output = Output::Slice(buffer);
-                    size = to_py_err!(CompressionError -> self::internal::compress(unsafe { input.as_bytes() }, output, level))?;
-                    Ok(())
-                })?;
-                pybytes.resize(size)?;
-                Ok(BytesType::ByteArray(pybytes))
-            }
-            None => {
-                let mut buffer = Vec::with_capacity(data.len() / 10);
-                let output = Output::Vector(&mut buffer);
-                to_py_err!(CompressionError -> self::internal::compress(unsafe { input.as_bytes() }, output, level))?;
-                Ok(BytesType::ByteArray(PyByteArray::new(py, &buffer)))
-            }
-        },
+        BytesType::ByteArray(_) => {
+            let mut pybytes = WriteablePyByteArray::new(py, output_len.unwrap_or_else(|| 0));
+            to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut pybytes, level))?;
+            Ok(BytesType::ByteArray(pybytes.into_inner()?))
+        }
     }
 }
 
@@ -121,62 +94,33 @@ pub fn compress_into<'a>(
     array: &PyArray1<u8>,
     level: Option<u32>,
 ) -> PyResult<usize> {
-    crate::de_compress_into(data.as_bytes(), array, |bytes, out| {
-        self::internal::compress(bytes, out, level)
-    })
+    crate::de_comp_into!(compress(data -> array), level)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
 pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyArray1<u8>) -> PyResult<usize> {
-    crate::de_compress_into(data.as_bytes(), array, self::internal::decompress)
+    crate::de_comp_into!(decompress(data -> array))
 }
 
 pub(crate) mod internal {
-    use crate::Output;
-    use flate2::read::GzDecoder;
+    use flate2::read::{GzDecoder, GzEncoder};
     use flate2::Compression;
     use std::io::prelude::*;
-    use std::io::{Cursor, Error};
+    use std::io::Error;
 
     /// Decompress gzip data
-    pub fn decompress<'a>(data: &'a [u8], output: Output<'a>) -> Result<usize, Error> {
-        let mut decoder = GzDecoder::new(data);
-        match output {
-            Output::Slice(slice) => {
-                let mut n_bytes = 0;
-                loop {
-                    let count = decoder.read(&mut slice[n_bytes..])?;
-                    if count == 0 {
-                        break;
-                    }
-                    n_bytes += count;
-                }
-                Ok(n_bytes)
-            }
-            Output::Vector(v) => decoder.read_to_end(v),
-        }
+    pub fn decompress<W: Write + ?Sized>(input: &[u8], output: &mut W) -> Result<usize, Error> {
+        let mut decoder = GzDecoder::new(input);
+        let n_bytes = std::io::copy(&mut decoder, output)?;
+        Ok(n_bytes as usize)
     }
 
     /// Compress gzip data
-    pub fn compress<'a>(data: &'a [u8], output: Output<'a>, level: Option<u32>) -> Result<usize, Error> {
+    pub fn compress<W: Write + ?Sized>(input: &[u8], output: &mut W, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| 6);
-        match output {
-            Output::Slice(slice) => {
-                // GzEncoder::read does not output the 'tail' of the gzip encoding. So we need to
-                // calculate the checksum and the data length manually.
-                use flate2::write::GzEncoder;
-                let cursor = Cursor::new(slice);
-                let mut encoder = GzEncoder::new(cursor, Compression::new(level));
-                encoder.write_all(data)?;
-                let writer = encoder.finish()?;
-                Ok(writer.position() as usize)
-            }
-            Output::Vector(v) => {
-                use flate2::read::GzEncoder;
-                let mut encoder = GzEncoder::new(data, Compression::new(level));
-                encoder.read_to_end(v)
-            }
-        }
+        let mut encoder = GzEncoder::new(input, Compression::new(level));
+        let n_bytes = std::io::copy(&mut encoder, output)?;
+        Ok(n_bytes as usize)
     }
 }
