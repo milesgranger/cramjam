@@ -22,7 +22,7 @@ def round_trip(compress, decompress, data, **kwargs):
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
 def test_snappy_raw(benchmark, file, use_cramjam: bool):
     """
-    Uses snappy compression
+    Uses snappy compression raw
     """
     import snappy
 
@@ -49,10 +49,9 @@ def test_snappy_raw(benchmark, file, use_cramjam: bool):
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
 def test_snappy_framed(benchmark, file, use_cramjam: bool):
     """
-    Uses snappy compression
+    Uses snappy compression framed
     """
     import snappy
-    import io
 
     data = bytearray(file.read_bytes())
     if use_cramjam:
@@ -63,26 +62,12 @@ def test_snappy_framed(benchmark, file, use_cramjam: bool):
             data=data,
         )
     else:
-
-        # TODO: snappy.stream_de/compress only operates on file-like... is this a fair comp?
-        def snappy_framed_round_trip(compress, decompress, data):
-
-            # compress
-            cmpressed_dst = io.BytesIO()
-            compress(io.BytesIO(data), cmpressed_dst)
-            cmpressed_dst.seek(0)
-
-            # decompress
-            dst = io.BytesIO()
-            decompress(cmpressed_dst, dst)
-            dst.seek(0)
-            return dst.read()
-
-
+        compressor = snappy.StreamCompressor()
+        decompressor = snappy.StreamDecompressor()
         benchmark(
-            snappy_framed_round_trip,
-            compress=snappy.stream_compress,
-            decompress=snappy.stream_decompress,
+            round_trip,
+            compress=compressor.compress,
+            decompress=decompressor.decompress,
             data=data,
         )
 
