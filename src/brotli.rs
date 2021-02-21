@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use std::io::Cursor;
+use std::io::{Cursor, Error, Write};
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -43,6 +43,41 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
         BytesType::ByteArray(_) => {
             let mut pybytes = WriteablePyByteArray::new(py, output_len.unwrap_or_else(|| data.len()));
             to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), &mut pybytes))?;
+            Ok(BytesType::ByteArray(pybytes.into_inner()?))
+        }
+    }
+}
+
+pub fn generic_py_compress<'a, F, W>(
+    py: Python<'a>,
+    data: BytesType<'a>,
+    level: Option<u32>,
+    output_len: Option<usize>,
+    func: F,
+) -> PyResult<BytesType<'a>>
+where
+    W: Write + ?Sized,
+    F: FnOnce(&[u8], &mut dyn Write, Option<u32>) -> Result<usize, Error>,
+{
+    match data {
+        BytesType::Bytes(_) => match output_len {
+            Some(len) => {
+                let pybytes = PyBytes::new_with(py, len, |buffer| {
+                    let mut cursor = Cursor::new(buffer);
+                    to_py_err!(CompressionError -> func(data.as_bytes(), &mut cursor, level))?;
+                    Ok(())
+                })?;
+                Ok(BytesType::Bytes(pybytes))
+            }
+            None => {
+                let mut buffer = Vec::with_capacity(data.len() / 10);
+                to_py_err!(CompressionError -> func(data.as_bytes(), &mut buffer, level))?;
+                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
+            }
+        },
+        BytesType::ByteArray(_) => {
+            let mut pybytes = WriteablePyByteArray::new(py, output_len.unwrap_or_else(|| 0));
+            to_py_err!(CompressionError -> func(data.as_bytes(), &mut pybytes, level))?;
             Ok(BytesType::ByteArray(pybytes.into_inner()?))
         }
     }
