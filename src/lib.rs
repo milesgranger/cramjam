@@ -161,7 +161,7 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
 #[cfg(test)]
 mod tests {
 
-    use std::io::{Cursor, Write};
+    use std::io::Cursor;
 
     // Default testing data
     fn gen_data() -> Vec<u8> {
