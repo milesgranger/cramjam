@@ -44,6 +44,7 @@ pub enum BytesType<'a> {
 }
 
 impl<'a> BytesType<'a> {
+    #[allow(dead_code)]
     fn len(&self) -> usize {
         self.as_bytes().len()
     }
@@ -113,7 +114,7 @@ impl<'a> Write for WriteablePyByteArray<'a> {
 /// This will handle gaining access to the Python's array as a buffer for an underlying de/compression
 /// function which takes the normal `&[u8]` and `Output` types
 #[macro_export]
-macro_rules! de_comp_into {
+macro_rules! generic_into {
     ($op:ident($input:ident -> $output:ident) $(, $level:ident)?) => {
         {
             let mut array_mut = unsafe { $output.as_array_mut() };
@@ -124,6 +125,50 @@ macro_rules! de_comp_into {
             let mut cursor = Cursor::new(buffer);
             let size = to_py_err!(DecompressionError -> self::internal::$op($input.as_bytes(), &mut cursor $(, $level)?))?;
             Ok(size)
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! generic {
+    ($op:ident($input:ident), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
+        {
+            let bytes = $input.as_bytes();
+            match $input {
+                BytesType::Bytes(_) => match $output_len {
+                    Some(len) => {
+                        let pybytes = PyBytes::new_with($py, len, |buffer| {
+                            let mut cursor = Cursor::new(buffer);
+                            if stringify!($op) == "compress" {
+                                to_py_err!(CompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                            } else {
+                                to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                            }
+                            Ok(())
+                        })?;
+                        Ok(BytesType::Bytes(pybytes))
+                    }
+                    None => {
+                        let mut buffer = Vec::new();
+                        if stringify!($op) == "compress" {
+                            to_py_err!(CompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                        } else {
+                            to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                        }
+
+                        Ok(BytesType::Bytes(PyBytes::new($py, &buffer)))
+                    }
+                },
+                BytesType::ByteArray(_) => {
+                    let mut pybytes = WriteablePyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
+                    if stringify!($op) == "compress" {
+                        to_py_err!(CompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                    } else {
+                        to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                    }
+                    Ok(BytesType::ByteArray(pybytes.into_inner()?))
+                }
+            }
         }
     }
 }

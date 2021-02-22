@@ -1,11 +1,10 @@
 use crate::exceptions::{CompressionError, DecompressionError};
-use crate::{de_comp_into, to_py_err, BytesType, WriteablePyByteArray};
+use crate::{to_py_err, BytesType, WriteablePyByteArray};
 use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use snap::raw::max_compress_len;
 use std::io::Cursor;
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
@@ -28,33 +27,7 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// ```
 #[pyfunction]
 pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
-    let result = match data {
-        BytesType::Bytes(bytes) => {
-            let pybytes = match output_len {
-                Some(len) => PyBytes::new_with(py, len, |output| {
-                    let mut cursor = Cursor::new(output);
-                    to_py_err!(DecompressionError -> self::internal::decompress(bytes.as_bytes(), &mut cursor))?;
-                    Ok(())
-                })?,
-                None => {
-                    let mut output = Vec::with_capacity(data.len());
-                    to_py_err!(DecompressionError -> self::internal::decompress(bytes.as_bytes(), &mut output))?;
-                    PyBytes::new(py, &output)
-                }
-            };
-            BytesType::Bytes(pybytes)
-        }
-        BytesType::ByteArray(bytes_array) => {
-            let mut pybytes = match output_len {
-                Some(len) => WriteablePyByteArray::new(py, len),
-                None => WriteablePyByteArray::new(py, data.len()),
-            };
-            let bytes = unsafe { bytes_array.as_bytes() };
-            to_py_err!(DecompressionError -> self::internal::decompress(bytes, &mut pybytes))?;
-            BytesType::ByteArray(pybytes.into_inner()?)
-        }
-    };
-    Ok(result)
+    crate::generic!(decompress(data), py = py, output_len = output_len)
 }
 
 /// Snappy compression.
@@ -67,35 +40,7 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 /// ```
 #[pyfunction]
 pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
-    // Prefer the user's output_len, fallback to estimate the output len
-    let estimated_len = output_len.unwrap_or_else(|| max_compress_len(data.len()));
-
-    let result = match data {
-        BytesType::Bytes(bytes) => {
-            // user provided the exact output len
-            if output_len.is_some() {
-                let pybytes = PyBytes::new_with(py, estimated_len, |buffer| {
-                    let mut cursor = Cursor::new(buffer);
-                    to_py_err!(CompressionError -> self::internal::compress(bytes.as_bytes(), &mut cursor))?;
-                    Ok(())
-                })?;
-                BytesType::Bytes(pybytes)
-
-                // we can use the estimated length, but need to use buffer as we don't know for sure the length
-            } else {
-                let mut buffer = Vec::with_capacity(estimated_len);
-                to_py_err!(CompressionError -> self::internal::compress(bytes.as_bytes(), &mut buffer))?;
-                let pybytes = PyBytes::new(py, &buffer);
-                BytesType::Bytes(pybytes)
-            }
-        }
-        BytesType::ByteArray(_) => {
-            let mut pybytes = WriteablePyByteArray::new(py, estimated_len);
-            to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut pybytes))?;
-            BytesType::ByteArray(pybytes.into_inner()?)
-        }
-    };
-    Ok(result)
+    crate::generic!(compress(data), py = py, output_len = output_len)
 }
 
 /// Snappy decompression, raw
@@ -145,13 +90,13 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
 /// Compress directly into an output buffer
 #[pyfunction]
 pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    de_comp_into!(compress(data -> array))
+    crate::generic_into!(compress(data -> array))
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
 pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyArray1<u8>) -> PyResult<usize> {
-    de_comp_into!(decompress(data -> array))
+    crate::generic_into!(decompress(data -> array))
 }
 
 pub(crate) mod internal {

@@ -24,28 +24,7 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// ```
 #[pyfunction]
 pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
-    match data {
-        BytesType::Bytes(_) => match output_len {
-            Some(len) => {
-                let pybytes = PyBytes::new_with(py, len, |buffer| {
-                    let mut cursor = Cursor::new(buffer);
-                    to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), &mut cursor))?;
-                    Ok(())
-                })?;
-                Ok(BytesType::Bytes(pybytes))
-            }
-            None => {
-                let mut buffer = Vec::with_capacity(data.len());
-                to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), &mut buffer))?;
-                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
-            }
-        },
-        BytesType::ByteArray(_) => {
-            let mut pybytes = WriteablePyByteArray::new(py, output_len.unwrap_or_else(|| data.len()));
-            to_py_err!(DecompressionError -> self::internal::decompress(data.as_bytes(), &mut pybytes))?;
-            Ok(BytesType::ByteArray(pybytes.into_inner()?))
-        }
-    }
+    crate::generic!(decompress(data), py = py, output_len = output_len)
 }
 
 /// Deflate compression.
@@ -62,28 +41,7 @@ pub fn compress<'a>(
     level: Option<u32>,
     output_len: Option<usize>,
 ) -> PyResult<BytesType<'a>> {
-    match data {
-        BytesType::Bytes(_) => match output_len {
-            Some(len) => {
-                let pybytes = PyBytes::new_with(py, len, |buffer| {
-                    let mut cursor = Cursor::new(buffer);
-                    to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut cursor, level))?;
-                    Ok(())
-                })?;
-                Ok(BytesType::Bytes(pybytes))
-            }
-            None => {
-                let mut buffer = Vec::new();
-                to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut buffer, level))?;
-                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
-            }
-        },
-        BytesType::ByteArray(_) => {
-            let mut pybytes = WriteablePyByteArray::new(py, output_len.unwrap_or_else(|| 0));
-            to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut pybytes, level))?;
-            Ok(BytesType::ByteArray(pybytes.into_inner()?))
-        }
-    }
+    crate::generic!(compress(data), py = py, output_len = output_len, level = level)
 }
 
 /// Compress directly into an output buffer
@@ -94,13 +52,13 @@ pub fn compress_into<'a>(
     array: &PyArray1<u8>,
     level: Option<u32>,
 ) -> PyResult<usize> {
-    crate::de_comp_into!(compress(data -> array), level)
+    crate::generic_into!(compress(data -> array), level)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
 pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyArray1<u8>) -> PyResult<usize> {
-    crate::de_comp_into!(decompress(data -> array))
+    crate::generic_into!(decompress(data -> array))
 }
 
 pub(crate) mod internal {

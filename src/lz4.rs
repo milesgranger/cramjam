@@ -50,7 +50,6 @@ pub fn compress<'a>(
     level: Option<u32>,
     output_len: Option<usize>,
 ) -> PyResult<BytesType<'a>> {
-    let level = level.unwrap_or_else(|| 4);
 
     match data {
         BytesType::Bytes(input) => {
@@ -74,7 +73,8 @@ pub(crate) mod internal {
 
     /// Compress lz4 data
     // TODO: lz-fear does not yet support level
-    pub fn compress(data: &[u8], _level: u32) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn compress(data: &[u8], level: Option<u32>) -> Result<Vec<u8>, Box<dyn Error>> {
+        let _ = level.unwrap_or_else(|| 4);
         let mut buf = vec![];
         lz_fear::framed::CompressionSettings::default().compress(data, &mut buf)?;
         Ok(buf)
