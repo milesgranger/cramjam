@@ -31,7 +31,6 @@ dev-install:
 	rm -rf ./dist
 	maturin build --release --out dist --no-sdist --interpreter $(shell which python)
 	pip uninstall cramjam -y
-	rm dist/*.tar.gz
 	pip install cramjam --no-index --find-links dist/
 
 pypy-build:
