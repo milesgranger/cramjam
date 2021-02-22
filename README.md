@@ -1,7 +1,7 @@
 # pyrus-cramjam
 
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
-[![CI](https://github.com/milesgranger/pyrus-cramjam/workflows/MasterCI/badge.svg?branch=master)](https://github.com/milesgranger/pyrus-cramjam/actions?query=branch=master)
+[![CI](https://github.com/milesgranger/pyrus-cramjam/workflows/CI/badge.svg?branch=master)](https://github.com/milesgranger/pyrus-cramjam/actions?query=branch=master)
 
 [API Documentation](https://docs.rs/cramjam)
 

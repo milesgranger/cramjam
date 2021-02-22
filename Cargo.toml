@@ -10,8 +10,12 @@ description = "Thin Python bindings to de/compression algorithms in Rust"
 [lib]
 crate-type = ["cdylib"]
 
+[features]
+default = ["abi3"]
+abi3 = ["pyo3/abi3-py36"]
+
 [dependencies]
-pyo3 = { version = "0.13.1", features = ["extension-module"] }
+pyo3 = { version = "0.13.2", features = ["extension-module"] }
 snap = "^1"
 brotli2 = "^0.3"
 lz-fear = "0.1.1"

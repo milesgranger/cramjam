@@ -18,7 +18,7 @@ major, minor = sys.version_info.major, sys.version_info.minor
 
 regex = re.compile(r"(?P<name>pp3[py0-9_]+-pypy[3_p0-9]+)")
 
-for file in pathlib.Path("./wheels").iterdir():
+for file in pathlib.Path("./dist").iterdir():
     if file.name.endswith(".whl"):
         new_name = regex.sub(f"pp{major}{minor}-{abi}", file.name)
         new_name = new_name.replace("linux", "manylinux2010")
