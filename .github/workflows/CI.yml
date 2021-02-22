@@ -182,7 +182,7 @@ jobs:
       run: pip install maturin
     - name: Build Wheels
       run: |
-        maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }} --cargo-extra-args="--features=abi3" --cargo-extra-args="--features=mimallocator"
+        maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }} --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=abi3"
     - uses: uraimo/run-on-arch-action@v2.0.5
       name: Install built wheel
       with:
