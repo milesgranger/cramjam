@@ -20,18 +20,18 @@ def round_trip(compress, decompress, data, **kwargs):
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "snappy"
 )
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
-def test_snappy(benchmark, file, use_cramjam: bool):
+def test_snappy_raw(benchmark, file, use_cramjam: bool):
     """
-    Uses snappy compression
+    Uses snappy compression raw
     """
     import snappy
 
-    data = file.read_bytes()
+    data = bytearray(file.read_bytes())
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.snappy.compress,
-            decompress=cramjam.snappy.decompress,
+            compress=cramjam.snappy.compress_raw,
+            decompress=cramjam.snappy.decompress_raw,
             data=data,
         )
     else:
@@ -42,6 +42,34 @@ def test_snappy(benchmark, file, use_cramjam: bool):
             data=data,
         )
 
+
+@pytest.mark.parametrize(
+    "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "snappy"
+)
+@pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
+def test_snappy_framed(benchmark, file, use_cramjam: bool):
+    """
+    Uses snappy compression framed
+    """
+    import snappy
+
+    data = bytearray(file.read_bytes())
+    if use_cramjam:
+        benchmark(
+            round_trip,
+            compress=cramjam.snappy.compress,
+            decompress=cramjam.snappy.decompress,
+            data=data,
+        )
+    else:
+        compressor = snappy.StreamCompressor()
+        decompressor = snappy.StreamDecompressor()
+        benchmark(
+            round_trip,
+            compress=compressor.compress,
+            decompress=decompressor.decompress,
+            data=data,
+        )
 
 @pytest.mark.parametrize("op", ("decompress_into", "compress_into"))
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)

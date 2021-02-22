@@ -30,7 +30,11 @@ use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 
 use exceptions::{CompressionError, DecompressionError};
-use numpy::PyArray1;
+use std::io::Write;
+
+#[cfg(feature = "mimallocator")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 #[derive(FromPyObject)]
 pub enum BytesType<'a> {
@@ -41,6 +45,7 @@ pub enum BytesType<'a> {
 }
 
 impl<'a> BytesType<'a> {
+    #[allow(dead_code)]
     fn len(&self) -> usize {
         self.as_bytes().len()
     }
@@ -61,12 +66,47 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
     }
 }
 
-/// Buffer to de/compression algorithms' output.
-/// ::Vector used when the output len cannot be determined, and/or resulting
-/// python object cannot be resized to what the actual bytes decoded was.
-pub enum Output<'a> {
-    Slice(&'a mut [u8]),
-    Vector(&'a mut Vec<u8>),
+/// A wrapper to PyByteArray, providing the std::io::Write impl
+pub struct WriteablePyByteArray<'a> {
+    array: &'a PyByteArray,
+    position: usize,
+}
+
+impl<'a> WriteablePyByteArray<'a> {
+    pub fn new(py: Python<'a>, len: usize) -> Self {
+        Self {
+            array: PyByteArray::new_with(py, len, |_| Ok(())).unwrap(),
+            position: 0,
+        }
+    }
+    pub fn into_inner(mut self) -> PyResult<&'a PyByteArray> {
+        self.flush()
+            .map_err(|e| pyo3::exceptions::PyBufferError::new_err(e.to_string()))?;
+        Ok(self.array)
+    }
+}
+
+impl<'a> Write for WriteablePyByteArray<'a> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        if (self.position + buf.len()) > self.array.len() {
+            self.array.resize(self.position + buf.len()).unwrap()
+        }
+        let array_bytes = unsafe { self.array.as_bytes_mut() };
+
+        //let mut wtr = Cursor::new(&mut array_bytes[self.position..]);
+        //let n_bytes = wtr.write(buf).unwrap();
+        let buf_len = buf.len();
+        array_bytes[self.position..self.position + buf_len].copy_from_slice(buf);
+
+        self.position += buf.len();
+        Ok(buf.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        if self.array.len() != self.position {
+            self.array.resize(self.position).unwrap();
+        }
+        Ok(())
+    }
 }
 
 /// Expose de/compression_into(data: BytesType<'_>, array: &PyArray1<u8>) -> PyResult<usize>
@@ -74,19 +114,64 @@ pub enum Output<'a> {
 ///
 /// This will handle gaining access to the Python's array as a buffer for an underlying de/compression
 /// function which takes the normal `&[u8]` and `Output` types
-pub fn de_compress_into<F>(data: &[u8], array: &PyArray1<u8>, func: F) -> PyResult<usize>
-where
-    F: for<'a> FnOnce(&'a [u8], Output<'a>) -> std::io::Result<usize>,
-{
-    let mut array_mut = unsafe { array.as_array_mut() };
+#[macro_export]
+macro_rules! generic_into {
+    ($op:ident($input:ident -> $output:ident) $(, $level:ident)?) => {
+        {
+            let mut array_mut = unsafe { $output.as_array_mut() };
 
-    let buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
-        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
-    }))?;
+            let buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
+                pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
+            }))?;
+            let mut cursor = Cursor::new(buffer);
+            let size = to_py_err!(DecompressionError -> self::internal::$op($input.as_bytes(), &mut cursor $(, $level)?))?;
+            Ok(size)
+        }
+    }
+}
 
-    let output = Output::Slice(buffer);
-    let size = to_py_err!(DecompressionError -> func(data, output))?;
-    Ok(size)
+#[macro_export]
+macro_rules! generic {
+    ($op:ident($input:ident), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
+        {
+            let bytes = $input.as_bytes();
+            match $input {
+                BytesType::Bytes(_) => match $output_len {
+                    Some(len) => {
+                        let pybytes = PyBytes::new_with($py, len, |buffer| {
+                            let mut cursor = Cursor::new(buffer);
+                            if stringify!($op) == "compress" {
+                                to_py_err!(CompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                            } else {
+                                to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                            }
+                            Ok(())
+                        })?;
+                        Ok(BytesType::Bytes(pybytes))
+                    }
+                    None => {
+                        let mut buffer = Vec::new();
+                        if stringify!($op) == "compress" {
+                            to_py_err!(CompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                        } else {
+                            to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                        }
+
+                        Ok(BytesType::Bytes(PyBytes::new($py, &buffer)))
+                    }
+                },
+                BytesType::ByteArray(_) => {
+                    let mut pybytes = WriteablePyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
+                    if stringify!($op) == "compress" {
+                        to_py_err!(CompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                    } else {
+                        to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                    }
+                    Ok(BytesType::ByteArray(pybytes.into_inner()?))
+                }
+            }
+        }
+    }
 }
 
 #[macro_export]
@@ -122,7 +207,7 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
 #[cfg(test)]
 mod tests {
 
-    use super::Output;
+    use std::io::Cursor;
 
     // Default testing data
     fn gen_data() -> Vec<u8> {
@@ -138,12 +223,31 @@ mod tests {
             #[test]
             fn $name() {
                 let data = gen_data();
-                let mut compressed = if stringify!($compress_output) == "Slice" { vec![0; $compressed_len] } else { Vec::new() };
-                let compressed_size = crate::$variant::internal::compress(&data, Output::$compress_output(&mut compressed) $(, $level)? ).unwrap();
-                assert_eq!(compressed_size, $compressed_len);
 
-                let mut decompressed = if stringify!($decompress_output) == "Slice" { vec![0; data.len()] } else { Vec::new() };
-                let decompressed_size = crate::$variant::internal::decompress(&compressed, Output::$decompress_output(&mut decompressed)).unwrap();
+                let mut compressed = Vec::new();
+
+                let compressed_size = if stringify!($decompress_output) == "Slice" {
+                        compressed = (0..data.len()).map(|_| 0).collect::<Vec<u8>>();
+                        let mut cursor = Cursor::new(compressed.as_mut_slice());
+                        crate::$variant::internal::compress(&data, &mut cursor $(, $level)?).unwrap()
+                    } else {
+
+                        crate::$variant::internal::compress(&data, &mut compressed $(, $level)?).unwrap()
+                    };
+
+                assert_eq!(compressed_size, $compressed_len);
+                compressed.truncate(compressed_size);
+
+                let mut decompressed = Vec::new();
+
+                let decompressed_size = if stringify!($decompress_output) == "Slice" {
+                        decompressed = (0..data.len()).map(|_| 0).collect::<Vec<u8>>();
+                        let mut cursor = Cursor::new(decompressed.as_mut_slice());
+                        crate::$variant::internal::decompress(&compressed, &mut cursor).unwrap()
+                    } else {
+
+                        crate::$variant::internal::decompress(&compressed, &mut decompressed).unwrap()
+                    };
                 assert_eq!(decompressed_size, data.len());
                 if &decompressed[..decompressed_size] != &data {
                     panic!("Decompressed and original data do not match! :-(")

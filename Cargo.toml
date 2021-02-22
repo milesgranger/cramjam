@@ -11,8 +11,14 @@ description = "Thin Python bindings to de/compression algorithms in Rust"
 crate-type = ["cdylib"]
 
 [features]
-default = ["abi3"]
+default = ["abi3", "mimallocator"]
 abi3 = ["pyo3/abi3-py36"]
+mimallocator = ["mimalloc"]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
 
 [dependencies]
 pyo3 = { version = "0.13.2", features = ["extension-module"] }
@@ -22,3 +28,8 @@ lz-fear = "0.1.1"
 flate2 = "^1"
 zstd = "0.6.0+zstd.1.4.8"
 numpy = "0.13.0"
+
+[dependencies.mimalloc]
+version = "0.1.24"
+default-features = false
+optional = true
