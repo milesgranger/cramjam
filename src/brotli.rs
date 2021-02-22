@@ -48,37 +48,45 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
     }
 }
 
-pub fn generic_py_compress<'a, F, W>(
-    py: Python<'a>,
-    data: BytesType<'a>,
-    level: Option<u32>,
-    output_len: Option<usize>,
-    func: F,
-) -> PyResult<BytesType<'a>>
-where
-    W: Write + ?Sized,
-    F: FnOnce(&[u8], &mut dyn Write, Option<u32>) -> Result<usize, Error>,
-{
-    match data {
-        BytesType::Bytes(_) => match output_len {
-            Some(len) => {
-                let pybytes = PyBytes::new_with(py, len, |buffer| {
-                    let mut cursor = Cursor::new(buffer);
-                    to_py_err!(CompressionError -> func(data.as_bytes(), &mut cursor, level))?;
-                    Ok(())
-                })?;
-                Ok(BytesType::Bytes(pybytes))
+macro_rules! generic {
+    ($op:ident($input:ident), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
+        {
+            let bytes = $input.as_bytes();
+            match $input {
+                BytesType::Bytes(_) => match $output_len {
+                    Some(len) => {
+                        let pybytes = PyBytes::new_with($py, len, |buffer| {
+                            let mut cursor = Cursor::new(buffer);
+                            if stringify!($op) == "compress" {
+                                to_py_err!(CompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                            } else {
+                                to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                            }
+                            Ok(())
+                        })?;
+                        Ok(BytesType::Bytes(pybytes))
+                    }
+                    None => {
+                        let mut buffer = Vec::new();
+                        if stringify!($op) == "compress" {
+                            to_py_err!(CompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                        } else {
+                            to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                        }
+
+                        Ok(BytesType::Bytes(PyBytes::new($py, &buffer)))
+                    }
+                },
+                BytesType::ByteArray(_) => {
+                    let mut pybytes = WriteablePyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
+                    if stringify!($op) == "compress" {
+                        to_py_err!(CompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                    } else {
+                        to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                    }
+                    Ok(BytesType::ByteArray(pybytes.into_inner()?))
+                }
             }
-            None => {
-                let mut buffer = Vec::with_capacity(data.len() / 10);
-                to_py_err!(CompressionError -> func(data.as_bytes(), &mut buffer, level))?;
-                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
-            }
-        },
-        BytesType::ByteArray(_) => {
-            let mut pybytes = WriteablePyByteArray::new(py, output_len.unwrap_or_else(|| 0));
-            to_py_err!(CompressionError -> func(data.as_bytes(), &mut pybytes, level))?;
-            Ok(BytesType::ByteArray(pybytes.into_inner()?))
         }
     }
 }
@@ -97,28 +105,7 @@ pub fn compress<'a>(
     level: Option<u32>,
     output_len: Option<usize>,
 ) -> PyResult<BytesType<'a>> {
-    match data {
-        BytesType::Bytes(_) => match output_len {
-            Some(len) => {
-                let pybytes = PyBytes::new_with(py, len, |buffer| {
-                    let mut cursor = Cursor::new(buffer);
-                    to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut cursor, level))?;
-                    Ok(())
-                })?;
-                Ok(BytesType::Bytes(pybytes))
-            }
-            None => {
-                let mut buffer = Vec::with_capacity(data.len() / 10);
-                to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut buffer, level))?;
-                Ok(BytesType::Bytes(PyBytes::new(py, &buffer)))
-            }
-        },
-        BytesType::ByteArray(_) => {
-            let mut pybytes = WriteablePyByteArray::new(py, output_len.unwrap_or_else(|| 0));
-            to_py_err!(CompressionError -> self::internal::compress(data.as_bytes(), &mut pybytes, level))?;
-            Ok(BytesType::ByteArray(pybytes.into_inner()?))
-        }
-    }
+    generic!(compress(data), py = py, output_len = output_len, level = level)
 }
 
 /// Compress directly into an output buffer
