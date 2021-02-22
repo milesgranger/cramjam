@@ -41,7 +41,7 @@ pub fn compress<'a>(
     level: Option<i32>,
     output_len: Option<usize>,
 ) -> PyResult<BytesType<'a>> {
-    crate::generic!(compress(data), py = py, output_len = output_len, level=level)
+    crate::generic!(compress(data), py = py, output_len = output_len, level = level)
 }
 
 /// Compress directly into an output buffer

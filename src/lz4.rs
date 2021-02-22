@@ -50,7 +50,6 @@ pub fn compress<'a>(
     level: Option<u32>,
     output_len: Option<usize>,
 ) -> PyResult<BytesType<'a>> {
-
     match data {
         BytesType::Bytes(input) => {
             let out = to_py_err!(CompressionError -> self::internal::compress(input.as_bytes(), level))?;
