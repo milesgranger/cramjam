@@ -25,12 +25,12 @@ bench-zstd:
 	$(BASE_BENCH_CMD) zstd
 
 dev-install:
-	rm -rf ./wheels
-	maturin build --release --out wheels --interpreter $(shell which python)
+	rm -rf ./dist
+	maturin build --release --out dist --no-sdist --interpreter $(shell which python)
 	pip uninstall cramjam -y
-	rm wheels/*.tar.gz
-	pip install cramjam --no-index --find-links wheels/
+	rm dist/*.tar.gz
+	pip install cramjam --no-index --find-links dist/
 
 pypy-build:
-	maturin build -i $(shell which pypy) --release --out wheels
+	maturin build -i $(shell which pypy) --release --out dist --cargo-extra-args="--no-default-features"  # disable abi3
 	pypy ./pypy_patch.py
