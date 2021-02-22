@@ -1,0 +1,224 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: aarch64-apple-darwin
+          profile: minimal
+          default: true
+      - name: Build
+        run: cargo build
+      - name: Tests
+        run: cargo test
+      - name: Install maturin
+        run: pip install maturin
+      - name: Build wheels - x86_64
+        run: |
+          maturin build -i python --target x86_64-apple-darwin --release --out dist
+          pip install cramjam --no-index --find-links dist --force-reinstall
+      - name: Build wheels - universal2
+        env:
+          DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+          MACOSX_DEPLOYMENT_TARGET: '10.9'
+          PYO3_CROSS_LIB_DIR: /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.8/lib
+        run: |
+          # set SDKROOT for C dependencies
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          maturin build -i python --release --universal2 --out dist --no-sdist
+          pip install cramjam --no-index --find-links dist --force-reinstall
+      - name: Python UnitTest
+        run: |
+          pip install --upgrade pip
+          pip install -r dev-requirements.txt
+          make test
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        platform: [
+          { python-architecture: "x64", target: "x86_64-pc-windows-msvc" },
+          { python-architecture: "x86", target: "i686-pc-windows-msvc" },
+        ]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+          architecture: ${{ matrix.platform.python-architecture }}
+      - name: Install Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.platform.target }}
+          profile: minimal
+          default: true
+      - name: Build
+        if: matrix.platform.python-architecture == 'x64'
+        run: cargo build
+      - name: Tests
+        if: matrix.platform.python-architecture == 'x64'
+        run: cargo test
+      - name: Install maturin
+        run: pip install maturin
+      - name: Build wheels
+        run: |
+          maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }}
+          pip install cramjam --no-index --find-links dist --force-reinstall
+      - name: Python UnitTest
+        run: |
+          pip install --upgrade pip
+          pip install -r dev-requirements.txt
+          make test
+      - name: Upload wheels
+        uses: actions/upload-artifact@v2
+        with:
+          name: wheels
+          path: dist
+
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [
+          { manylinux: '2010', target: "x86_64-unknown-linux-gnu", arch: "x86_64" },
+          { manylinux: '2010', target: "i686-unknown-linux-gnu", arch: "i686" },
+        ]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        default: true
+    - name: Build
+      run: cargo build
+    - name: Tests
+      run: cargo test
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.6
+    - name: Build Wheels
+      run: |
+        echo 'curl --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+        source ~/.cargo/env
+        export PATH=/opt/python/cp38-cp38/bin:$PATH
+        pip install maturin
+        maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }}
+        ' > build-wheel.sh
+        chmod +x build-wheel.sh
+
+        docker run --rm -v "$PWD":/io -w /io quay.io/pypa/manylinux${{ matrix.platform.manylinux }}_${{ matrix.platform.arch }} bash build-wheel.sh
+    - name: Python UnitTest
+      if: matrix.platform.arch == 'x86_64'
+      run: |
+        pip install cramjam --no-index --find-links dist --force-reinstall
+        pip install --upgrade pip
+        pip install -r dev-requirements.txt
+        make test
+    - name: Upload wheels
+      uses: actions/upload-artifact@v2
+      with:
+        name: wheels
+        path: dist
+
+  linux-cross:
+    runs-on: ubuntu-16.04
+    strategy:
+      matrix:
+        platform: [
+          { manylinux: "2014", target: "aarch64-unknown-linux-gnu", arch: "aarch64" },
+          { manylinux: "2014", target: "armv7-unknown-linux-gnueabihf", arch: "armv7" },
+        ]
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: 3.6
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: ${{ matrix.platform.target }}
+        profile: minimal
+        default: true
+    - name: Install aarch64 cross compiler
+      if: matrix.platform.target == 'aarch64-unknown-linux-gnu'
+      run: |
+        sudo apt-get install -y gcc-aarch64-linux-gnu libc6-arm64-cross libc6-dev-arm64-cross
+        echo "TARGET_CC=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+        echo "TARGET_CXX=aarch64-linux-gnu-cpp" >> "$GITHUB_ENV"
+        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
+    - name: Install armv7 cross compiler
+      if: matrix.platform.target == 'armv7-unknown-linux-gnueabihf'
+      run: |
+        sudo apt-get install -y gcc-arm-linux-gnueabihf libc6-armhf-cross libc6-dev-armhf-cross
+        echo "TARGET_CC=arm-linux-gnueabihf-gcc" >> "$GITHUB_ENV"
+        echo "TARGET_CXX=arm-linux-gnueabihf-cpp" >> "$GITHUB_ENV"
+        echo "CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc" >> "$GITHUB_ENV"
+    - name: Install maturin
+      run: pip install maturin
+    - name: Build Wheels
+      run: |
+        maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }}
+    - uses: uraimo/run-on-arch-action@v2.0.5
+      name: Install built wheel
+      with:
+        arch: ${{ matrix.platform.arch }}
+        distro: ubuntu18.04
+        githubToken: ${{ github.token }}
+        # Mount the dist directory as /artifacts in the container
+        dockerRunArgs: |
+          --volume "${PWD}/dist:/artifacts"
+        install: |
+          apt-get update
+          apt-get install -y --no-install-recommends python3 python3-pip
+          pip3 install -U pip
+        run: |
+          ls -lrth /artifacts
+          pip3 install cramjam --no-index --find-links /artifacts --force-reinstall
+          python3 -c "import cramjam"
+    - name: Upload wheels
+      uses: actions/upload-artifact@v2
+      with:
+        name: wheels
+        path: dist
+
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    if: "startsWith(github.ref, 'refs/tags/')"
+    needs: [ macos, windows, linux, linux-cross ]
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: wheels
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.9
+      - name: Publish to PyPi
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+        run: |
+          pip install --upgrade wheel pip setuptools twine
+          twine upload --skip-existing *
