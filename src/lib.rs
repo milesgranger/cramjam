@@ -32,6 +32,7 @@ use pyo3::types::{PyByteArray, PyBytes};
 use exceptions::{CompressionError, DecompressionError};
 use std::io::Write;
 
+#[cfg(feature = "mimallocator")]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
