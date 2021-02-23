@@ -2,6 +2,7 @@
 
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 [![CI](https://github.com/milesgranger/pyrus-cramjam/workflows/CI/badge.svg?branch=master)](https://github.com/milesgranger/pyrus-cramjam/actions?query=branch=master)
+[![PyPI](https://img.shields.io/pypi/v/cramjam.svg)](https://pypi.org/project/cramjam)
 
 [API Documentation](https://docs.rs/cramjam)
 
@@ -39,7 +40,7 @@ All available for use as:
 
 ```python
 >>> import cramjam
->>> compessed = cramjam.snappy.compress(b"bytes here")
+>>> compressed = cramjam.snappy.compress(b"bytes here")
 >>> cramjam.snappy.decompress(compressed)
 b"bytes here"
 ```
