@@ -14,6 +14,10 @@ pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decompress_raw, m)?)?;
     m.add_function(wrap_pyfunction!(compress_into, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_into, m)?)?;
+    m.add_function(wrap_pyfunction!(compress_raw_into, m)?)?;
+    m.add_function(wrap_pyfunction!(decompress_raw_into, m)?)?;
+    m.add_function(wrap_pyfunction!(compress_raw_max_len, m)?)?;
+    m.add_function(wrap_pyfunction!(decompress_raw_len, m)?)?;
     Ok(())
 }
 
@@ -99,10 +103,36 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
     crate::generic_into!(decompress(data -> array))
 }
 
+/// Compress raw format directly into an output buffer
+#[pyfunction]
+pub fn compress_raw_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
+    crate::generic_into!(compress_raw_into(data -> array))
+}
+
+/// Decompress raw format directly into an output buffer
+#[pyfunction]
+pub fn decompress_raw_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
+    crate::generic_into!(decompress_raw_into(data -> array))
+}
+
+/// Get the expected max compressed length for snappy raw compression; this is the size
+/// of buffer that should be passed to `compress_raw_into`
+#[pyfunction]
+pub fn compress_raw_max_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> usize {
+    snap::raw::max_compress_len(data.len())
+}
+
+/// Get the decompressed length for the given data. This is the size of buffer
+/// that should be passed to `decompress_raw_into`
+#[pyfunction]
+pub fn decompress_raw_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> PyResult<usize> {
+    to_py_err!(DecompressionError -> snap::raw::decompress_len(data.as_bytes()))
+}
+
 pub(crate) mod internal {
     use snap::raw::{Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Error, Write};
+    use std::io::{Error, Write, Cursor};
 
     /// Decompress snappy data raw
     pub fn decompress_raw(data: &[u8]) -> Result<Vec<u8>, snap::Error> {
@@ -114,6 +144,20 @@ pub(crate) mod internal {
     pub fn compress_raw(data: &[u8]) -> Result<Vec<u8>, snap::Error> {
         let mut encoder = Encoder::new();
         encoder.compress_vec(data)
+    }
+
+    /// Decompress snappy data raw into a mutable slice
+    pub fn decompress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {
+        let mut decoder = Decoder::new();
+        let buffer = output.get_mut();
+        decoder.decompress(input, *buffer)
+    }
+
+    /// Compress snappy data raw into a mutable slice
+    pub fn compress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {
+        let mut encoder = Encoder::new();
+        let buffer = output.get_mut();
+        encoder.compress(input, buffer)
     }
 
     /// Decompress snappy data framed

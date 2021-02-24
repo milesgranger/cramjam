@@ -71,6 +71,7 @@ def test_snappy_framed(benchmark, file, use_cramjam: bool):
             data=data,
         )
 
+
 @pytest.mark.parametrize("op", ("decompress_into", "compress_into"))
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
 def test_cramjam_snappy_de_compress_into(benchmark, op, file):
