@@ -12,6 +12,31 @@ FILES = [
 ]
 
 
+class FiftyFourMbRepeating:
+    """
+    54mb of data, where the first 54bytes are repeated 1000000 times.
+    """
+
+    name = "fifty-four-mb-repeating"
+
+    def read_bytes(self):
+        return b"oh what a beautiful morning, oh what a beautiful day!!" * 1000000
+
+
+class FiftyFourMbRandom:
+    """
+    54mb of data, all random
+    """
+
+    name = "fifty-four-mb-random"
+
+    def read_bytes(self):
+        return np.random.randint(0, 255, size=54000000, dtype=np.uint8).tobytes()
+
+
+FILES.extend([FiftyFourMbRepeating(), FiftyFourMbRandom()])
+
+
 def round_trip(compress, decompress, data, **kwargs):
     return decompress(compress(data, **kwargs))
 
@@ -70,6 +95,7 @@ def test_snappy_framed(benchmark, file, use_cramjam: bool):
             decompress=decompressor.decompress,
             data=data,
         )
+
 
 @pytest.mark.parametrize("op", ("decompress_into", "compress_into"))
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)

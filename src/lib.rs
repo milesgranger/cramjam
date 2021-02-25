@@ -275,4 +275,25 @@ mod tests {
     test_variant!(brotli, compressed_len = 729, level = None);
     test_variant!(deflate, compressed_len = 157174, level = None);
     test_variant!(zstd, compressed_len = 4990, level = None);
+
+    #[test]
+    fn test_snappy_raw_into_round_trip() {
+        let data = gen_data();
+        let max_compress_len = snap::raw::max_compress_len(data.len());
+        let mut compressed_buffer = vec![0; max_compress_len];
+
+        let n_bytes =
+            crate::snappy::internal::compress_raw_into(&data, &mut Cursor::new(&mut compressed_buffer)).unwrap();
+        assert_eq!(n_bytes, 2563328); // raw compressed len
+
+        let decompress_len = snap::raw::decompress_len(&compressed_buffer[..n_bytes]).unwrap();
+        let mut decompressed_buffer = vec![0; decompress_len];
+        let n_bytes = crate::snappy::internal::decompress_raw_into(
+            &compressed_buffer[..n_bytes],
+            &mut Cursor::new(&mut decompressed_buffer),
+        )
+        .unwrap();
+        assert_eq!(n_bytes, data.len());
+        assert_eq!(&data, &decompressed_buffer[..n_bytes]);
+    }
 }
