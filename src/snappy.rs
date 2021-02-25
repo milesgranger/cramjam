@@ -57,14 +57,22 @@ pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usiz
 /// ```
 #[pyfunction]
 pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
+    let output_len = to_py_err!(DecompressionError -> snap::raw::decompress_len(data.as_bytes()))?;
+
     match data {
-        BytesType::Bytes(input) => {
-            let out = to_py_err!(DecompressionError -> self::internal::decompress_raw(input.as_bytes()))?;
-            Ok(BytesType::Bytes(PyBytes::new(py, &out)))
+        BytesType::Bytes(_) => {
+            let pybytes = PyBytes::new_with(py, output_len, |output| {
+                to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut Cursor::new(output)))?;
+                Ok(())
+            })?;
+            Ok(BytesType::Bytes(pybytes))
         }
-        BytesType::ByteArray(input) => {
-            let out = to_py_err!(DecompressionError -> self::internal::decompress_raw(unsafe { input.as_bytes() }))?;
-            Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
+        BytesType::ByteArray(_) => {
+            let pybytes = PyByteArray::new_with(py, output_len, |output| {
+                to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut Cursor::new(output)))?;
+                Ok(())
+            })?;
+            Ok(BytesType::ByteArray(pybytes))
         }
     }
 }
@@ -79,14 +87,25 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<Bytes
 /// ```
 #[pyfunction]
 pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
+    let output_len = snap::raw::max_compress_len(data.len());
+
     match data {
-        BytesType::Bytes(input) => {
-            let out = to_py_err!(CompressionError -> self::internal::compress_raw(input.as_bytes()))?;
-            Ok(BytesType::Bytes(PyBytes::new(py, &out)))
+        BytesType::Bytes(_) => {
+            let mut output = vec![0; output_len];
+            let n_bytes = to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut Cursor::new(output.as_mut_slice())))?;
+            output.truncate(n_bytes);
+            Ok(BytesType::Bytes(PyBytes::new(py, &output)))
         }
-        BytesType::ByteArray(input) => {
-            let out = to_py_err!(CompressionError -> self::internal::compress_raw(unsafe { input.as_bytes() }))?;
-            Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
+        BytesType::ByteArray(_) => {
+            let mut actual_size = 0;
+            let pybytes = PyByteArray::new_with(py, output_len, |output| {
+                let mut cursor = Cursor::new(output);
+                actual_size =
+                    to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut cursor))?;
+                Ok(())
+            })?;
+            pybytes.resize(actual_size)?;
+            Ok(BytesType::ByteArray(pybytes))
         }
     }
 }
@@ -132,19 +151,7 @@ pub fn decompress_raw_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> PyResult<
 pub(crate) mod internal {
     use snap::raw::{Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Error, Write, Cursor};
-
-    /// Decompress snappy data raw
-    pub fn decompress_raw(data: &[u8]) -> Result<Vec<u8>, snap::Error> {
-        let mut decoder = Decoder::new();
-        decoder.decompress_vec(data)
-    }
-
-    /// Compress snappy data raw
-    pub fn compress_raw(data: &[u8]) -> Result<Vec<u8>, snap::Error> {
-        let mut encoder = Encoder::new();
-        encoder.compress_vec(data)
-    }
+    use std::io::{Cursor, Error, Write};
 
     /// Decompress snappy data raw into a mutable slice
     pub fn decompress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {
