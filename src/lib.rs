@@ -191,6 +191,7 @@ macro_rules! make_submodule {
 
 #[pymodule]
 fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
+    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("CompressionError", py.get_type::<CompressionError>())?;
     m.add("DecompressionError", py.get_type::<DecompressionError>())?;
 
