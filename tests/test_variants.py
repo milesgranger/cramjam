@@ -7,6 +7,9 @@ import hashlib
 def same_same(a, b):
     return hashlib.md5(a).hexdigest() == hashlib.md5(b).hexdigest()
 
+def test_has_version():
+    from cramjam import __version__
+    assert isinstance(__version__, str)
 
 @pytest.mark.parametrize("is_bytearray", (True, False))
 @pytest.mark.parametrize(
