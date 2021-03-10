@@ -7,9 +7,12 @@ import hashlib
 def same_same(a, b):
     return hashlib.md5(a).hexdigest() == hashlib.md5(b).hexdigest()
 
+
 def test_has_version():
     from cramjam import __version__
+
     assert isinstance(__version__, str)
+
 
 @pytest.mark.parametrize("is_bytearray", (True, False))
 @pytest.mark.parametrize(
@@ -85,3 +88,14 @@ def test_variant_snappy_raw_into():
     assert n_bytes == len(data)
 
     assert same_same(decompressed_buffer[:n_bytes], data)
+
+
+def test_native_buffer():
+    data = b"why, hello there! How do you do?" * 100000
+    input = cramjam.Buffer()
+    input.write(data)
+    input.seek(0)
+    compressed = cramjam.snappy.compress(input)
+    compressed.seek(0)
+
+    assert same_same(compressed.read(), cramjam.snappy.compress(data))
