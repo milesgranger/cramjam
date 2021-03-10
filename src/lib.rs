@@ -25,6 +25,7 @@ pub mod gzip;
 pub mod lz4;
 pub mod snappy;
 pub mod zstd;
+pub mod io;
 
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
@@ -194,7 +195,7 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("CompressionError", py.get_type::<CompressionError>())?;
     m.add("DecompressionError", py.get_type::<DecompressionError>())?;
-
+    m.add_class::<crate::io::RustyFile>()?;
     make_submodule!(py -> m -> snappy);
     make_submodule!(py -> m -> brotli);
     make_submodule!(py -> m -> lz4);
