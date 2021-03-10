@@ -73,7 +73,8 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<Bytes
                 Ok(())
             })?;
             Ok(BytesType::ByteArray(pybytes))
-        }
+        },
+        _ => Err(DecompressionError::new_err("decompress_raw not supported for native Rust types."))
     }
 }
 
@@ -106,7 +107,8 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
             })?;
             pybytes.resize(actual_size)?;
             Ok(BytesType::ByteArray(pybytes))
-        }
+        },
+        _ => Err(CompressionError::new_err("compress_raw not supported for native Rust types."))
     }
 }
 
@@ -151,7 +153,7 @@ pub fn decompress_raw_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> PyResult<
 pub(crate) mod internal {
     use snap::raw::{Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Cursor, Error, Write};
+    use std::io::{Cursor, Error, Write, Read};
 
     /// Decompress snappy data raw into a mutable slice
     pub fn decompress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {
@@ -168,14 +170,14 @@ pub(crate) mod internal {
     }
 
     /// Decompress snappy data framed
-    pub fn decompress<W: Write + ?Sized>(input: &[u8], output: &mut W) -> Result<usize, Error> {
+    pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = FrameDecoder::new(input);
         let n_bytes = std::io::copy(&mut decoder, output)?;
         Ok(n_bytes as usize)
     }
 
     /// Decompress snappy data framed
-    pub fn compress<W: Write + ?Sized>(data: &[u8], output: &mut W) -> Result<usize, Error> {
+    pub fn compress<W: Write + ?Sized, R: Read>(data: R, output: &mut W) -> Result<usize, Error> {
         let mut encoder = FrameEncoder::new(data);
         let n_bytes = std::io::copy(&mut encoder, output)?;
         Ok(n_bytes as usize)

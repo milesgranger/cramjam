@@ -63,17 +63,17 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
 
 pub(crate) mod internal {
 
-    use std::io::{Error, Write};
+    use std::io::{Error, Write, Read};
 
     /// Decompress gzip data
-    pub fn decompress<W: Write + ?Sized>(input: &[u8], output: &mut W) -> Result<usize, Error> {
+    pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = zstd::stream::read::Decoder::new(input)?;
         let n_bytes = std::io::copy(&mut decoder, output)?;
         Ok(n_bytes as usize)
     }
 
     /// Compress gzip data
-    pub fn compress<W: Write + ?Sized>(input: &[u8], output: &mut W, level: Option<i32>) -> Result<usize, Error> {
+    pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<i32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| 0); // 0 will use zstd's default, currently 11
         let mut encoder = zstd::stream::read::Encoder::new(input, level)?;
         let n_bytes = std::io::copy(&mut encoder, output)?;

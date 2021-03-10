@@ -68,14 +68,14 @@ pub(crate) mod internal {
     use std::io::Error;
 
     /// Decompress gzip data
-    pub fn decompress<W: Write + ?Sized>(input: &[u8], output: &mut W) -> Result<usize, Error> {
+    pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = GzDecoder::new(input);
         let n_bytes = std::io::copy(&mut decoder, output)?;
         Ok(n_bytes as usize)
     }
 
     /// Compress gzip data
-    pub fn compress<W: Write + ?Sized>(input: &[u8], output: &mut W, level: Option<u32>) -> Result<usize, Error> {
+    pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| 6);
         let mut encoder = GzEncoder::new(input, Compression::new(level));
         let n_bytes = std::io::copy(&mut encoder, output)?;

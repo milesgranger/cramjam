@@ -32,6 +32,7 @@ use pyo3::types::{PyByteArray, PyBytes};
 
 use exceptions::{CompressionError, DecompressionError};
 use std::io::Write;
+use crate::io::{RustyFile, RustyBuffer};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
@@ -43,6 +44,10 @@ pub enum BytesType<'a> {
     Bytes(&'a PyBytes),
     #[pyo3(transparent, annotation = "bytearray")]
     ByteArray(&'a PyByteArray),
+    #[pyo3(transparent, annotation = "File")]
+    RustyFile(&'a PyCell<RustyFile>),
+    #[pyo3(transparent, annotation = "Buffer")]
+    RustyBuffer(&'a PyCell<RustyBuffer>),
 }
 
 impl<'a> BytesType<'a> {
@@ -54,6 +59,7 @@ impl<'a> BytesType<'a> {
         match self {
             Self::Bytes(b) => b.as_bytes(),
             Self::ByteArray(b) => unsafe { b.as_bytes() },
+            _ => unimplemented!("Converting Rust native types to bytes is not supported")
         }
     }
 }
@@ -63,6 +69,8 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
         match self {
             Self::Bytes(bytes) => bytes.to_object(py),
             Self::ByteArray(byte_array) => byte_array.to_object(py),
+            Self::RustyFile(file) => file.to_object(py),
+            Self::RustyBuffer(buffer) => buffer.to_object(py)
         }
     }
 }
@@ -135,33 +143,36 @@ macro_rules! generic_into {
 macro_rules! generic {
     ($op:ident($input:ident), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
         {
-            let bytes = $input.as_bytes();
             match $input {
-                BytesType::Bytes(_) => match $output_len {
-                    Some(len) => {
-                        let pybytes = PyBytes::new_with($py, len, |buffer| {
-                            let mut cursor = Cursor::new(buffer);
-                            if stringify!($op) == "compress" {
-                                to_py_err!(CompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
-                            } else {
-                                to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
-                            }
-                            Ok(())
-                        })?;
-                        Ok(BytesType::Bytes(pybytes))
-                    }
-                    None => {
-                        let mut buffer = Vec::new();
-                        if stringify!($op) == "compress" {
-                            to_py_err!(CompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
-                        } else {
-                            to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                BytesType::Bytes(b) => {
+                    let bytes = b.as_bytes();
+                    match $output_len {
+                        Some(len) => {
+                            let pybytes = PyBytes::new_with($py, len, |buffer| {
+                                let mut cursor = Cursor::new(buffer);
+                                if stringify!($op) == "compress" {
+                                    to_py_err!(CompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                                } else {
+                                    to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                                }
+                                Ok(())
+                            })?;
+                            Ok(BytesType::Bytes(pybytes))
                         }
+                        None => {
+                            let mut buffer = Vec::new();
+                            if stringify!($op) == "compress" {
+                                to_py_err!(CompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                            } else {
+                                to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                            }
 
-                        Ok(BytesType::Bytes(PyBytes::new($py, &buffer)))
+                            Ok(BytesType::Bytes(PyBytes::new($py, &buffer)))
+                        }
                     }
                 },
-                BytesType::ByteArray(_) => {
+                BytesType::ByteArray(b) => {
+                    let bytes = unsafe { b.as_bytes() };
                     let mut pybytes = WriteablePyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
                     if stringify!($op) == "compress" {
                         to_py_err!(CompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
@@ -169,6 +180,24 @@ macro_rules! generic {
                         to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
                     }
                     Ok(BytesType::ByteArray(pybytes.into_inner()?))
+                },
+                BytesType::RustyFile(file) => {
+                    let mut output = crate::io::RustyBuffer::default();
+                    if stringify!($op) == "compress" {
+                        to_py_err!(CompressionError -> self::internal::$op(&mut *file.borrow_mut(), &mut output $(, $level)? ))?;
+                    } else {
+                        to_py_err!(DecompressionError -> self::internal::$op(&mut *file.borrow_mut(), &mut output $(, $level)? ))?;
+                    }
+                    Ok(BytesType::RustyBuffer(PyCell::new($py, output).unwrap()))
+                },
+                BytesType::RustyBuffer(buffer) => {
+                    let mut output = crate::io::RustyBuffer::default();
+                    if stringify!($op) == "compress" {
+                        to_py_err!(CompressionError -> self::internal::$op(&mut *buffer.borrow_mut(), &mut output $(, $level)? ))?;
+                    } else {
+                        to_py_err!(DecompressionError -> self::internal::$op(&mut *buffer.borrow_mut(), &mut output $(, $level)? ))?;
+                    }
+                    Ok(BytesType::RustyBuffer(PyCell::new($py, output).unwrap()))
                 }
             }
         }

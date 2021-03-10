@@ -30,7 +30,8 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
         BytesType::ByteArray(input) => {
             let out = to_py_err!(DecompressionError -> self::internal::decompress(unsafe { input.as_bytes() }))?;
             Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
-        }
+        },
+        _ => Err(DecompressionError::new_err("decompress not supported for native Rust types in lz4."))
     }
 }
 
@@ -58,21 +59,23 @@ pub fn compress<'a>(
         BytesType::ByteArray(input) => {
             let out = to_py_err!(CompressionError -> self::internal::compress(unsafe { input.as_bytes() }, level))?;
             Ok(BytesType::ByteArray(PyByteArray::new(py, &out)))
-        }
+        },
+        _ => Err(CompressionError::new_err("compress not supported for native Rust types for lz4."))
     }
 }
 
 pub(crate) mod internal {
     use std::error::Error;
+    use std::io::Read;
 
     /// Decompress lz4 data
-    pub fn decompress(data: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn decompress<R: Read>(data: R) -> Result<Vec<u8>, Box<dyn Error>> {
         lz_fear::framed::decompress_frame(data).map_err(|err| err.into())
     }
 
     /// Compress lz4 data
     // TODO: lz-fear does not yet support level
-    pub fn compress(data: &[u8], level: Option<u32>) -> Result<Vec<u8>, Box<dyn Error>> {
+    pub fn compress<R: Read>(data: R, level: Option<u32>) -> Result<Vec<u8>, Box<dyn Error>> {
         let _ = level.unwrap_or_else(|| 4);
         let mut buf = vec![];
         lz_fear::framed::CompressionSettings::default().compress(data, &mut buf)?;

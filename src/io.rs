@@ -63,6 +63,7 @@ impl RustyFile {
 }
 
 #[pyclass(name="Buffer")]
+#[derive(Default)]
 pub struct RustyBuffer {
     inner: Cursor<Vec<u8>>,
 }
@@ -70,8 +71,8 @@ pub struct RustyBuffer {
 #[pymethods]
 impl RustyBuffer {
     #[new]
-    pub fn new(len: Option<usize>) -> PyResult<Self> {
-        Ok(Self { inner: Cursor::new(vec![0; len.unwrap_or_else(|| 0)]) })
+    pub fn new(len: Option<usize>) -> Self {
+        Self { inner: Cursor::new(vec![0; len.unwrap_or_else(|| 0)]) }
     }
 
     pub fn write(&mut self, buf: &[u8]) -> PyResult<usize> {
@@ -124,13 +125,13 @@ impl Write for RustyFile {
     }
 }
 
-impl Read for RustyBuffer {
+impl Read for &mut RustyBuffer {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.inner.read(buf)
     }
 }
 
-impl Read for RustyFile {
+impl Read for &mut RustyFile {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.inner.read(buf)
     }
