@@ -1,5 +1,5 @@
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write};
+use std::io::{Read, Seek, SeekFrom, Write, Cursor};
 
 use pyo3::prelude::*;
 use pyo3::types::{PyBytes};
@@ -7,7 +7,7 @@ use pyo3::types::{PyBytes};
 
 #[pyclass(name="File")]
 pub struct RustyFile {
-    inner: File, // preferably, this is R: Read, but generic structs cannot be exposed to Python
+    inner: File
 }
 
 #[pymethods]
@@ -32,7 +32,7 @@ impl RustyFile {
     }
 
     pub fn write(&mut self, buf: &[u8]) -> PyResult<usize> {
-        let r = self.inner.write(buf)?;
+        let r = Write::write(self, buf)?;
         Ok(r)
     }
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
@@ -60,5 +60,78 @@ impl RustyFile {
     pub fn truncate(&mut self) -> PyResult<()> {
         self.set_len(0)
     }
+}
 
+#[pyclass(name="Buffer")]
+pub struct RustyBuffer {
+    inner: Cursor<Vec<u8>>,
+}
+
+#[pymethods]
+impl RustyBuffer {
+    #[new]
+    pub fn new(len: Option<usize>) -> PyResult<Self> {
+        Ok(Self { inner: Cursor::new(vec![0; len.unwrap_or_else(|| 0)]) })
+    }
+
+    pub fn write(&mut self, buf: &[u8]) -> PyResult<usize> {
+        let r = Write::write(self, buf)?;
+        Ok(r)
+    }
+    pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
+        match n_bytes {
+            Some(n) => {
+                let mut buf = vec![0; n];
+                self.inner.read(buf.as_mut_slice())?;
+                Ok(PyBytes::new(py, buf.as_slice()))
+            }
+            None => {
+                let mut buf = vec![];
+                self.inner.read_to_end(&mut buf)?;
+                Ok(PyBytes::new(py, buf.as_slice()))
+            }
+        }
+    }
+    pub fn seek(&mut self, position: usize) -> PyResult<usize> {
+        let r = self.inner.seek(SeekFrom::Start(position as u64)).map(|r| r as usize)?;
+        Ok(r)
+    }
+    pub fn set_len(&mut self, size: usize) -> PyResult<()> {
+        self.inner.get_mut().resize(size, 0);
+        Ok(())
+    }
+    pub fn truncate(&mut self) -> PyResult<()> {
+        self.inner.get_mut().truncate(0);
+        Ok(())
+    }
+}
+
+impl Write for RustyBuffer {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.write(buf)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+impl Write for RustyFile {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.inner.write(buf)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.inner.flush()
+    }
+}
+
+impl Read for RustyBuffer {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buf)
+    }
+}
+
+impl Read for RustyFile {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.inner.read(buf)
+    }
 }
