@@ -63,7 +63,7 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
 
 pub(crate) mod internal {
 
-    use std::io::{Error, Write, Read};
+    use std::io::{Error, Read, Write};
 
     /// Decompress gzip data
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {

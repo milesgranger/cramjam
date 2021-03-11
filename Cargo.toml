@@ -25,7 +25,7 @@ opt-level = 3
 pyo3 = { version = "0.13.2", features = ["extension-module"] }
 snap = "^1"
 brotli2 = "^0.3"
-lz-fear = "0.1.1"
+lz4 = "^1"
 flate2 = "^1"
 zstd = "0.6.0+zstd.1.4.8"
 numpy = "0.13.0"

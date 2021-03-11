@@ -73,8 +73,10 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<Bytes
                 Ok(())
             })?;
             Ok(BytesType::ByteArray(pybytes))
-        },
-        _ => Err(DecompressionError::new_err("decompress_raw not supported for native Rust types."))
+        }
+        _ => Err(DecompressionError::new_err(
+            "decompress_raw not supported for native Rust types.",
+        )),
     }
 }
 
@@ -107,8 +109,10 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
             })?;
             pybytes.resize(actual_size)?;
             Ok(BytesType::ByteArray(pybytes))
-        },
-        _ => Err(CompressionError::new_err("compress_raw not supported for native Rust types."))
+        }
+        _ => Err(CompressionError::new_err(
+            "compress_raw not supported for native Rust types.",
+        )),
     }
 }
 
@@ -127,13 +131,29 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
 /// Compress raw format directly into an output buffer
 #[pyfunction]
 pub fn compress_raw_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(compress_raw_into(data -> array))
+    //crate::generic_into!(compress_raw_into(data -> array))  <- does not support Read/Write; must pass &[u8]
+    let mut array_mut = unsafe { array.as_array_mut() };
+
+    let buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
+        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
+    }))?;
+    let mut cursor = Cursor::new(buffer);
+    let size = to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut cursor))?;
+    Ok(size)
 }
 
 /// Decompress raw format directly into an output buffer
 #[pyfunction]
 pub fn decompress_raw_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(decompress_raw_into(data -> array))
+    //crate::generic_into!(decompress_raw_into(data -> array))  <- does not support Read/Write; must pass &[u8]
+    let mut array_mut = unsafe { array.as_array_mut() };
+
+    let buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
+        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
+    }))?;
+    let mut cursor = Cursor::new(buffer);
+    let size = to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut cursor))?;
+    Ok(size)
 }
 
 /// Get the expected max compressed length for snappy raw compression; this is the size
@@ -153,7 +173,7 @@ pub fn decompress_raw_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> PyResult<
 pub(crate) mod internal {
     use snap::raw::{Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Cursor, Error, Write, Read};
+    use std::io::{Cursor, Error, Read, Write};
 
     /// Decompress snappy data raw into a mutable slice
     pub fn decompress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {

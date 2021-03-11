@@ -22,17 +22,17 @@ pub mod brotli;
 pub mod deflate;
 pub mod exceptions;
 pub mod gzip;
+pub mod io;
 pub mod lz4;
 pub mod snappy;
 pub mod zstd;
-pub mod io;
 
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 
+use crate::io::{RustyBuffer, RustyFile};
 use exceptions::{CompressionError, DecompressionError};
 use std::io::Write;
-use crate::io::{RustyFile, RustyBuffer};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
@@ -59,7 +59,7 @@ impl<'a> BytesType<'a> {
         match self {
             Self::Bytes(b) => b.as_bytes(),
             Self::ByteArray(b) => unsafe { b.as_bytes() },
-            _ => unimplemented!("Converting Rust native types to bytes is not supported")
+            _ => unimplemented!("Converting Rust native types to bytes is not supported"),
         }
     }
 }
@@ -70,7 +70,7 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
             Self::Bytes(bytes) => bytes.to_object(py),
             Self::ByteArray(byte_array) => byte_array.to_object(py),
             Self::RustyFile(file) => file.to_object(py),
-            Self::RustyBuffer(buffer) => buffer.to_object(py)
+            Self::RustyBuffer(buffer) => buffer.to_object(py),
         }
     }
 }
@@ -133,7 +133,7 @@ macro_rules! generic_into {
                 pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
             }))?;
             let mut cursor = Cursor::new(buffer);
-            let size = to_py_err!(DecompressionError -> self::internal::$op($input.as_bytes(), &mut cursor $(, $level)?))?;
+            let size = to_py_err!(DecompressionError -> self::internal::$op(&mut Cursor::new($input.as_bytes()), &mut cursor $(, $level)?))?;
             Ok(size)
         }
     }
@@ -146,14 +146,15 @@ macro_rules! generic {
             match $input {
                 BytesType::Bytes(b) => {
                     let bytes = b.as_bytes();
+                    let mut input_cursor = Cursor::new(bytes);
                     match $output_len {
                         Some(len) => {
                             let pybytes = PyBytes::new_with($py, len, |buffer| {
                                 let mut cursor = Cursor::new(buffer);
                                 if stringify!($op) == "compress" {
-                                    to_py_err!(CompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                                    to_py_err!(CompressionError -> self::internal::$op(&mut input_cursor, &mut cursor $(, $level)? ))?;
                                 } else {
-                                    to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
+                                    to_py_err!(DecompressionError -> self::internal::$op(&mut input_cursor, &mut cursor $(, $level)? ))?;
                                 }
                                 Ok(())
                             })?;
@@ -162,9 +163,9 @@ macro_rules! generic {
                         None => {
                             let mut buffer = Vec::new();
                             if stringify!($op) == "compress" {
-                                to_py_err!(CompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                                to_py_err!(CompressionError -> self::internal::$op(&mut input_cursor, &mut buffer $(, $level)? ))?;
                             } else {
-                                to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
+                                to_py_err!(DecompressionError -> self::internal::$op(&mut input_cursor, &mut buffer $(, $level)? ))?;
                             }
 
                             Ok(BytesType::Bytes(PyBytes::new($py, &buffer)))
@@ -173,11 +174,12 @@ macro_rules! generic {
                 },
                 BytesType::ByteArray(b) => {
                     let bytes = unsafe { b.as_bytes() };
+                    let mut cursor = Cursor::new(bytes);
                     let mut pybytes = WriteablePyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
                     if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                        to_py_err!(CompressionError -> self::internal::$op(&mut cursor, &mut pybytes $(, $level)? ))?;
                     } else {
-                        to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                        to_py_err!(DecompressionError -> self::internal::$op(&mut cursor, &mut pybytes $(, $level)? ))?;
                     }
                     Ok(BytesType::ByteArray(pybytes.into_inner()?))
                 },

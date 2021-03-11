@@ -1,13 +1,12 @@
 use std::fs::{File, OpenOptions};
-use std::io::{Read, Seek, SeekFrom, Write, Cursor};
+use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes};
+use pyo3::types::PyBytes;
 
-
-#[pyclass(name="File")]
+#[pyclass(name = "File")]
 pub struct RustyFile {
-    inner: File
+    inner: File,
 }
 
 #[pymethods]
@@ -62,7 +61,7 @@ impl RustyFile {
     }
 }
 
-#[pyclass(name="Buffer")]
+#[pyclass(name = "Buffer")]
 #[derive(Default)]
 pub struct RustyBuffer {
     inner: Cursor<Vec<u8>>,
@@ -72,7 +71,9 @@ pub struct RustyBuffer {
 impl RustyBuffer {
     #[new]
     pub fn new(len: Option<usize>) -> Self {
-        Self { inner: Cursor::new(vec![0; len.unwrap_or_else(|| 0)]) }
+        Self {
+            inner: Cursor::new(vec![0; len.unwrap_or_else(|| 0)]),
+        }
     }
 
     pub fn write(&mut self, buf: &[u8]) -> PyResult<usize> {
@@ -125,13 +126,13 @@ impl Write for RustyFile {
     }
 }
 
-impl Read for &mut RustyBuffer {
+impl Read for RustyBuffer {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.inner.read(buf)
     }
 }
 
-impl Read for &mut RustyFile {
+impl Read for RustyFile {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.inner.read(buf)
     }
