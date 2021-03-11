@@ -32,7 +32,7 @@ use pyo3::types::{PyByteArray, PyBytes};
 
 use crate::io::{RustyBuffer, RustyFile};
 use exceptions::{CompressionError, DecompressionError};
-use std::io::Write;
+use std::io::{Write, Seek, SeekFrom};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
@@ -118,6 +118,13 @@ impl<'a> Write for WriteablePyByteArray<'a> {
     }
 }
 
+impl<'a> Seek for WriteablePyByteArray<'a> {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        unimplemented!();
+        Ok(0)
+    }
+}
+
 /// Expose de/compression_into(data: BytesType<'_>, array: &PyArray1<u8>) -> PyResult<usize>
 /// functions to allow de/compress bytes into a pre-allocated Python array.
 ///
@@ -163,9 +170,9 @@ macro_rules! generic {
                         None => {
                             let mut buffer = Vec::new();
                             if stringify!($op) == "compress" {
-                                to_py_err!(CompressionError -> self::internal::$op(&mut input_cursor, &mut buffer $(, $level)? ))?;
+                                to_py_err!(CompressionError -> self::internal::$op(&mut input_cursor, &mut Cursor::new(&mut buffer) $(, $level)? ))?;
                             } else {
-                                to_py_err!(DecompressionError -> self::internal::$op(&mut input_cursor, &mut buffer $(, $level)? ))?;
+                                to_py_err!(DecompressionError -> self::internal::$op(&mut input_cursor, &mut Cursor::new(&mut buffer) $(, $level)? ))?;
                             }
 
                             Ok(BytesType::Bytes(PyBytes::new($py, &buffer)))
@@ -263,10 +270,9 @@ mod tests {
                 let compressed_size = if stringify!($decompress_output) == "Slice" {
                         compressed = (0..data.len()).map(|_| 0).collect::<Vec<u8>>();
                         let mut cursor = Cursor::new(compressed.as_mut_slice());
-                        crate::$variant::internal::compress(&data, &mut cursor $(, $level)?).unwrap()
+                        crate::$variant::internal::compress(&mut Cursor::new(data.as_slice()), &mut cursor $(, $level)?).unwrap()
                     } else {
-
-                        crate::$variant::internal::compress(&data, &mut compressed $(, $level)?).unwrap()
+                        crate::$variant::internal::compress(&mut Cursor::new(data.as_slice()), &mut Cursor::new(&mut compressed) $(, $level)?).unwrap()
                     };
 
                 assert_eq!(compressed_size, $compressed_len);
@@ -277,10 +283,9 @@ mod tests {
                 let decompressed_size = if stringify!($decompress_output) == "Slice" {
                         decompressed = (0..data.len()).map(|_| 0).collect::<Vec<u8>>();
                         let mut cursor = Cursor::new(decompressed.as_mut_slice());
-                        crate::$variant::internal::decompress(&compressed, &mut cursor).unwrap()
+                        crate::$variant::internal::decompress(&mut Cursor::new(&compressed), &mut cursor).unwrap()
                     } else {
-
-                        crate::$variant::internal::decompress(&compressed, &mut decompressed).unwrap()
+                        crate::$variant::internal::decompress(&mut Cursor::new(&compressed), &mut decompressed).unwrap()
                     };
                 assert_eq!(decompressed_size, data.len());
                 if &decompressed[..decompressed_size] != &data {
@@ -309,6 +314,7 @@ mod tests {
     test_variant!(brotli, compressed_len = 729, level = None);
     test_variant!(deflate, compressed_len = 157174, level = None);
     test_variant!(zstd, compressed_len = 4990, level = None);
+    test_variant!(lz4, compressed_len = 303278, level = None);
 
     #[test]
     fn test_snappy_raw_into_round_trip() {

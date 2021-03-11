@@ -66,7 +66,7 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
 
 pub(crate) mod internal {
     use lz4::{Decoder, EncoderBuilder};
-    use std::io::{Error, Read, Write};
+    use std::io::{Error, Read, Write, Cursor, Seek, SeekFrom};
 
     /// Decompress lz4 data
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
@@ -78,7 +78,7 @@ pub(crate) mod internal {
 
     /// Compress lz4 data
     // TODO: lz-fear does not yet support level
-    pub fn compress<W: Write + ?Sized, R: Read>(
+    pub fn compress<W: Write + ?Sized + Seek, R: Read>(
         input: &mut R,
         output: &mut W,
         level: Option<u32>,
@@ -87,8 +87,11 @@ pub(crate) mod internal {
             .auto_flush(true)
             .level(level.unwrap_or_else(|| 4))
             .build(output)?;
-        let n_bytes = std::io::copy(input, &mut encoder)?;
-        encoder.finish().1?;
+
+        std::io::copy(input, &mut encoder)?;
+        let (w, r) = encoder.finish();
+        r?;
+        let n_bytes = w.seek(SeekFrom::Current(0))?;
         Ok(n_bytes as usize)
     }
 }

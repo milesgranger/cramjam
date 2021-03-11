@@ -26,9 +26,9 @@ jobs:
           profile: minimal
           default: true
       - name: Build
-        run: cargo build
+        run: cargo build --release
       - name: Tests
-        run: cargo test
+        run: cargo test --no-default-features --release
       - name: Install maturin
         run: pip install maturin
       - name: Build wheels - x86_64
@@ -78,10 +78,10 @@ jobs:
           default: true
       - name: Build
         if: matrix.platform.python-architecture == 'x64'
-        run: cargo build
+        run: cargo build --release
       - name: Tests
         if: matrix.platform.python-architecture == 'x64'
-        run: cargo test
+        run: cargo test --no-default-features --release
       - name: Install maturin
         run: pip install maturin
       - name: Build wheels
@@ -115,9 +115,9 @@ jobs:
         profile: minimal
         default: true
     - name: Build
-      run: cargo build
+      run: cargo build --release
     - name: Tests
-      run: cargo test
+      run: cargo test --no-default-features
     - uses: actions/setup-python@v2
       with:
         python-version: 3.6
@@ -220,9 +220,9 @@ jobs:
         profile: minimal
         default: true
     - name: Build
-      run: cargo build
+      run: cargo build --release
     - name: Tests
-      run: cargo test
+      run: cargo test --no-default-features
     - uses: actions/setup-python@v2
       with:
         python-version: pypy-3.6

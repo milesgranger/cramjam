@@ -3,6 +3,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
+use pyo3::number::pos;
 
 #[pyclass(name = "File")]
 pub struct RustyFile {
@@ -49,8 +50,8 @@ impl RustyFile {
         }
     }
     pub fn seek(&mut self, position: usize) -> PyResult<usize> {
-        let r = self.inner.seek(SeekFrom::Start(position as u64)).map(|r| r as usize)?;
-        Ok(r)
+        let r = Seek::seek(self, SeekFrom::Start(position as u64))?;
+        Ok(r as usize)
     }
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
         self.inner.set_len(size as u64)?;
@@ -95,8 +96,9 @@ impl RustyBuffer {
         }
     }
     pub fn seek(&mut self, position: usize) -> PyResult<usize> {
-        let r = self.inner.seek(SeekFrom::Start(position as u64)).map(|r| r as usize)?;
-        Ok(r)
+        // TODO: Support SeekFrom from python side as in IOBase.seek definition
+        let r = Seek::seek(self, SeekFrom::Start(position as u64))?;
+        Ok(r as usize)
     }
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
         self.inner.get_mut().resize(size, 0);
@@ -105,6 +107,17 @@ impl RustyBuffer {
     pub fn truncate(&mut self) -> PyResult<()> {
         self.inner.get_mut().truncate(0);
         Ok(())
+    }
+}
+
+impl Seek for RustyBuffer {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        self.inner.seek(pos)
+    }
+}
+impl Seek for RustyFile {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        self.inner.seek(pos)
     }
 }
 
