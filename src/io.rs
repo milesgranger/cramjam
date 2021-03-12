@@ -56,6 +56,10 @@ impl RustyFile {
     pub fn seekable(&self) -> bool {
         true
     }
+    pub fn tell(&mut self) -> PyResult<usize> {
+        let r = self.inner.seek(SeekFrom::Current(0))?;
+        Ok(r as usize)
+    }
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
         self.inner.set_len(size as u64)?;
         Ok(())
