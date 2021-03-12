@@ -53,6 +53,9 @@ impl RustyFile {
         let r = Seek::seek(self, SeekFrom::Start(position as u64))?;
         Ok(r as usize)
     }
+    pub fn seekable(&self) -> bool {
+        true
+    }
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
         self.inner.set_len(size as u64)?;
         Ok(())
@@ -99,6 +102,12 @@ impl RustyBuffer {
         // TODO: Support SeekFrom from python side as in IOBase.seek definition
         let r = Seek::seek(self, SeekFrom::Start(position as u64))?;
         Ok(r as usize)
+    }
+    pub fn seekable(&self) -> bool {
+        true
+    }
+    pub fn tell(&self) -> usize {
+        self.inner.position() as usize
     }
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
         self.inner.get_mut().resize(size, 0);
