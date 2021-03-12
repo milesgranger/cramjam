@@ -94,6 +94,11 @@ impl<'a> WriteablePyByteArray<'a> {
         Ok(self.array)
     }
 }
+impl<'a> From<&'a PyByteArray> for WriteablePyByteArray<'a> {
+    fn from(array: &'a PyByteArray) -> Self {
+        Self { array, position: 0 }
+    }
+}
 
 impl<'a> Write for WriteablePyByteArray<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {

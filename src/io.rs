@@ -3,6 +3,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
+use crate::{BytesType, WriteablePyByteArray};
 
 
 #[pyclass(name = "File")]
@@ -112,6 +113,23 @@ impl RustyBuffer {
     }
     pub fn tell(&self) -> usize {
         self.inner.position() as usize
+    }
+    pub fn readinto(&mut self, output: &PyAny) -> PyResult<usize> {
+        let result = match output.extract::<BytesType>()? {
+            BytesType::RustyFile(out) => std::io::copy(&mut self.inner, &mut out.borrow_mut().inner)?,
+            BytesType::RustyBuffer(out) => std::io::copy(&mut self.inner, &mut out.borrow_mut().inner)?,
+            BytesType::ByteArray(out) => {
+                let mut array = WriteablePyByteArray::from(out);
+                std::io::copy(&mut self.inner, &mut array)?
+            },
+            BytesType::Bytes(out) => {
+                // TODO: official API support from PyO3 is probably better; coerce it into &mut [u8]
+                let ptr = out.as_bytes().as_ptr();
+                let mut buffer = unsafe { std::slice::from_raw_parts_mut(ptr as *mut _, out.as_bytes().len())};
+                std::io::copy(&mut self.inner, &mut buffer)?
+            }
+        };
+        Ok(result as usize)
     }
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
         self.inner.get_mut().resize(size, 0);
