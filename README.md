@@ -49,7 +49,7 @@ Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts
 both `bytes` and `bytearray` objects.
 
 **de/compress_into**
-Additionally, support `decompress_into` and `compress_into`.
+Additionally, all variants support `decompress_into` and `compress_into`.
 If you have a numpy array preallocated, that can be used as the output location for de/compression.  
 Ex.
 ```python 

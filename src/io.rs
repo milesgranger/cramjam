@@ -3,7 +3,7 @@ use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
-use pyo3::number::pos;
+
 
 #[pyclass(name = "File")]
 pub struct RustyFile {

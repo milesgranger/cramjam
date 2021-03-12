@@ -120,8 +120,28 @@ impl<'a> Write for WriteablePyByteArray<'a> {
 
 impl<'a> Seek for WriteablePyByteArray<'a> {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        unimplemented!();
-        Ok(0)
+
+        match pos {
+            SeekFrom::Start(p) => self.position = p as usize,
+            SeekFrom::Current(p) => {
+                let mut next_pos = self.position as i64 + p;
+                if next_pos < 0 {
+                    next_pos = 0;
+                }
+                self.position = next_pos as usize;
+            },
+            SeekFrom::End(p) => {
+                let mut next_pos = self.array.len() as i64 + p;
+                if next_pos < 0 {
+                    next_pos = 0;
+                }
+                self.position = next_pos as usize;
+            }
+        }
+        if self.position > self.array.len() {
+            self.array.resize(self.position)?;
+        }
+        Ok(self.position as u64)
     }
 }
 

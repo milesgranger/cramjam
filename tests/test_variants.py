@@ -20,9 +20,6 @@ def test_has_version():
 )
 def test_variants_simple(variant_str, is_bytearray):
 
-    if variant_str == "lz4":
-        return  # TODO: Only until Seek is implemented for WritablePyByteArray
-
     variant = getattr(cramjam, variant_str)
 
     uncompressed = b"some bytes to compress 123" * 1000
@@ -47,7 +44,7 @@ def test_variants_raise_exception(variant_str):
         variant.decompress(b"sknow")
 
 
-@pytest.mark.parametrize("variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd"))
+@pytest.mark.parametrize("variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd", "lz4"))
 def test_variants_de_compress_into(variant_str):
 
     # TODO: support lz4 de/compress_into

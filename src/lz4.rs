@@ -66,7 +66,7 @@ pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyAr
 
 pub(crate) mod internal {
     use lz4::{Decoder, EncoderBuilder};
-    use std::io::{Error, Read, Write, Cursor, Seek, SeekFrom};
+    use std::io::{Error, Read, Write, Seek, SeekFrom};
 
     /// Decompress lz4 data
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
