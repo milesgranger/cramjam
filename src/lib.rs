@@ -32,7 +32,7 @@ use pyo3::types::{PyByteArray, PyBytes};
 
 use crate::io::{RustyBuffer, RustyFile};
 use exceptions::{CompressionError, DecompressionError};
-use std::io::{Write, Seek, SeekFrom};
+use std::io::{Seek, SeekFrom, Write};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
@@ -125,7 +125,6 @@ impl<'a> Write for WriteablePyByteArray<'a> {
 
 impl<'a> Seek for WriteablePyByteArray<'a> {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-
         match pos {
             SeekFrom::Start(p) => self.position = p as usize,
             SeekFrom::Current(p) => {
@@ -134,7 +133,7 @@ impl<'a> Seek for WriteablePyByteArray<'a> {
                     next_pos = 0;
                 }
                 self.position = next_pos as usize;
-            },
+            }
             SeekFrom::End(p) => {
                 let mut next_pos = self.array.len() as i64 + p;
                 if next_pos < 0 {
