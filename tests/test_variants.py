@@ -46,9 +46,6 @@ def test_variants_raise_exception(variant_str):
 
 @pytest.mark.parametrize("variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd", "lz4"))
 def test_variants_de_compress_into(variant_str):
-
-    # TODO: support lz4 de/compress_into
-
     variant = getattr(cramjam, variant_str)
 
     data = b"oh what a beautiful morning, oh what a beautiful day!!" * 1000000

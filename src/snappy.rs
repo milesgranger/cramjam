@@ -1,11 +1,12 @@
 use crate::exceptions::{CompressionError, DecompressionError};
-use crate::{to_py_err, BytesType, WriteablePyByteArray};
+use crate::{to_py_err, BytesType};
 use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use std::io::Cursor;
+use std::io::{Cursor};
+use crate::io::{RustyPyBytes, RustyPyByteArray};
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -65,14 +66,14 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<Bytes
                 to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut Cursor::new(output)))?;
                 Ok(())
             })?;
-            Ok(BytesType::Bytes(pybytes))
+            Ok(BytesType::Bytes(RustyPyBytes::from(pybytes)))
         }
         BytesType::ByteArray(_) => {
             let pybytes = PyByteArray::new_with(py, output_len, |output| {
                 to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut Cursor::new(output)))?;
                 Ok(())
             })?;
-            Ok(BytesType::ByteArray(pybytes))
+            Ok(BytesType::ByteArray(RustyPyByteArray::from(pybytes)))
         }
         _ => Err(DecompressionError::new_err(
             "decompress_raw not supported for native Rust types.",
@@ -97,7 +98,7 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
             let mut output = vec![0; output_len];
             let n_bytes = to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut Cursor::new(output.as_mut_slice())))?;
             output.truncate(n_bytes);
-            Ok(BytesType::Bytes(PyBytes::new(py, &output)))
+            Ok(BytesType::Bytes(RustyPyBytes::from(PyBytes::new(py, &output))))
         }
         BytesType::ByteArray(_) => {
             let mut actual_size = 0;
@@ -108,7 +109,7 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
                 Ok(())
             })?;
             pybytes.resize(actual_size)?;
-            Ok(BytesType::ByteArray(pybytes))
+            Ok(BytesType::ByteArray(RustyPyByteArray::from(pybytes)))
         }
         _ => Err(CompressionError::new_err(
             "compress_raw not supported for native Rust types.",
@@ -118,14 +119,16 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesTy
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(compress(data -> array))
+pub fn compress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = internal::compress(input, &mut output)?;
+    Ok(r)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(decompress(data -> array))
+pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = internal::decompress(input, &mut output)?;
+    Ok(r as usize)
 }
 
 /// Compress raw format directly into an output buffer

@@ -1,11 +1,10 @@
 use crate::exceptions::{CompressionError, DecompressionError};
-use crate::{to_py_err, BytesType, WriteablePyByteArray};
-use numpy::PyArray1;
+use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use std::io::Cursor;
+use std::io::{Cursor, Seek, SeekFrom};
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -51,22 +50,62 @@ pub fn compress<'a>(
 #[pyfunction]
 pub fn compress_into<'a>(
     _py: Python<'a>,
-    data: BytesType<'a>,
-    array: &PyArray1<u8>,
+    mut input: BytesType<'a>,
+    mut output: BytesType<'a>,
     level: Option<u32>,
 ) -> PyResult<usize> {
-    crate::generic_into!(compress(data -> array), level)
+    // Unfortunately, lz4 only implements a the Read trait for its Encoder,
+    // meaning we will only get the bytes read, when we want the bytes written.
+    // it's too cumbersome to implement Seek for BytesType; as things like PyBytes doesn't
+    // really have a position; so we match each arm and create Cursor for &[u8] and normal seek
+    // for the internal rust types which have already implemented it.
+    let r = match &mut output {
+        BytesType::Bytes(pybytes) => {
+            let starting_pos = to_py_err!(CompressionError -> pybytes.cursor.seek(SeekFrom::Current(0)))?;
+            let _ = internal::compress(&mut input, pybytes, level)?;
+            let ending_pos = to_py_err!(CompressionError -> pybytes.cursor.seek(SeekFrom::Current(0)))?;
+            ending_pos - starting_pos
+        }
+        BytesType::ByteArray(pybytes) => {
+            let starting_pos = to_py_err!(CompressionError -> pybytes.cursor.seek(SeekFrom::Current(0)))?;
+            let _ = internal::compress(&mut input, pybytes, level)?;
+            let ending_pos = to_py_err!(CompressionError -> pybytes.cursor.seek(SeekFrom::Current(0)))?;
+            ending_pos - starting_pos
+        }
+        BytesType::NumpyArray(array) => {
+            let starting_pos = to_py_err!(CompressionError -> array.cursor.seek(SeekFrom::Current(0)))?;
+            internal::compress(&mut input, array, level)?;
+            let ending_pos = to_py_err!(CompressionError -> array.cursor.seek(SeekFrom::Current(0)))?;
+            ending_pos - starting_pos
+        }
+        BytesType::RustyFile(file) => {
+            let mut file_ref = file.borrow_mut();
+            let starting_pos = to_py_err!(CompressionError -> file_ref.inner.seek(SeekFrom::Current(0)))?;
+            let _ = internal::compress(&mut input, &mut file_ref.inner, level)?;
+            let ending_pos = to_py_err!(CompressionError -> file_ref.inner.seek(SeekFrom::Current(0)))?;
+            (ending_pos - starting_pos) as u64
+        }
+        BytesType::RustyBuffer(buffer) => {
+            let mut buf_ref = buffer.borrow_mut();
+            let starting_pos = buf_ref.inner.seek(SeekFrom::Current(0))?;
+            let _ = internal::compress(&mut input, &mut buf_ref.inner, level)?;
+            let ending_pos = buf_ref.inner.seek(SeekFrom::Current(0))?;
+            (ending_pos - starting_pos) as u64
+        }
+    };
+    Ok(r as usize)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(decompress(data -> array))
+pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = internal::decompress(input, &mut output)?;
+    Ok(r)
 }
 
 pub(crate) mod internal {
     use lz4::{Decoder, EncoderBuilder};
-    use std::io::{Error, Read, Seek, SeekFrom, Write};
+    use std::io::{Error, Read, Seek, Write};
 
     /// Decompress lz4 data
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
@@ -77,7 +116,6 @@ pub(crate) mod internal {
     }
 
     /// Compress lz4 data
-    // TODO: lz-fear does not yet support level
     pub fn compress<W: Write + ?Sized + Seek, R: Read>(
         input: &mut R,
         output: &mut W,
@@ -88,10 +126,9 @@ pub(crate) mod internal {
             .level(level.unwrap_or_else(|| 4))
             .build(output)?;
 
-        std::io::copy(input, &mut encoder)?;
-        let (w, r) = encoder.finish();
+        let n_bytes = std::io::copy(input, &mut encoder)?;
+        let (_, r) = encoder.finish();
         r?;
-        let n_bytes = w.seek(SeekFrom::Current(0))?;
         Ok(n_bytes as usize)
     }
 }
