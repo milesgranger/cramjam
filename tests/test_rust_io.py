@@ -13,6 +13,13 @@ def test_obj_api(tmpdir, Obj):
     assert buf.tell() == 5
     assert buf.seek(0) == 0
     assert buf.read() == b"bytes"
+    assert buf.seek(-1, 2) == 4  # set one byte backwards from end; position 4
+    assert buf.read() == b"s"
+    assert buf.seek(-2, whence=1) == 3  # set two bytes from current (end): position 3
+    assert buf.read() == b"es"
+
+    with pytest.raises(ValueError):
+        buf.seek(1, 3)  # only 0, 1, 2 are valid seek from positions
 
     for out in (b"12345", bytearray(b'12345'), File(str(tmpdir.join("test.txt"))), Buffer()):
         buf.seek(0)

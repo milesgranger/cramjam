@@ -43,8 +43,18 @@ impl RustyFile {
         let r = copy(self, &mut out)?;
         Ok(r as usize)
     }
-    pub fn seek(&mut self, position: usize) -> PyResult<usize> {
-        let r = Seek::seek(self, SeekFrom::Start(position as u64))?;
+    pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
+        let pos = match whence.unwrap_or_else(|| 0) {
+            0 => SeekFrom::Start(position as u64),
+            1 => SeekFrom::Current(position as i64),
+            2 => SeekFrom::End(position as i64),
+            _ => {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "whence should be one of 0: seek from start, 1: seek from current, or 2: seek from end",
+                ))
+            }
+        };
+        let r = Seek::seek(self, pos)?;
         Ok(r as usize)
     }
     pub fn seekable(&self) -> bool {
@@ -85,9 +95,18 @@ impl RustyBuffer {
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
         read(self, py, n_bytes)
     }
-    pub fn seek(&mut self, position: usize) -> PyResult<usize> {
-        // TODO: Support SeekFrom from python side as in IOBase.seek definition
-        let r = Seek::seek(self, SeekFrom::Start(position as u64))?;
+    pub fn seek(&mut self, position: i64, whence: Option<usize>) -> PyResult<usize> {
+        let pos = match whence.unwrap_or_else(|| 0) {
+            0 => SeekFrom::Start(position as u64),
+            1 => SeekFrom::Current(position as i64),
+            2 => SeekFrom::End(position as i64),
+            _ => {
+                return Err(pyo3::exceptions::PyValueError::new_err(
+                    "whence should be one of 0: seek from start, 1: seek from current, or 2: seek from end",
+                ))
+            }
+        };
+        let r = Seek::seek(self, pos)?;
         Ok(r as usize)
     }
     pub fn seekable(&self) -> bool {
