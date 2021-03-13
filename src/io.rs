@@ -130,9 +130,10 @@ fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64
 fn read<'a, R: Read>(reader: &mut R, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
     match n_bytes {
         Some(n) => {
-            let mut buf = vec![0; n];
-            reader.read(buf.as_mut_slice())?;
-            Ok(PyBytes::new(py, buf.as_slice()))
+            PyBytes::new_with(py, n, |buf| {
+                reader.read(buf)?;
+                Ok(())
+            })
         }
         None => {
             let mut buf = vec![];
