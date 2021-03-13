@@ -129,7 +129,6 @@ jobs:
         pip install maturin
         maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }}
         ' > build-wheel.sh
-        chmod +x build-wheel.sh
 
         docker run --rm -v "$PWD":/io -w /io quay.io/pypa/manylinux${{ matrix.platform.manylinux }}_${{ matrix.platform.arch }} bash build-wheel.sh
     - name: Python UnitTest
@@ -145,7 +144,7 @@ jobs:
         path: dist
 
   linux-cross:
-    runs-on: ubuntu-16.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         platform: [
@@ -157,32 +156,15 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: 3.6
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: ${{ matrix.platform.target }}
-        profile: minimal
-        default: true
-    - name: Install aarch64 cross compiler
-      if: matrix.platform.target == 'aarch64-unknown-linux-gnu'
-      run: |
-        sudo apt-get install -y gcc-aarch64-linux-gnu libc6-arm64-cross libc6-dev-arm64-cross
-        echo "TARGET_CC=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
-        echo "TARGET_CXX=aarch64-linux-gnu-cpp" >> "$GITHUB_ENV"
-        echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
-    - name: Install armv7 cross compiler
-      if: matrix.platform.target == 'armv7-unknown-linux-gnueabihf'
-      run: |
-        sudo apt-get install -y gcc-arm-linux-gnueabihf libc6-armhf-cross libc6-dev-armhf-cross
-        echo "TARGET_CC=arm-linux-gnueabihf-gcc" >> "$GITHUB_ENV"
-        echo "TARGET_CXX=arm-linux-gnueabihf-cpp" >> "$GITHUB_ENV"
-        echo "CARGO_TARGET_ARMV7_UNKNOWN_LINUX_GNUEABIHF_LINKER=arm-linux-gnueabihf-gcc" >> "$GITHUB_ENV"
-    - name: Install maturin
-      run: pip install maturin
     - name: Build Wheels
       run: |
-        maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }} --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=abi3"
+        echo 'curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
+        source ~/.cargo/env
+        rustup target add ${{ matrix.platform.target }}
+        maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }} --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=abi3,extension-module"  # disable mimallocator
+        ' > build-wheel.sh
+
+        docker run --rm -v "$PWD":/io -w /io messense/manylinux2014-cross:${{ matrix.platform.arch }} bash build-wheel.sh
     - uses: uraimo/run-on-arch-action@v2.0.5
       name: Install built wheel
       with:
