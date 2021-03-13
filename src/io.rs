@@ -30,9 +30,10 @@ impl RustyFile {
                 .open(path)?,
         })
     }
-    pub fn write(&mut self, buf: &[u8]) -> PyResult<usize> {
-        let r = Write::write(self, buf)?;
-        Ok(r)
+    pub fn write(&mut self, data: &PyAny) -> PyResult<usize> {
+        let mut input = data.extract::<BytesType>()?;
+        let r = write(&mut input, self)?;
+        Ok(r as usize)
     }
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
         read(self, py, n_bytes)
@@ -76,9 +77,10 @@ impl RustyBuffer {
             inner: Cursor::new(vec![0; len.unwrap_or_else(|| 0)]),
         }
     }
-    pub fn write(&mut self, buf: &[u8]) -> PyResult<usize> {
-        let r = Write::write(self, buf)?;
-        Ok(r)
+    pub fn write(&mut self, data: &PyAny) -> PyResult<usize> {
+        let mut input = data.extract::<BytesType>()?;
+        let r = write(&mut input, self)?;
+        Ok(r as usize)
     }
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
         read(self, py, n_bytes)
@@ -107,6 +109,22 @@ impl RustyBuffer {
         self.inner.get_mut().truncate(0);
         Ok(())
     }
+}
+
+fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64> {
+    let result = match input {
+        BytesType::RustyFile(data) => copy(&mut data.borrow_mut().inner, output)?,
+        BytesType::RustyBuffer(data) => copy(&mut data.borrow_mut().inner, output)?,
+        BytesType::ByteArray(data) => {
+            let mut array = Cursor::new(unsafe { data.as_bytes() });
+            copy(&mut array, output)?
+        }
+        BytesType::Bytes(data) => {
+            let buffer = data.as_bytes();
+            copy(&mut Cursor::new(buffer), output)?
+        }
+    };
+    Ok(result)
 }
 
 fn read<'a, R: Read>(reader: &mut R, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
