@@ -32,7 +32,7 @@ use pyo3::types::{PyByteArray, PyBytes};
 
 use crate::io::{RustyBuffer, RustyFile};
 use exceptions::{CompressionError, DecompressionError};
-use std::io::{Seek, SeekFrom, Write};
+use std::io::{copy, Cursor, Seek, SeekFrom, Write};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
@@ -48,6 +48,34 @@ pub enum BytesType<'a> {
     RustyFile(&'a PyCell<RustyFile>),
     #[pyo3(transparent, annotation = "Buffer")]
     RustyBuffer(&'a PyCell<RustyBuffer>),
+}
+
+impl<'a> Write for BytesType<'a> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let mut reader = Cursor::new(buf);
+        let result = match self {
+            BytesType::RustyFile(out) => copy(&mut reader, &mut out.borrow_mut().inner)?,
+            BytesType::RustyBuffer(out) => copy(&mut reader, &mut out.borrow_mut().inner)?,
+            BytesType::ByteArray(out) => {
+                let mut array = WriteablePyByteArray::from(out);
+                copy(&mut reader, &mut array)?
+            }
+            BytesType::Bytes(out) => {
+                // TODO: official API support from PyO3 is probably better; coerce it into &mut [u8]
+                let ptr = out.as_bytes().as_ptr();
+                let mut buffer = unsafe { std::slice::from_raw_parts_mut(ptr as *mut _, out.as_bytes().len()) };
+                copy(&mut reader, &mut buffer)?
+            }
+        };
+        Ok(result as usize)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            BytesType::RustyFile(f) => f.borrow_mut().flush(),
+            BytesType::RustyBuffer(b) => b.borrow_mut().flush(),
+            BytesType::ByteArray(_) | BytesType::Bytes(_) => Ok(()),
+        }
+    }
 }
 
 impl<'a> BytesType<'a> {
@@ -96,6 +124,11 @@ impl<'a> WriteablePyByteArray<'a> {
 }
 impl<'a> From<&'a PyByteArray> for WriteablePyByteArray<'a> {
     fn from(array: &'a PyByteArray) -> Self {
+        Self { array, position: 0 }
+    }
+}
+impl<'a> From<&mut &'a PyByteArray> for WriteablePyByteArray<'a> {
+    fn from(array: &mut &'a PyByteArray) -> Self {
         Self { array, position: 0 }
     }
 }

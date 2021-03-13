@@ -1,13 +1,13 @@
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 
-use crate::{BytesType, WriteablePyByteArray};
+use crate::BytesType;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
 #[pyclass(name = "File")]
 pub struct RustyFile {
-    inner: File,
+    pub(crate) inner: File,
 }
 
 #[pymethods]
@@ -39,8 +39,8 @@ impl RustyFile {
         read(self, py, n_bytes)
     }
     pub fn readinto(&mut self, output: &PyAny) -> PyResult<usize> {
-        let out = output.extract::<BytesType>()?;
-        let r = readinto(self, out)?;
+        let mut out = output.extract::<BytesType>()?;
+        let r = copy(self, &mut out)?;
         Ok(r as usize)
     }
     pub fn seek(&mut self, position: usize) -> PyResult<usize> {
@@ -66,7 +66,7 @@ impl RustyFile {
 #[pyclass(name = "Buffer")]
 #[derive(Default)]
 pub struct RustyBuffer {
-    inner: Cursor<Vec<u8>>,
+    pub(crate) inner: Cursor<Vec<u8>>,
 }
 
 #[pymethods]
@@ -97,8 +97,8 @@ impl RustyBuffer {
         self.inner.position() as usize
     }
     pub fn readinto(&mut self, output: &PyAny) -> PyResult<usize> {
-        let out = output.extract::<BytesType>()?;
-        let r = readinto(self, out)?;
+        let mut out = output.extract::<BytesType>()?;
+        let r = copy(self, &mut out)?;
         Ok(r as usize)
     }
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
@@ -129,36 +129,16 @@ fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64
 
 fn read<'a, R: Read>(reader: &mut R, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
     match n_bytes {
-        Some(n) => {
-            PyBytes::new_with(py, n, |buf| {
-                reader.read(buf)?;
-                Ok(())
-            })
-        }
+        Some(n) => PyBytes::new_with(py, n, |buf| {
+            reader.read(buf)?;
+            Ok(())
+        }),
         None => {
             let mut buf = vec![];
             reader.read_to_end(&mut buf)?;
             Ok(PyBytes::new(py, buf.as_slice()))
         }
     }
-}
-
-fn readinto<R: Read>(reader: &mut R, output: BytesType) -> std::io::Result<u64> {
-    let result = match output {
-        BytesType::RustyFile(out) => copy(reader, &mut out.borrow_mut().inner)?,
-        BytesType::RustyBuffer(out) => copy(reader, &mut out.borrow_mut().inner)?,
-        BytesType::ByteArray(out) => {
-            let mut array = WriteablePyByteArray::from(out);
-            copy(reader, &mut array)?
-        }
-        BytesType::Bytes(out) => {
-            // TODO: official API support from PyO3 is probably better; coerce it into &mut [u8]
-            let ptr = out.as_bytes().as_ptr();
-            let mut buffer = unsafe { std::slice::from_raw_parts_mut(ptr as *mut _, out.as_bytes().len()) };
-            copy(reader, &mut buffer)?
-        }
-    };
-    Ok(result)
 }
 
 impl Seek for RustyBuffer {
