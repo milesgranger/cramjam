@@ -31,7 +31,7 @@ use pyo3::prelude::*;
 
 use crate::io::{RustyBuffer, RustyFile, RustyPyBytes, RustyPyByteArray, RustyNumpyArray};
 use exceptions::{CompressionError, DecompressionError};
-use std::io::{Read, Write};
+use std::io::{Read, Write, Seek, SeekFrom};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
@@ -78,6 +78,17 @@ impl<'a> Read for BytesType<'a> {
             BytesType::ByteArray(data) => data.read(buf),
             BytesType::NumpyArray(array) => array.read(buf),
             BytesType::Bytes(data) => data.read(buf)
+        }
+    }
+}
+impl<'a> Seek for BytesType<'a> {
+    fn seek(&mut self, style: SeekFrom) -> std::io::Result<u64> {
+        match self {
+            BytesType::RustyFile(f) => f.borrow_mut().inner.seek(style),
+            BytesType::RustyBuffer(b) => b.borrow_mut().inner.seek(style),
+            BytesType::ByteArray(a) => a.seek(style),
+            BytesType::NumpyArray(a) => a.seek(style),
+            BytesType::Bytes(b) => b.seek(style)
         }
     }
 }
@@ -289,10 +300,7 @@ mod tests {
     test_variant!(brotli, compressed_len = 729, level = None);
     test_variant!(deflate, compressed_len = 157174, level = None);
     test_variant!(zstd, compressed_len = 4990, level = None);
-    // TODO: lz4 Encoder only implements Read, so gives back bytes read into output
-    // worked around at the #[pyfunction] level by wrapping the output going into
-    // internal::compress as a Cursor, then getting the position after compression
-    //test_variant!(lz4, compressed_len = 303278, level = None);
+    test_variant!(lz4, compressed_len = 303278, level = None);
 
     #[test]
     fn test_snappy_raw_into_round_trip() {

@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use std::io::{Cursor, Seek, SeekFrom};
+use std::io::{Cursor};
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -54,46 +54,8 @@ pub fn compress_into<'a>(
     mut output: BytesType<'a>,
     level: Option<u32>,
 ) -> PyResult<usize> {
-    // Unfortunately, lz4 only implements a the Read trait for its Encoder,
-    // meaning we will only get the bytes read, when we want the bytes written.
-    // it's too cumbersome to implement Seek for BytesType; as things like PyBytes doesn't
-    // really have a position; so we match each arm and create Cursor for &[u8] and normal seek
-    // for the internal rust types which have already implemented it.
-    let r = match &mut output {
-        BytesType::Bytes(pybytes) => {
-            let starting_pos = to_py_err!(CompressionError -> pybytes.cursor.seek(SeekFrom::Current(0)))?;
-            let _ = internal::compress(&mut input, pybytes, level)?;
-            let ending_pos = to_py_err!(CompressionError -> pybytes.cursor.seek(SeekFrom::Current(0)))?;
-            ending_pos - starting_pos
-        }
-        BytesType::ByteArray(pybytes) => {
-            let starting_pos = to_py_err!(CompressionError -> pybytes.cursor.seek(SeekFrom::Current(0)))?;
-            let _ = internal::compress(&mut input, pybytes, level)?;
-            let ending_pos = to_py_err!(CompressionError -> pybytes.cursor.seek(SeekFrom::Current(0)))?;
-            ending_pos - starting_pos
-        }
-        BytesType::NumpyArray(array) => {
-            let starting_pos = to_py_err!(CompressionError -> array.cursor.seek(SeekFrom::Current(0)))?;
-            internal::compress(&mut input, array, level)?;
-            let ending_pos = to_py_err!(CompressionError -> array.cursor.seek(SeekFrom::Current(0)))?;
-            ending_pos - starting_pos
-        }
-        BytesType::RustyFile(file) => {
-            let mut file_ref = file.borrow_mut();
-            let starting_pos = to_py_err!(CompressionError -> file_ref.inner.seek(SeekFrom::Current(0)))?;
-            let _ = internal::compress(&mut input, &mut file_ref.inner, level)?;
-            let ending_pos = to_py_err!(CompressionError -> file_ref.inner.seek(SeekFrom::Current(0)))?;
-            (ending_pos - starting_pos) as u64
-        }
-        BytesType::RustyBuffer(buffer) => {
-            let mut buf_ref = buffer.borrow_mut();
-            let starting_pos = buf_ref.inner.seek(SeekFrom::Current(0))?;
-            let _ = internal::compress(&mut input, &mut buf_ref.inner, level)?;
-            let ending_pos = buf_ref.inner.seek(SeekFrom::Current(0))?;
-            (ending_pos - starting_pos) as u64
-        }
-    };
-    Ok(r as usize)
+    let r = internal::compress(&mut input, &mut output, level)?;
+    Ok(r)
 }
 
 /// Decompress directly into an output buffer
@@ -105,7 +67,7 @@ pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: By
 
 pub(crate) mod internal {
     use lz4::{Decoder, EncoderBuilder};
-    use std::io::{Error, Read, Seek, Write};
+    use std::io::{Error, Read, Seek, Write, SeekFrom};
 
     /// Decompress lz4 data
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
@@ -121,14 +83,18 @@ pub(crate) mod internal {
         output: &mut W,
         level: Option<u32>,
     ) -> Result<usize, Error> {
+        let start_pos = output.seek(SeekFrom::Current(0))?;
         let mut encoder = EncoderBuilder::new()
             .auto_flush(true)
             .level(level.unwrap_or_else(|| 4))
             .build(output)?;
 
-        let n_bytes = std::io::copy(input, &mut encoder)?;
-        let (_, r) = encoder.finish();
+        // this returns, bytes read from uncompressed, input; we want bytes written
+        // but lz4 only implements Read for Encoder
+        std::io::copy(input, &mut encoder)?;
+        let (w, r) = encoder.finish();
         r?;
-        Ok(n_bytes as usize)
+        let ending_pos = w.seek(SeekFrom::Current(0))?;
+        Ok((ending_pos - start_pos) as usize)
     }
 }
