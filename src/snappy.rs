@@ -1,12 +1,10 @@
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::{to_py_err, BytesType};
-use numpy::PyArray1;
 use pyo3::prelude::*;
-use pyo3::types::{PyByteArray, PyBytes};
+use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use std::io::{Cursor};
-use crate::io::{RustyPyBytes, RustyPyByteArray};
+use std::io::Cursor;
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -57,28 +55,8 @@ pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usiz
 /// >>> cramjam.snappy.decompress_raw(compressed_raw_bytes)
 /// ```
 #[pyfunction]
-pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
-    let output_len = to_py_err!(DecompressionError -> snap::raw::decompress_len(data.as_bytes()))?;
-
-    match data {
-        BytesType::Bytes(_) => {
-            let pybytes = PyBytes::new_with(py, output_len, |output| {
-                to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut Cursor::new(output)))?;
-                Ok(())
-            })?;
-            Ok(BytesType::Bytes(RustyPyBytes::from(pybytes)))
-        }
-        BytesType::ByteArray(_) => {
-            let pybytes = PyByteArray::new_with(py, output_len, |output| {
-                to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut Cursor::new(output)))?;
-                Ok(())
-            })?;
-            Ok(BytesType::ByteArray(RustyPyByteArray::from(pybytes)))
-        }
-        _ => Err(DecompressionError::new_err(
-            "decompress_raw not supported for native Rust types.",
-        )),
-    }
+pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    crate::generic!(decompress_raw(data), py = py, output_len = output_len)
 }
 
 /// Snappy compression raw.
@@ -90,31 +68,8 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<Bytes
 /// >>> cramjam.snappy.compress_raw(b'some bytes here')
 /// ```
 #[pyfunction]
-pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
-    let output_len = snap::raw::max_compress_len(data.len());
-
-    match data {
-        BytesType::Bytes(_) => {
-            let mut output = vec![0; output_len];
-            let n_bytes = to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut Cursor::new(output.as_mut_slice())))?;
-            output.truncate(n_bytes);
-            Ok(BytesType::Bytes(RustyPyBytes::from(PyBytes::new(py, &output))))
-        }
-        BytesType::ByteArray(_) => {
-            let mut actual_size = 0;
-            let pybytes = PyByteArray::new_with(py, output_len, |output| {
-                let mut cursor = Cursor::new(output);
-                actual_size =
-                    to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut cursor))?;
-                Ok(())
-            })?;
-            pybytes.resize(actual_size)?;
-            Ok(BytesType::ByteArray(RustyPyByteArray::from(pybytes)))
-        }
-        _ => Err(CompressionError::new_err(
-            "compress_raw not supported for native Rust types.",
-        )),
-    }
+pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    crate::generic!(compress_raw(data), py = py, output_len = output_len)
 }
 
 /// Compress directly into an output buffer
@@ -133,30 +88,16 @@ pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: By
 
 /// Compress raw format directly into an output buffer
 #[pyfunction]
-pub fn compress_raw_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    //crate::generic_into!(compress_raw_into(data -> array))  <- does not support Read/Write; must pass &[u8]
-    let mut array_mut = unsafe { array.as_array_mut() };
-
-    let buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
-        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
-    }))?;
-    let mut cursor = Cursor::new(buffer);
-    let size = to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut cursor))?;
-    Ok(size)
+pub fn compress_raw_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = to_py_err!(CompressionError -> internal::compress_raw(input, &mut output))?;
+    Ok(r)
 }
 
 /// Decompress raw format directly into an output buffer
 #[pyfunction]
-pub fn decompress_raw_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    //crate::generic_into!(decompress_raw_into(data -> array))  <- does not support Read/Write; must pass &[u8]
-    let mut array_mut = unsafe { array.as_array_mut() };
-
-    let buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
-        pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
-    }))?;
-    let mut cursor = Cursor::new(buffer);
-    let size = to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut cursor))?;
-    Ok(size)
+pub fn decompress_raw_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = to_py_err!(DecompressionError -> internal::decompress_raw(input, &mut output))?;
+    Ok(r)
 }
 
 /// Get the expected max compressed length for snappy raw compression; this is the size
@@ -174,22 +115,88 @@ pub fn decompress_raw_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> PyResult<
 }
 
 pub(crate) mod internal {
-    use snap::raw::{Decoder, Encoder};
+    use snap::raw::{decompress_len, max_compress_len, Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
     use std::io::{Cursor, Error, Read, Write};
 
+    pub(crate) struct RawEncoder<R: Read> {
+        inner: R,
+        buffer: Vec<u8>,             // raw data read from inner
+        compressed: Cursor<Vec<u8>>, // compressed data.
+        encoder: Encoder,
+    }
+    impl<R: Read> RawEncoder<R> {
+        pub fn new(inner: R) -> Self {
+            Self {
+                inner,
+                buffer: Vec::new(),
+                compressed: Cursor::new(Vec::new()),
+                encoder: Encoder::new(),
+            }
+        }
+    }
+    impl<R: Read> Read for RawEncoder<R> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            if self.buffer.is_empty() {
+                let n = self.inner.read_to_end(&mut self.buffer)?;
+                self.buffer.truncate(n);
+                let len = max_compress_len(self.buffer.len());
+                self.compressed.get_mut().resize(len, 0);
+                let n = self
+                    .encoder
+                    .compress(self.buffer.as_slice(), self.compressed.get_mut())?;
+                self.compressed.get_mut().truncate(n);
+                self.compressed.set_position(0);
+            }
+            self.compressed.read(buf)
+        }
+    }
+
+    pub(crate) struct RawDecoder<R: Read> {
+        inner: R,
+        buffer: Vec<u8>,               // raw data read from inner
+        decompressed: Cursor<Vec<u8>>, // decompressed data.
+        decoder: Decoder,
+    }
+    impl<R: Read> RawDecoder<R> {
+        pub fn new(inner: R) -> Self {
+            Self {
+                inner,
+                buffer: Vec::with_capacity(64000),
+                decompressed: Cursor::new(Vec::with_capacity(64000)),
+                decoder: Decoder::new(),
+            }
+        }
+    }
+    impl<R: Read> Read for RawDecoder<R> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            if self.buffer.is_empty() {
+                let n = self.inner.read_to_end(&mut self.buffer)?;
+                self.buffer.truncate(n);
+                let len = decompress_len(&self.buffer)?;
+                self.decompressed.get_mut().resize(len, 0);
+                let n = self
+                    .decoder
+                    .decompress(self.buffer.as_slice(), self.decompressed.get_mut())?;
+                self.decompressed.get_mut().truncate(n);
+                self.decompressed.set_position(0);
+            }
+            self.decompressed.read(buf)
+        }
+    }
+
     /// Decompress snappy data raw into a mutable slice
-    pub fn decompress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {
-        let mut decoder = Decoder::new();
-        let buffer = output.get_mut();
-        decoder.decompress(input, *buffer)
+    pub fn decompress_raw<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> std::io::Result<usize> {
+        let mut decoder = RawDecoder::new(input);
+        let n_bytes = std::io::copy(&mut decoder, output)?;
+        Ok(n_bytes as usize)
     }
 
     /// Compress snappy data raw into a mutable slice
-    pub fn compress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {
-        let mut encoder = Encoder::new();
-        let buffer = output.get_mut();
-        encoder.compress(input, buffer)
+    pub fn compress_raw<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> std::io::Result<usize> {
+        let mut encoder = RawEncoder::new(input);
+        let n_bytes = std::io::copy(&mut encoder, output)?;
+        Ok(n_bytes as usize)
     }
 
     /// Decompress snappy data framed

@@ -2,21 +2,21 @@ use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 
 use crate::BytesType;
-use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyByteArray};
 use numpy::PyArray1;
+use pyo3::prelude::*;
+use pyo3::types::{PyByteArray, PyBytes};
 
 // Internal wrapper for PyArray1, to provide Read + Write and other traits
 pub struct RustyNumpyArray<'a> {
     pub(crate) inner: &'a PyArray1<u8>,
-    pub(crate) cursor: Cursor<&'a mut [u8]>
+    pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
 impl<'a> RustyNumpyArray<'a> {
     pub fn from_vec(py: Python<'a>, v: Vec<u8>) -> Self {
         let inner = PyArray1::from_vec(py, v);
         Self {
             inner,
-            cursor: Cursor::new(unsafe {inner.as_slice_mut().unwrap() })
+            cursor: Cursor::new(unsafe { inner.as_slice_mut().unwrap() }),
         }
     }
     pub fn as_bytes(&self) -> &[u8] {
@@ -28,7 +28,10 @@ impl<'a> RustyNumpyArray<'a> {
 }
 impl<'a> From<&'a PyArray1<u8>> for RustyNumpyArray<'a> {
     fn from(inner: &'a PyArray1<u8>) -> Self {
-        Self { inner, cursor: Cursor::new(unsafe { inner.as_slice_mut().unwrap() }) }
+        Self {
+            inner,
+            cursor: Cursor::new(unsafe { inner.as_slice_mut().unwrap() }),
+        }
     }
 }
 impl<'a> FromPyObject<'a> for RustyNumpyArray<'a> {
@@ -65,7 +68,7 @@ impl<'a> Seek for RustyNumpyArray<'a> {
 // Internal wrapper for PyBytes, to provide Read + Write and other traits
 pub struct RustyPyBytes<'a> {
     pub(crate) inner: &'a PyBytes,
-    pub(crate) cursor: Cursor<&'a mut [u8]>
+    pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
 impl<'a> RustyPyBytes<'a> {
     pub fn as_bytes(&self) -> &[u8] {
@@ -75,7 +78,10 @@ impl<'a> RustyPyBytes<'a> {
 impl<'a> From<&'a PyBytes> for RustyPyBytes<'a> {
     fn from(inner: &'a PyBytes) -> Self {
         let ptr = inner.as_bytes().as_ptr();
-        Self { inner, cursor: Cursor::new(unsafe { std::slice::from_raw_parts_mut(ptr as *mut _, inner.as_bytes().len()) }) }
+        Self {
+            inner,
+            cursor: Cursor::new(unsafe { std::slice::from_raw_parts_mut(ptr as *mut _, inner.as_bytes().len()) }),
+        }
     }
 }
 impl<'a> FromPyObject<'a> for RustyPyBytes<'a> {
@@ -132,7 +138,10 @@ impl<'a> RustyPyByteArray<'a> {
 }
 impl<'a> From<&'a PyByteArray> for RustyPyByteArray<'a> {
     fn from(inner: &'a PyByteArray) -> Self {
-        Self { inner, cursor: Cursor::new(unsafe { inner.as_bytes_mut() }) }
+        Self {
+            inner,
+            cursor: Cursor::new(unsafe { inner.as_bytes_mut() }),
+        }
     }
 }
 impl<'a> FromPyObject<'a> for RustyPyByteArray<'a> {

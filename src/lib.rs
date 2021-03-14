@@ -29,9 +29,9 @@ pub mod zstd;
 
 use pyo3::prelude::*;
 
-use crate::io::{RustyBuffer, RustyFile, RustyPyBytes, RustyPyByteArray, RustyNumpyArray};
+use crate::io::{RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 use exceptions::{CompressionError, DecompressionError};
-use std::io::{Read, Write, Seek, SeekFrom};
+use std::io::{Read, Seek, SeekFrom, Write};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
@@ -58,7 +58,7 @@ impl<'a> Write for BytesType<'a> {
             BytesType::RustyBuffer(out) => out.borrow_mut().inner.write(buf)?,
             BytesType::ByteArray(out) => out.write(buf)?,
             BytesType::NumpyArray(out) => out.write(buf)?,
-            BytesType::Bytes(out) => out.write(buf)?
+            BytesType::Bytes(out) => out.write(buf)?,
         };
         Ok(result)
     }
@@ -77,7 +77,7 @@ impl<'a> Read for BytesType<'a> {
             BytesType::RustyBuffer(data) => data.borrow_mut().inner.read(buf),
             BytesType::ByteArray(data) => data.read(buf),
             BytesType::NumpyArray(array) => array.read(buf),
-            BytesType::Bytes(data) => data.read(buf)
+            BytesType::Bytes(data) => data.read(buf),
         }
     }
 }
@@ -88,7 +88,7 @@ impl<'a> Seek for BytesType<'a> {
             BytesType::RustyBuffer(b) => b.borrow_mut().inner.seek(style),
             BytesType::ByteArray(a) => a.seek(style),
             BytesType::NumpyArray(a) => a.seek(style),
-            BytesType::Bytes(b) => b.seek(style)
+            BytesType::Bytes(b) => b.seek(style),
         }
     }
 }
@@ -239,9 +239,9 @@ mod tests {
     // Default testing data
     fn gen_data() -> Vec<u8> {
         (0..1000000)
-            .map(|_| "oh what a beautiful morning, oh what a beautiful day!!")
-            .collect::<String>()
-            .into_bytes()
+            .map(|_| b"oh what a beautiful morning, oh what a beautiful day!!".to_vec())
+            .flat_map(|v| v)
+            .collect()
     }
 
     // Single test generation
@@ -301,25 +301,4 @@ mod tests {
     test_variant!(deflate, compressed_len = 157174, level = None);
     test_variant!(zstd, compressed_len = 4990, level = None);
     test_variant!(lz4, compressed_len = 303278, level = None);
-
-    #[test]
-    fn test_snappy_raw_into_round_trip() {
-        let data = gen_data();
-        let max_compress_len = snap::raw::max_compress_len(data.len());
-        let mut compressed_buffer = vec![0; max_compress_len];
-
-        let n_bytes =
-            crate::snappy::internal::compress_raw_into(&data, &mut Cursor::new(&mut compressed_buffer)).unwrap();
-        assert_eq!(n_bytes, 2563328); // raw compressed len
-
-        let decompress_len = snap::raw::decompress_len(&compressed_buffer[..n_bytes]).unwrap();
-        let mut decompressed_buffer = vec![0; decompress_len];
-        let n_bytes = crate::snappy::internal::decompress_raw_into(
-            &compressed_buffer[..n_bytes],
-            &mut Cursor::new(&mut decompressed_buffer),
-        )
-        .unwrap();
-        assert_eq!(n_bytes, data.len());
-        assert_eq!(&data, &decompressed_buffer[..n_bytes]);
-    }
 }

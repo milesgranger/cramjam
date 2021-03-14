@@ -2,6 +2,7 @@ import pytest
 
 from cramjam import File, Buffer
 
+
 @pytest.mark.parametrize("Obj", (File, Buffer))
 def test_obj_api(tmpdir, Obj):
     if isinstance(Obj, File):
@@ -21,7 +22,12 @@ def test_obj_api(tmpdir, Obj):
     with pytest.raises(ValueError):
         buf.seek(1, 3)  # only 0, 1, 2 are valid seek from positions
 
-    for out in (b"12345", bytearray(b'12345'), File(str(tmpdir.join("test.txt"))), Buffer()):
+    for out in (
+        b"12345",
+        bytearray(b"12345"),
+        File(str(tmpdir.join("test.txt"))),
+        Buffer(),
+    ):
         buf.seek(0)
 
         expected = b"bytes"
@@ -40,12 +46,12 @@ def test_obj_api(tmpdir, Obj):
     # Set the length
     buf.set_len(2)
     buf.seek(0)
-    assert buf.read() == b'by'
+    assert buf.read() == b"by"
     buf.set_len(10)
     buf.seek(0)
-    assert buf.read() == b'by\x00\x00\x00\x00\x00\x00\x00\x00'
+    assert buf.read() == b"by\x00\x00\x00\x00\x00\x00\x00\x00"
 
     # truncate
     buf.truncate()
     buf.seek(0)
-    assert buf.read() == b''
+    assert buf.read() == b""

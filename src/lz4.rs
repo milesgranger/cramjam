@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use std::io::{Cursor};
+use std::io::Cursor;
 
 pub fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -67,7 +67,7 @@ pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: By
 
 pub(crate) mod internal {
     use lz4::{Decoder, EncoderBuilder};
-    use std::io::{Error, Read, Seek, Write, SeekFrom};
+    use std::io::{Error, Read, Seek, SeekFrom, Write};
 
     /// Decompress lz4 data
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
