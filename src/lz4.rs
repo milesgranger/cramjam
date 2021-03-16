@@ -39,11 +39,11 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 #[pyfunction]
 pub fn compress<'a>(
     py: Python<'a>,
-    data: BytesType<'a>,
+    mut data: BytesType<'a>,
     level: Option<u32>,
     output_len: Option<usize>,
 ) -> PyResult<BytesType<'a>> {
-    crate::generic!(compress(data), py = py, output_len = output_len, level = level)
+    crate::generic!(compress(&mut data), py = py, output_len = output_len, level = level)
 }
 
 /// Compress directly into an output buffer

@@ -115,86 +115,135 @@ pub fn decompress_raw_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> PyResult<
 }
 
 pub(crate) mod internal {
+    use crate::BytesType;
     use snap::raw::{decompress_len, max_compress_len, Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
     use std::io::{Cursor, Error, Read, Write};
 
-    pub(crate) struct RawEncoder<R: Read> {
-        inner: R,
-        buffer: Vec<u8>,             // raw data read from inner
-        compressed: Cursor<Vec<u8>>, // compressed data.
+    pub(crate) struct RawEncoder<'a, 'b> {
+        inner: &'b BytesType<'a>,
+        overflow: Option<Cursor<Vec<u8>>>,
         encoder: Encoder,
+        is_finished: bool,
     }
-    impl<R: Read> RawEncoder<R> {
-        pub fn new(inner: R) -> Self {
+    impl<'a, 'b> RawEncoder<'a, 'b> {
+        pub fn new(inner: &'b BytesType<'a>) -> Self {
             Self {
                 inner,
-                buffer: Vec::new(),
-                compressed: Cursor::new(Vec::new()),
                 encoder: Encoder::new(),
+                overflow: None,
+                is_finished: false,
+            }
+        }
+        fn init_read(&mut self, bytes: &[u8], buf: &mut [u8]) -> std::io::Result<usize> {
+            let len = max_compress_len(bytes.len());
+            if buf.len() >= len {
+                let n = self.encoder.compress(bytes, buf)?;
+                self.is_finished = true; // if overflow is set, it will return 0 next iter
+                Ok(n)
+            } else {
+                let mut overflow = vec![0; len];
+                let n = self.encoder.compress(bytes, overflow.as_mut_slice())?;
+                overflow.truncate(n);
+                let mut overflow = Cursor::new(overflow);
+                let r = overflow.read(buf)?;
+                self.overflow = Some(overflow);
+                Ok(r)
             }
         }
     }
-    impl<R: Read> Read for RawEncoder<R> {
+    impl<'a, 'b> Read for RawEncoder<'a, 'b> {
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            if self.buffer.is_empty() {
-                let n = self.inner.read_to_end(&mut self.buffer)?;
-                self.buffer.truncate(n);
-                let len = max_compress_len(self.buffer.len());
-                self.compressed.get_mut().resize(len, 0);
-                let n = self
-                    .encoder
-                    .compress(self.buffer.as_slice(), self.compressed.get_mut())?;
-                self.compressed.get_mut().truncate(n);
-                self.compressed.set_position(0);
+            if self.is_finished {
+                return Ok(0);
             }
-            self.compressed.read(buf)
+            match self.overflow.as_mut() {
+                Some(overflow) => overflow.read(buf),
+                None => match self.inner {
+                    BytesType::Bytes(pybytes) => self.init_read(pybytes.as_bytes(), buf),
+                    BytesType::ByteArray(pybytes) => self.init_read(pybytes.as_bytes(), buf),
+                    BytesType::NumpyArray(array) => self.init_read(array.as_bytes(), buf),
+                    BytesType::RustyBuffer(buffer) => {
+                        let buffer_ref = buffer.borrow();
+                        self.init_read(buffer_ref.inner.get_ref(), buf)
+                    }
+                    BytesType::RustyFile(file) => {
+                        let mut buffer = vec![];
+                        file.borrow_mut().read_to_end(&mut buffer)?;
+                        self.init_read(buffer.as_slice(), buf)
+                    }
+                },
+            }
         }
     }
 
-    pub(crate) struct RawDecoder<R: Read> {
-        inner: R,
-        buffer: Vec<u8>,               // raw data read from inner
-        decompressed: Cursor<Vec<u8>>, // decompressed data.
+    pub(crate) struct RawDecoder<'a, 'b> {
+        inner: &'b BytesType<'a>,
+        overflow: Option<Cursor<Vec<u8>>>,
         decoder: Decoder,
+        is_finished: bool,
     }
-    impl<R: Read> RawDecoder<R> {
-        pub fn new(inner: R) -> Self {
+    impl<'a, 'b> RawDecoder<'a, 'b> {
+        pub fn new(inner: &'b BytesType<'a>) -> Self {
             Self {
                 inner,
-                buffer: Vec::with_capacity(64000),
-                decompressed: Cursor::new(Vec::with_capacity(64000)),
                 decoder: Decoder::new(),
+                overflow: None,
+                is_finished: false,
+            }
+        }
+        fn init_read(&mut self, bytes: &[u8], buf: &mut [u8]) -> std::io::Result<usize> {
+            let len = decompress_len(bytes)?;
+            if buf.len() >= len {
+                let n = self.decoder.decompress(bytes, buf)?;
+                self.is_finished = true; // if overflow is set, it will return 0 next iter
+                Ok(n)
+            } else {
+                let mut overflow = vec![0; len];
+                let n = self.decoder.decompress(bytes, overflow.as_mut_slice())?;
+                overflow.truncate(n);
+                let mut overflow = Cursor::new(overflow);
+                let r = overflow.read(buf)?;
+                self.overflow = Some(overflow);
+                Ok(r)
             }
         }
     }
-    impl<R: Read> Read for RawDecoder<R> {
+    impl<'a, 'b> Read for RawDecoder<'a, 'b> {
         fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            if self.buffer.is_empty() {
-                let n = self.inner.read_to_end(&mut self.buffer)?;
-                self.buffer.truncate(n);
-                let len = decompress_len(&self.buffer)?;
-                self.decompressed.get_mut().resize(len, 0);
-                let n = self
-                    .decoder
-                    .decompress(self.buffer.as_slice(), self.decompressed.get_mut())?;
-                self.decompressed.get_mut().truncate(n);
-                self.decompressed.set_position(0);
+            if self.is_finished {
+                return Ok(0);
             }
-            self.decompressed.read(buf)
+            match self.overflow.as_mut() {
+                Some(overflow) => overflow.read(buf),
+                None => match self.inner {
+                    BytesType::Bytes(pybytes) => self.init_read(pybytes.as_bytes(), buf),
+                    BytesType::ByteArray(pybytes) => self.init_read(pybytes.as_bytes(), buf),
+                    BytesType::NumpyArray(array) => self.init_read(array.as_bytes(), buf),
+                    BytesType::RustyBuffer(buffer) => {
+                        let buffer_ref = buffer.borrow();
+                        self.init_read(buffer_ref.inner.get_ref(), buf)
+                    }
+                    BytesType::RustyFile(file) => {
+                        let mut buffer = vec![];
+                        file.borrow_mut().read_to_end(&mut buffer)?;
+                        self.init_read(buffer.as_slice(), buf)
+                    }
+                },
+            }
         }
     }
 
     /// Decompress snappy data raw into a mutable slice
-    pub fn decompress_raw<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> std::io::Result<usize> {
-        let mut decoder = RawDecoder::new(input);
+    pub fn decompress_raw<'a, W: Write>(input: BytesType<'a>, output: &mut W) -> std::io::Result<usize> {
+        let mut decoder = RawDecoder::new(&input);
         let n_bytes = std::io::copy(&mut decoder, output)?;
         Ok(n_bytes as usize)
     }
 
     /// Compress snappy data raw into a mutable slice
-    pub fn compress_raw<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> std::io::Result<usize> {
-        let mut encoder = RawEncoder::new(input);
+    pub fn compress_raw<'a, W: Write>(input: BytesType<'a>, output: &'a mut W) -> std::io::Result<usize> {
+        let mut encoder = RawEncoder::new(&input);
         let n_bytes = std::io::copy(&mut encoder, output)?;
         Ok(n_bytes as usize)
     }
