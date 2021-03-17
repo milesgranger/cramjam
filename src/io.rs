@@ -16,17 +16,17 @@ pub struct RustyNumpyArray<'a> {
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
 impl<'a> RustyNumpyArray<'a> {
-    pub fn from_vec(py: Python<'a>, v: Vec<u8>) -> Self {
+    pub(crate) fn from_vec(py: Python<'a>, v: Vec<u8>) -> Self {
         let inner = PyArray1::from_vec(py, v);
         Self {
             inner,
             cursor: Cursor::new(unsafe { inner.as_slice_mut().unwrap() }),
         }
     }
-    pub fn as_bytes(&self) -> &[u8] {
+    pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { self.inner.as_slice().unwrap() }
     }
-    pub fn as_slice(&self) -> &[u8] {
+    pub(crate) fn as_slice(&self) -> &[u8] {
         self.as_bytes()
     }
 }
@@ -75,7 +75,7 @@ pub struct RustyPyBytes<'a> {
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
 impl<'a> RustyPyBytes<'a> {
-    pub fn as_bytes(&self) -> &[u8] {
+    pub(crate) fn as_bytes(&self) -> &[u8] {
         self.inner.as_bytes()
     }
 }
@@ -124,19 +124,19 @@ pub struct RustyPyByteArray<'a> {
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
 impl<'a> RustyPyByteArray<'a> {
-    pub fn new(py: Python<'a>, len: usize) -> Self {
+    pub(crate) fn new(py: Python<'a>, len: usize) -> Self {
         let inner = PyByteArray::new_with(py, len, |_| Ok(())).unwrap();
         Self {
             inner,
             cursor: Cursor::new(unsafe { inner.as_bytes_mut() }),
         }
     }
-    pub fn into_inner(mut self) -> PyResult<&'a PyByteArray> {
+    pub(crate) fn into_inner(mut self) -> PyResult<&'a PyByteArray> {
         self.flush()
             .map_err(|e| pyo3::exceptions::PyBufferError::new_err(e.to_string()))?;
         Ok(self.inner)
     }
-    pub fn as_bytes(&self) -> &[u8] {
+    pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { self.inner.as_bytes() }
     }
 }
@@ -213,6 +213,18 @@ pub struct RustyFile {
 
 #[pymethods]
 impl RustyFile {
+
+    /// Maps to python `__init__` to instantiate this struct.
+    ///
+    /// ### Example
+    /// ```python
+    /// from cramjam import File
+    /// file = File("/tmp/file.txt", read=True, write=True, truncate=True)
+    /// file.write(b"bytes")
+    /// file.seek(2)
+    /// file.read()
+    /// b'tes'
+    /// ```
     #[new]
     pub fn new(
         path: &str,
