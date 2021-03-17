@@ -264,10 +264,14 @@ pub struct RustyBuffer {
 #[pymethods]
 impl RustyBuffer {
     #[new]
-    pub fn new(len: Option<usize>) -> Self {
-        Self {
-            inner: Cursor::new(vec![0; len.unwrap_or_else(|| 0)]),
+    pub fn new(mut data: Option<BytesType<'_>>) -> PyResult<Self> {
+        let mut buf = vec![];
+        if let Some(bytes) = data.as_mut() {
+            bytes.read_to_end(&mut buf)?;
         }
+        Ok(Self {
+            inner: Cursor::new(buf),
+        })
     }
     pub fn write(&mut self, data: &PyAny) -> PyResult<usize> {
         let mut input = data.extract::<BytesType>()?;
