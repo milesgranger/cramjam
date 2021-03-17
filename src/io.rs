@@ -1,3 +1,7 @@
+//! Module holds native Rust objects exposed to Python, or objects
+//! which wrap native Python objects to provide additional functionality
+//! or tighter integration with de/compression algorithms.
+//!
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 
@@ -6,7 +10,7 @@ use numpy::PyArray1;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
 
-// Internal wrapper for PyArray1, to provide Read + Write and other traits
+/// Internal wrapper for `numpy.array`/`PyArray1`, to provide Read + Write and other traits
 pub struct RustyNumpyArray<'a> {
     pub(crate) inner: &'a PyArray1<u8>,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
@@ -65,7 +69,7 @@ impl<'a> Seek for RustyNumpyArray<'a> {
     }
 }
 
-// Internal wrapper for PyBytes, to provide Read + Write and other traits
+/// Internal wrapper for `bytes`/`PyBytes`, to provide Read + Write and other traits
 pub struct RustyPyBytes<'a> {
     pub(crate) inner: &'a PyBytes,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
@@ -114,7 +118,7 @@ impl<'a> Seek for RustyPyBytes<'a> {
     }
 }
 
-// Internal wrapper for PyByteArray, to provide Read + Write and other traits
+/// Internal wrapper for `bytearray`/`PyByteArray`, to provide Read + Write and other traits
 pub struct RustyPyByteArray<'a> {
     pub(crate) inner: &'a PyByteArray,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
@@ -187,9 +191,24 @@ impl<'a> Seek for RustyPyByteArray<'a> {
     }
 }
 
+/// A native Rust file-like object. Reading and writing takes place
+/// through the Rust implementation, allowing access to the underlying
+/// bytes in Python.
+///
+/// ### Python Example
+/// ```python
+/// from cramjam import File
+/// file = File("/tmp/file.txt")
+/// file.write(b"bytes")
+/// ```
+///
+/// ### Notes
+/// Presently, the file's handle is managed by Rust's lifetime rules, in that
+/// once it's garbage collected from Python's side, it will be closed.
+///
 #[pyclass(name = "File")]
 pub struct RustyFile {
-    pub inner: File,
+    pub(crate) inner: File,
 }
 
 #[pymethods]
@@ -255,6 +274,18 @@ impl RustyFile {
     }
 }
 
+/// A native Rust file-like object. Reading and writing takes place
+/// through the Rust implementation, allowing access to the underlying
+/// bytes in Python.
+///
+/// ### Python Example
+/// ```python
+/// >>> from cramjam import Buffer
+/// >>> buf = Buffer(b"bytes")
+/// >>> buf.read()
+/// b'bytes'
+/// ```
+///
 #[pyclass(name = "Buffer")]
 #[derive(Default)]
 pub struct RustyBuffer {

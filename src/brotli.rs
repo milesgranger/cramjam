@@ -1,3 +1,4 @@
+//! brotli de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
@@ -6,7 +7,7 @@ use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
 use std::io::Cursor;
 
-pub fn init_py_module(m: &PyModule) -> PyResult<()> {
+pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
     m.add_function(wrap_pyfunction!(decompress, m)?)?;
     m.add_function(wrap_pyfunction!(compress_into, m)?)?;

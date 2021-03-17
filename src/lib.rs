@@ -1,6 +1,16 @@
+#![warn(missing_docs)]
 //! CramJam documentation of python exported functions for (de)compression of bytes
 //!
-//! The API follows cramjam.`<<compression algorithm>>.compress` and cramjam.`<<compression algorithm>>.decompress`
+//! Although this documentation is built using Cargo/Rust toolchain, the examples and API represent
+//! the usable _Python_ API
+//!
+//! In general, the API follows cramjam.`<<compression algorithm>>.compress` and cramjam.`<<compression algorithm>>.decompress`
+//! as well as `compress_into`/`decompress_into` where it takes an input and output combination of any of the following:
+//!  - `numpy.array` (dtype=np.uint8)
+//!  - `bytes`
+//!  - `bytearray`
+//!  - [`cramjam.File`](io/struct.RustyFile.html)
+//!  - [`cramjam.Buffer`](./io/struct.RustyBuffer.html)
 //!
 //! Python Example:
 //!
@@ -10,13 +20,6 @@
 //! decompressed = cramjam.snappy.decompress(compressed)
 //! assert data == decompressed
 //! ```
-
-// TODO: There is a lot of very similar, but slightly different code for each variant
-// time should be spent perhaps with a macro or other alternative.
-// Each variant is similar, but sometimes has subtly different APIs/logic.
-
-// TODO: Add output size estimation for each variant, now it's just snappy
-// allow for resizing PyByteArray if over allocated; cannot resize PyBytes yet.
 
 pub mod brotli;
 pub mod deflate;
@@ -37,16 +40,24 @@ use std::io::{Read, Seek, SeekFrom, Write};
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+/// Any possible input/output to de/compression algorithms.
+/// Typically, as a Python user, you never have to worry about this object. It's exposed here in
+/// the documentation to see what types are acceptable for de/compression functions.
 #[derive(FromPyObject)]
 pub enum BytesType<'a> {
+    /// `bytes`
     #[pyo3(transparent, annotation = "bytes")]
     Bytes(RustyPyBytes<'a>),
+    /// `bytearray`
     #[pyo3(transparent, annotation = "bytearray")]
     ByteArray(RustyPyByteArray<'a>),
+    /// `numpy.array` with `dtype=np.uint8`
     #[pyo3(transparent, annotation = "numpy")]
     NumpyArray(RustyNumpyArray<'a>),
+    /// [`cramjam.File`](io/struct.RustyFile.html)
     #[pyo3(transparent, annotation = "File")]
     RustyFile(&'a PyCell<RustyFile>),
+    /// [`cramjam.Buffer`](io/struct.RustyBuffer.html)
     #[pyo3(transparent, annotation = "Buffer")]
     RustyBuffer(&'a PyCell<RustyBuffer>),
 }
