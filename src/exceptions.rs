@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+//! cramjam specific Python exceptions
 use pyo3::create_exception;
 use pyo3::exceptions::PyException;
 

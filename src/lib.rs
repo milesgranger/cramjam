@@ -1,47 +1,137 @@
+#![warn(missing_docs)]
 //! CramJam documentation of python exported functions for (de)compression of bytes
 //!
-//! The API follows cramjam.`<<compression algorithm>>.compress` and cramjam.`<<compression algorithm>>.decompress`
+//! Although this documentation is built using Cargo/Rust toolchain, the examples and API represent
+//! the usable _Python_ API
 //!
-//! Python Example:
+//! In general, the API follows cramjam.`<<compression algorithm>>.compress` and cramjam.`<<compression algorithm>>.decompress`
+//! as well as `compress_into`/`decompress_into` where it takes an input and output combination of any of the following:
+//!  - `numpy.array` (dtype=np.uint8)
+//!  - `bytes`
+//!  - `bytearray`
+//!  - [`cramjam.File`](io/struct.RustyFile.html)
+//!  - [`cramjam.Buffer`](./io/struct.RustyBuffer.html)
+//!
+//! ### Simple Python Example:
 //!
 //! ```python
-//! data = b'some bytes here'
-//! compressed = cramjam.snappy.compress(data)
-//! decompressed = cramjam.snappy.decompress(compressed)
-//! assert data == decompressed
+//! >>> data = b'some bytes here'
+//! >>> compressed = cramjam.snappy.compress(data)
+//! >>> decompressed = cramjam.snappy.decompress(compressed)
+//! >>> assert data == decompressed
+//! >>>
 //! ```
-
-// TODO: There is a lot of very similar, but slightly different code for each variant
-// time should be spent perhaps with a macro or other alternative.
-// Each variant is similar, but sometimes has subtly different APIs/logic.
-
-// TODO: Add output size estimation for each variant, now it's just snappy
-// allow for resizing PyByteArray if over allocated; cannot resize PyBytes yet.
+//!
+//! ### Example of de/compressing into different types.
+//!
+//! ```python
+//! >>> import numpy as np
+//! >>> from cramjam import snappy, Buffer
+//! >>>
+//! >>> data = np.frombuffer(b'some bytes here', dtype=np.uint8)
+//! >>> data
+//! array([115, 111, 109, 101,  32,  98, 121, 116, 101, 115,  32, 104, 101,
+//!        114, 101], dtype=uint8)
+//! >>>
+//! >>> compressed = Buffer()
+//! >>> snappy.compress_into(data, compressed)
+//! 33  # 33 bytes written to compressed buffer
+//! >>>
+//! >>> compressed.tell()  # Where is the buffer position?
+//! 33  # goodie!
+//! >>>
+//! >>> compressed.seek(0)  # Go back to the start of the buffer so we can prepare to decompress
+//! >>> decompressed = b'0' * len(data)  # let's write to `bytes` as output
+//! >>> decompressed
+//! b'000000000000000'
+//! >>>
+//! >>> snappy.decompress_into(compressed, decompressed)
+//! 15  # 15 bytes written to decompressed
+//! >>> decompressed
+//! b'some bytes here'
+//! ```
 
 pub mod brotli;
 pub mod deflate;
 pub mod exceptions;
 pub mod gzip;
+pub mod io;
 pub mod lz4;
 pub mod snappy;
 pub mod zstd;
 
 use pyo3::prelude::*;
-use pyo3::types::{PyByteArray, PyBytes};
 
+use crate::io::{RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 use exceptions::{CompressionError, DecompressionError};
-use std::io::Write;
+use std::io::{Read, Seek, SeekFrom, Write};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
+/// Any possible input/output to de/compression algorithms.
+/// Typically, as a Python user, you never have to worry about this object. It's exposed here in
+/// the documentation to see what types are acceptable for de/compression functions.
 #[derive(FromPyObject)]
 pub enum BytesType<'a> {
+    /// `bytes`
     #[pyo3(transparent, annotation = "bytes")]
-    Bytes(&'a PyBytes),
+    Bytes(RustyPyBytes<'a>),
+    /// `bytearray`
     #[pyo3(transparent, annotation = "bytearray")]
-    ByteArray(&'a PyByteArray),
+    ByteArray(RustyPyByteArray<'a>),
+    /// `numpy.array` with `dtype=np.uint8`
+    #[pyo3(transparent, annotation = "numpy")]
+    NumpyArray(RustyNumpyArray<'a>),
+    /// [`cramjam.File`](io/struct.RustyFile.html)
+    #[pyo3(transparent, annotation = "File")]
+    RustyFile(&'a PyCell<RustyFile>),
+    /// [`cramjam.Buffer`](io/struct.RustyBuffer.html)
+    #[pyo3(transparent, annotation = "Buffer")]
+    RustyBuffer(&'a PyCell<RustyBuffer>),
+}
+
+impl<'a> Write for BytesType<'a> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let result = match self {
+            BytesType::RustyFile(out) => out.borrow_mut().inner.write(buf)?,
+            BytesType::RustyBuffer(out) => out.borrow_mut().inner.write(buf)?,
+            BytesType::ByteArray(out) => out.write(buf)?,
+            BytesType::NumpyArray(out) => out.write(buf)?,
+            BytesType::Bytes(out) => out.write(buf)?,
+        };
+        Ok(result)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        match self {
+            BytesType::RustyFile(f) => f.borrow_mut().flush(),
+            BytesType::RustyBuffer(b) => b.borrow_mut().flush(),
+            BytesType::ByteArray(_) | BytesType::Bytes(_) | BytesType::NumpyArray(_) => Ok(()),
+        }
+    }
+}
+impl<'a> Read for BytesType<'a> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        match self {
+            BytesType::RustyFile(data) => data.borrow_mut().inner.read(buf),
+            BytesType::RustyBuffer(data) => data.borrow_mut().inner.read(buf),
+            BytesType::ByteArray(data) => data.read(buf),
+            BytesType::NumpyArray(array) => array.read(buf),
+            BytesType::Bytes(data) => data.read(buf),
+        }
+    }
+}
+impl<'a> Seek for BytesType<'a> {
+    fn seek(&mut self, style: SeekFrom) -> std::io::Result<u64> {
+        match self {
+            BytesType::RustyFile(f) => f.borrow_mut().inner.seek(style),
+            BytesType::RustyBuffer(b) => b.borrow_mut().inner.seek(style),
+            BytesType::ByteArray(a) => a.seek(style),
+            BytesType::NumpyArray(a) => a.seek(style),
+            BytesType::Bytes(b) => b.seek(style),
+        }
+    }
 }
 
 impl<'a> BytesType<'a> {
@@ -49,10 +139,11 @@ impl<'a> BytesType<'a> {
     fn len(&self) -> usize {
         self.as_bytes().len()
     }
-    fn as_bytes(&self) -> &'a [u8] {
+    fn as_bytes(&self) -> &'_ [u8] {
         match self {
             Self::Bytes(b) => b.as_bytes(),
-            Self::ByteArray(b) => unsafe { b.as_bytes() },
+            Self::ByteArray(b) => b.as_bytes(),
+            _ => unimplemented!("Converting Rust native types to bytes is not supported"),
         }
     }
 }
@@ -62,118 +153,89 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
         match self {
             Self::Bytes(bytes) => bytes.to_object(py),
             Self::ByteArray(byte_array) => byte_array.to_object(py),
+            Self::RustyFile(file) => file.to_object(py),
+            Self::RustyBuffer(buffer) => buffer.to_object(py),
+            Self::NumpyArray(array) => array.to_object(py),
         }
     }
 }
 
-/// A wrapper to PyByteArray, providing the std::io::Write impl
-pub struct WriteablePyByteArray<'a> {
-    array: &'a PyByteArray,
-    position: usize,
-}
-
-impl<'a> WriteablePyByteArray<'a> {
-    pub fn new(py: Python<'a>, len: usize) -> Self {
-        Self {
-            array: PyByteArray::new_with(py, len, |_| Ok(())).unwrap(),
-            position: 0,
-        }
-    }
-    pub fn into_inner(mut self) -> PyResult<&'a PyByteArray> {
-        self.flush()
-            .map_err(|e| pyo3::exceptions::PyBufferError::new_err(e.to_string()))?;
-        Ok(self.array)
-    }
-}
-
-impl<'a> Write for WriteablePyByteArray<'a> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        if (self.position + buf.len()) > self.array.len() {
-            self.array.resize(self.position + buf.len()).unwrap()
-        }
-        let array_bytes = unsafe { self.array.as_bytes_mut() };
-
-        //let mut wtr = Cursor::new(&mut array_bytes[self.position..]);
-        //let n_bytes = wtr.write(buf).unwrap();
-        let buf_len = buf.len();
-        array_bytes[self.position..self.position + buf_len].copy_from_slice(buf);
-
-        self.position += buf.len();
-        Ok(buf.len())
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        if self.array.len() != self.position {
-            self.array.resize(self.position).unwrap();
-        }
-        Ok(())
-    }
-}
-
-/// Expose de/compression_into(data: BytesType<'_>, array: &PyArray1<u8>) -> PyResult<usize>
-/// functions to allow de/compress bytes into a pre-allocated Python array.
-///
-/// This will handle gaining access to the Python's array as a buffer for an underlying de/compression
-/// function which takes the normal `&[u8]` and `Output` types
-#[macro_export]
-macro_rules! generic_into {
-    ($op:ident($input:ident -> $output:ident) $(, $level:ident)?) => {
-        {
-            let mut array_mut = unsafe { $output.as_array_mut() };
-
-            let buffer: &mut [u8] = to_py_err!(DecompressionError -> array_mut.as_slice_mut().ok_or_else(|| {
-                pyo3::exceptions::PyBufferError::new_err("Failed to get mutable slice from array.")
-            }))?;
-            let mut cursor = Cursor::new(buffer);
-            let size = to_py_err!(DecompressionError -> self::internal::$op($input.as_bytes(), &mut cursor $(, $level)?))?;
-            Ok(size)
-        }
-    }
-}
-
+/// Macro for generating the implementation of de/compression against a variant interface
 #[macro_export]
 macro_rules! generic {
-    ($op:ident($input:ident), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
+    ($op:ident($input:expr), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
         {
-            let bytes = $input.as_bytes();
-            match $input {
-                BytesType::Bytes(_) => match $output_len {
-                    Some(len) => {
-                        let pybytes = PyBytes::new_with($py, len, |buffer| {
-                            let mut cursor = Cursor::new(buffer);
-                            if stringify!($op) == "compress" {
-                                to_py_err!(CompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
-                            } else {
-                                to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut cursor $(, $level)? ))?;
-                            }
-                            Ok(())
-                        })?;
-                        Ok(BytesType::Bytes(pybytes))
-                    }
-                    None => {
-                        let mut buffer = Vec::new();
-                        if stringify!($op) == "compress" {
-                            to_py_err!(CompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
-                        } else {
-                            to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut buffer $(, $level)? ))?;
-                        }
+            use crate::io::{RustyPyBytes, RustyPyByteArray, RustyNumpyArray};
 
-                        Ok(BytesType::Bytes(PyBytes::new($py, &buffer)))
+            match $input {
+                BytesType::Bytes(_) => {
+                    match $output_len {
+                        Some(len) => {
+                            let pybytes = PyBytes::new_with($py, len, |buffer| {
+                                let mut cursor = Cursor::new(buffer);
+                                if stringify!($op) == "compress" {
+                                    to_py_err!(CompressionError -> self::internal::$op($input, &mut cursor $(, $level)? ))?;
+                                } else {
+                                    to_py_err!(DecompressionError -> self::internal::$op($input, &mut cursor $(, $level)? ))?;
+                                }
+                                Ok(())
+                            })?;
+                            Ok(BytesType::Bytes(RustyPyBytes::from(pybytes)))
+                        }
+                        None => {
+                            let mut buffer = Vec::new();
+                            if stringify!($op) == "compress" {
+                                to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut buffer) $(, $level)? ))?;
+                            } else {
+                                to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut buffer) $(, $level)? ))?;
+                            }
+
+                            Ok(BytesType::Bytes(RustyPyBytes::from(PyBytes::new($py, &buffer))))
+                        }
                     }
                 },
                 BytesType::ByteArray(_) => {
-                    let mut pybytes = WriteablePyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
+                    let mut pybytes = RustyPyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
                     if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                        to_py_err!(CompressionError -> self::internal::$op($input, &mut pybytes $(, $level)? ))?;
                     } else {
-                        to_py_err!(DecompressionError -> self::internal::$op(bytes, &mut pybytes $(, $level)? ))?;
+                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut pybytes $(, $level)? ))?;
                     }
-                    Ok(BytesType::ByteArray(pybytes.into_inner()?))
+                    Ok(BytesType::ByteArray(pybytes))
+                },
+                BytesType::NumpyArray(_) => {
+                    let mut output = Vec::new();
+                    if stringify!($op) == "compress" {
+                        to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
+                    } else {
+                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
+                    }
+                    Ok(BytesType::NumpyArray(RustyNumpyArray::from_vec($py, output)))
+                },
+                BytesType::RustyFile(_) => {
+                    let mut output = crate::io::RustyBuffer::default();
+                    if stringify!($op) == "compress" {
+                        to_py_err!(CompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
+                    } else {
+                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
+                    }
+                    Ok(BytesType::RustyBuffer(PyCell::new($py, output).unwrap()))
+                },
+                BytesType::RustyBuffer(_) => {
+                    let mut output = crate::io::RustyBuffer::default();
+                    if stringify!($op) == "compress" {
+                        to_py_err!(CompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
+                    } else {
+                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
+                    }
+                    Ok(BytesType::RustyBuffer(PyCell::new($py, output).unwrap()))
                 }
             }
         }
     }
 }
 
+/// Macro to convert an error into a specific Python exception.
 #[macro_export]
 macro_rules! to_py_err {
     ($error:ident -> $expr:expr) => {
@@ -194,7 +256,8 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     m.add("__version__", env!("CARGO_PKG_VERSION"))?;
     m.add("CompressionError", py.get_type::<CompressionError>())?;
     m.add("DecompressionError", py.get_type::<DecompressionError>())?;
-
+    m.add_class::<crate::io::RustyFile>()?;
+    m.add_class::<crate::io::RustyBuffer>()?;
     make_submodule!(py -> m -> snappy);
     make_submodule!(py -> m -> brotli);
     make_submodule!(py -> m -> lz4);
@@ -213,9 +276,9 @@ mod tests {
     // Default testing data
     fn gen_data() -> Vec<u8> {
         (0..1000000)
-            .map(|_| "oh what a beautiful morning, oh what a beautiful day!!")
-            .collect::<String>()
-            .into_bytes()
+            .map(|_| b"oh what a beautiful morning, oh what a beautiful day!!".to_vec())
+            .flat_map(|v| v)
+            .collect()
     }
 
     // Single test generation
@@ -230,10 +293,9 @@ mod tests {
                 let compressed_size = if stringify!($decompress_output) == "Slice" {
                         compressed = (0..data.len()).map(|_| 0).collect::<Vec<u8>>();
                         let mut cursor = Cursor::new(compressed.as_mut_slice());
-                        crate::$variant::internal::compress(&data, &mut cursor $(, $level)?).unwrap()
+                        crate::$variant::internal::compress(&mut Cursor::new(data.as_slice()), &mut cursor $(, $level)?).unwrap()
                     } else {
-
-                        crate::$variant::internal::compress(&data, &mut compressed $(, $level)?).unwrap()
+                        crate::$variant::internal::compress(&mut Cursor::new(data.as_slice()), &mut Cursor::new(&mut compressed) $(, $level)?).unwrap()
                     };
 
                 assert_eq!(compressed_size, $compressed_len);
@@ -244,10 +306,9 @@ mod tests {
                 let decompressed_size = if stringify!($decompress_output) == "Slice" {
                         decompressed = (0..data.len()).map(|_| 0).collect::<Vec<u8>>();
                         let mut cursor = Cursor::new(decompressed.as_mut_slice());
-                        crate::$variant::internal::decompress(&compressed, &mut cursor).unwrap()
+                        crate::$variant::internal::decompress(&mut Cursor::new(&compressed), &mut cursor).unwrap()
                     } else {
-
-                        crate::$variant::internal::decompress(&compressed, &mut decompressed).unwrap()
+                        crate::$variant::internal::decompress(&mut Cursor::new(&compressed), &mut decompressed).unwrap()
                     };
                 assert_eq!(decompressed_size, data.len());
                 if &decompressed[..decompressed_size] != &data {
@@ -276,25 +337,5 @@ mod tests {
     test_variant!(brotli, compressed_len = 729, level = None);
     test_variant!(deflate, compressed_len = 157174, level = None);
     test_variant!(zstd, compressed_len = 4990, level = None);
-
-    #[test]
-    fn test_snappy_raw_into_round_trip() {
-        let data = gen_data();
-        let max_compress_len = snap::raw::max_compress_len(data.len());
-        let mut compressed_buffer = vec![0; max_compress_len];
-
-        let n_bytes =
-            crate::snappy::internal::compress_raw_into(&data, &mut Cursor::new(&mut compressed_buffer)).unwrap();
-        assert_eq!(n_bytes, 2563328); // raw compressed len
-
-        let decompress_len = snap::raw::decompress_len(&compressed_buffer[..n_bytes]).unwrap();
-        let mut decompressed_buffer = vec![0; decompress_len];
-        let n_bytes = crate::snappy::internal::decompress_raw_into(
-            &compressed_buffer[..n_bytes],
-            &mut Cursor::new(&mut decompressed_buffer),
-        )
-        .unwrap();
-        assert_eq!(n_bytes, data.len());
-        assert_eq!(&data, &decompressed_buffer[..n_bytes]);
-    }
+    test_variant!(lz4, compressed_len = 303278, level = None);
 }

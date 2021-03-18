@@ -34,5 +34,5 @@ dev-install:
 	pip install cramjam --no-index --find-links dist/
 
 pypy-build:
-	maturin build -i $(shell which pypy) --release --out dist --cargo-extra-args="--no-default-features"  # disable abi3
+	maturin build -i $(shell which pypy) --release --out dist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=mimallocator,extension-module"  # disable abi3
 	pypy ./pypy_patch.py

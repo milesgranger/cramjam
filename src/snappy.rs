@@ -1,13 +1,13 @@
+//! snappy de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
-use crate::{to_py_err, BytesType, WriteablePyByteArray};
-use numpy::PyArray1;
+use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
-use pyo3::types::{PyByteArray, PyBytes};
+use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
 use std::io::Cursor;
 
-pub fn init_py_module(m: &PyModule) -> PyResult<()> {
+pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
     m.add_function(wrap_pyfunction!(decompress, m)?)?;
     m.add_function(wrap_pyfunction!(compress_raw, m)?)?;
@@ -56,25 +56,8 @@ pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usiz
 /// >>> cramjam.snappy.decompress_raw(compressed_raw_bytes)
 /// ```
 #[pyfunction]
-pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
-    let output_len = to_py_err!(DecompressionError -> snap::raw::decompress_len(data.as_bytes()))?;
-
-    match data {
-        BytesType::Bytes(_) => {
-            let pybytes = PyBytes::new_with(py, output_len, |output| {
-                to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut Cursor::new(output)))?;
-                Ok(())
-            })?;
-            Ok(BytesType::Bytes(pybytes))
-        }
-        BytesType::ByteArray(_) => {
-            let pybytes = PyByteArray::new_with(py, output_len, |output| {
-                to_py_err!(DecompressionError -> self::internal::decompress_raw_into(data.as_bytes(), &mut Cursor::new(output)))?;
-                Ok(())
-            })?;
-            Ok(BytesType::ByteArray(pybytes))
-        }
-    }
+pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    crate::generic!(decompress_raw(data), py = py, output_len = output_len)
 }
 
 /// Snappy compression raw.
@@ -86,52 +69,36 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<Bytes
 /// >>> cramjam.snappy.compress_raw(b'some bytes here')
 /// ```
 #[pyfunction]
-pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>) -> PyResult<BytesType<'a>> {
-    let output_len = snap::raw::max_compress_len(data.len());
-
-    match data {
-        BytesType::Bytes(_) => {
-            let mut output = vec![0; output_len];
-            let n_bytes = to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut Cursor::new(output.as_mut_slice())))?;
-            output.truncate(n_bytes);
-            Ok(BytesType::Bytes(PyBytes::new(py, &output)))
-        }
-        BytesType::ByteArray(_) => {
-            let mut actual_size = 0;
-            let pybytes = PyByteArray::new_with(py, output_len, |output| {
-                let mut cursor = Cursor::new(output);
-                actual_size =
-                    to_py_err!(CompressionError -> self::internal::compress_raw_into(data.as_bytes(), &mut cursor))?;
-                Ok(())
-            })?;
-            pybytes.resize(actual_size)?;
-            Ok(BytesType::ByteArray(pybytes))
-        }
-    }
+pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+    crate::generic!(compress_raw(data), py = py, output_len = output_len)
 }
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(compress(data -> array))
+pub fn compress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = internal::compress(input, &mut output)?;
+    Ok(r)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &'a PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(decompress(data -> array))
+pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = internal::decompress(input, &mut output)?;
+    Ok(r as usize)
 }
 
 /// Compress raw format directly into an output buffer
 #[pyfunction]
-pub fn compress_raw_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(compress_raw_into(data -> array))
+pub fn compress_raw_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = to_py_err!(CompressionError -> internal::compress_raw(input, &mut output))?;
+    Ok(r)
 }
 
 /// Decompress raw format directly into an output buffer
 #[pyfunction]
-pub fn decompress_raw_into<'a>(_py: Python<'a>, data: BytesType<'a>, array: &PyArray1<u8>) -> PyResult<usize> {
-    crate::generic_into!(decompress_raw_into(data -> array))
+pub fn decompress_raw_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = to_py_err!(DecompressionError -> internal::decompress_raw(input, &mut output))?;
+    Ok(r)
 }
 
 /// Get the expected max compressed length for snappy raw compression; this is the size
@@ -149,33 +116,148 @@ pub fn decompress_raw_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> PyResult<
 }
 
 pub(crate) mod internal {
-    use snap::raw::{Decoder, Encoder};
+    use crate::BytesType;
+    use snap::raw::{decompress_len, max_compress_len, Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Cursor, Error, Write};
+    use std::io::{Cursor, Error, Read, Write};
+
+    pub(crate) struct RawEncoder<'a, 'b> {
+        inner: &'b BytesType<'a>,
+        overflow: Option<Cursor<Vec<u8>>>,
+        encoder: Encoder,
+        is_finished: bool,
+    }
+    impl<'a, 'b> RawEncoder<'a, 'b> {
+        pub fn new(inner: &'b BytesType<'a>) -> Self {
+            Self {
+                inner,
+                encoder: Encoder::new(),
+                overflow: None,
+                is_finished: false,
+            }
+        }
+        fn init_read(&mut self, bytes: &[u8], buf: &mut [u8]) -> std::io::Result<usize> {
+            let len = max_compress_len(bytes.len());
+            if buf.len() >= len {
+                let n = self.encoder.compress(bytes, buf)?;
+                self.is_finished = true; // if overflow is set, it will return 0 next iter
+                Ok(n)
+            } else {
+                let mut overflow = vec![0; len];
+                let n = self.encoder.compress(bytes, overflow.as_mut_slice())?;
+                overflow.truncate(n);
+                let mut overflow = Cursor::new(overflow);
+                let r = overflow.read(buf)?;
+                self.overflow = Some(overflow);
+                Ok(r)
+            }
+        }
+    }
+    impl<'a, 'b> Read for RawEncoder<'a, 'b> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            if self.is_finished {
+                return Ok(0);
+            }
+            match self.overflow.as_mut() {
+                Some(overflow) => overflow.read(buf),
+                None => match self.inner {
+                    BytesType::Bytes(pybytes) => self.init_read(pybytes.as_bytes(), buf),
+                    BytesType::ByteArray(pybytes) => self.init_read(pybytes.as_bytes(), buf),
+                    BytesType::NumpyArray(array) => self.init_read(array.as_bytes(), buf),
+                    BytesType::RustyBuffer(buffer) => {
+                        let buffer_ref = buffer.borrow();
+                        self.init_read(buffer_ref.inner.get_ref(), buf)
+                    }
+                    BytesType::RustyFile(file) => {
+                        let mut buffer = vec![];
+                        file.borrow_mut().read_to_end(&mut buffer)?;
+                        self.init_read(buffer.as_slice(), buf)
+                    }
+                },
+            }
+        }
+    }
+
+    pub(crate) struct RawDecoder<'a, 'b> {
+        inner: &'b BytesType<'a>,
+        overflow: Option<Cursor<Vec<u8>>>,
+        decoder: Decoder,
+        is_finished: bool,
+    }
+    impl<'a, 'b> RawDecoder<'a, 'b> {
+        pub fn new(inner: &'b BytesType<'a>) -> Self {
+            Self {
+                inner,
+                decoder: Decoder::new(),
+                overflow: None,
+                is_finished: false,
+            }
+        }
+        fn init_read(&mut self, bytes: &[u8], buf: &mut [u8]) -> std::io::Result<usize> {
+            let len = decompress_len(bytes)?;
+            if buf.len() >= len {
+                let n = self.decoder.decompress(bytes, buf)?;
+                self.is_finished = true; // if overflow is set, it will return 0 next iter
+                Ok(n)
+            } else {
+                let mut overflow = vec![0; len];
+                let n = self.decoder.decompress(bytes, overflow.as_mut_slice())?;
+                overflow.truncate(n);
+                let mut overflow = Cursor::new(overflow);
+                let r = overflow.read(buf)?;
+                self.overflow = Some(overflow);
+                Ok(r)
+            }
+        }
+    }
+    impl<'a, 'b> Read for RawDecoder<'a, 'b> {
+        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+            if self.is_finished {
+                return Ok(0);
+            }
+            match self.overflow.as_mut() {
+                Some(overflow) => overflow.read(buf),
+                None => match self.inner {
+                    BytesType::Bytes(pybytes) => self.init_read(pybytes.as_bytes(), buf),
+                    BytesType::ByteArray(pybytes) => self.init_read(pybytes.as_bytes(), buf),
+                    BytesType::NumpyArray(array) => self.init_read(array.as_bytes(), buf),
+                    BytesType::RustyBuffer(buffer) => {
+                        let buffer_ref = buffer.borrow();
+                        self.init_read(buffer_ref.inner.get_ref(), buf)
+                    }
+                    BytesType::RustyFile(file) => {
+                        let mut buffer = vec![];
+                        file.borrow_mut().read_to_end(&mut buffer)?;
+                        self.init_read(buffer.as_slice(), buf)
+                    }
+                },
+            }
+        }
+    }
 
     /// Decompress snappy data raw into a mutable slice
-    pub fn decompress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {
-        let mut decoder = Decoder::new();
-        let buffer = output.get_mut();
-        decoder.decompress(input, *buffer)
+    pub fn decompress_raw<'a, W: Write>(input: BytesType<'a>, output: &mut W) -> std::io::Result<usize> {
+        let mut decoder = RawDecoder::new(&input);
+        let n_bytes = std::io::copy(&mut decoder, output)?;
+        Ok(n_bytes as usize)
     }
 
     /// Compress snappy data raw into a mutable slice
-    pub fn compress_raw_into(input: &[u8], output: &mut Cursor<&mut [u8]>) -> Result<usize, snap::Error> {
-        let mut encoder = Encoder::new();
-        let buffer = output.get_mut();
-        encoder.compress(input, buffer)
+    pub fn compress_raw<'a, W: Write>(input: BytesType<'a>, output: &'a mut W) -> std::io::Result<usize> {
+        let mut encoder = RawEncoder::new(&input);
+        let n_bytes = std::io::copy(&mut encoder, output)?;
+        Ok(n_bytes as usize)
     }
 
     /// Decompress snappy data framed
-    pub fn decompress<W: Write + ?Sized>(input: &[u8], output: &mut W) -> Result<usize, Error> {
+    pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = FrameDecoder::new(input);
         let n_bytes = std::io::copy(&mut decoder, output)?;
         Ok(n_bytes as usize)
     }
 
     /// Decompress snappy data framed
-    pub fn compress<W: Write + ?Sized>(data: &[u8], output: &mut W) -> Result<usize, Error> {
+    pub fn compress<W: Write + ?Sized, R: Read>(data: R, output: &mut W) -> Result<usize, Error> {
         let mut encoder = FrameEncoder::new(data);
         let n_bytes = std::io::copy(&mut encoder, output)?;
         Ok(n_bytes as usize)
