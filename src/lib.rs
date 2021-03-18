@@ -12,13 +12,43 @@
 //!  - [`cramjam.File`](io/struct.RustyFile.html)
 //!  - [`cramjam.Buffer`](./io/struct.RustyBuffer.html)
 //!
-//! Python Example:
+//! ### Simple Python Example:
 //!
 //! ```python
-//! data = b'some bytes here'
-//! compressed = cramjam.snappy.compress(data)
-//! decompressed = cramjam.snappy.decompress(compressed)
-//! assert data == decompressed
+//! >>> data = b'some bytes here'
+//! >>> compressed = cramjam.snappy.compress(data)
+//! >>> decompressed = cramjam.snappy.decompress(compressed)
+//! >>> assert data == decompressed
+//! >>>
+//! ```
+//!
+//! ### Example of de/compressing into different types.
+//!
+//! ```python
+//! >>> import numpy as np
+//! >>> from cramjam import snappy, Buffer
+//! >>>
+//! >>> data = np.frombuffer(b'some bytes here', dtype=np.uint8)
+//! >>> data
+//! array([115, 111, 109, 101,  32,  98, 121, 116, 101, 115,  32, 104, 101,
+//!        114, 101], dtype=uint8)
+//! >>>
+//! >>> compressed = Buffer()
+//! >>> snappy.compress_into(data, compressed)
+//! 33  # 33 bytes written to compressed buffer
+//! >>>
+//! >>> compressed.tell()  # Where is the buffer position?
+//! 33  # goodie!
+//! >>>
+//! >>> compressed.seek(0)  # Go back to the start of the buffer so we can prepare to decompress
+//! >>> decompressed = b'0' * len(data)  # let's write to `bytes` as output
+//! >>> decompressed
+//! b'000000000000000'
+//! >>>
+//! >>> snappy.decompress_into(compressed, decompressed)
+//! 15  # 15 bytes written to decompressed
+//! >>> decompressed
+//! b'some bytes here'
 //! ```
 
 pub mod brotli;
@@ -130,6 +160,7 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
     }
 }
 
+/// Macro for generating the implementation of de/compression against a variant interface
 #[macro_export]
 macro_rules! generic {
     ($op:ident($input:expr), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
@@ -204,6 +235,7 @@ macro_rules! generic {
     }
 }
 
+/// Macro to convert an error into a specific Python exception.
 #[macro_export]
 macro_rules! to_py_err {
     ($error:ident -> $expr:expr) => {

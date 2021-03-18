@@ -213,9 +213,6 @@ pub struct RustyFile {
 
 #[pymethods]
 impl RustyFile {
-
-    /// Maps to python `__init__` to instantiate this struct.
-    ///
     /// ### Example
     /// ```python
     /// from cramjam import File
@@ -226,7 +223,7 @@ impl RustyFile {
     /// b'tes'
     /// ```
     #[new]
-    pub fn new(
+    pub fn __init__(
         path: &str,
         read: Option<bool>,
         write: Option<bool>,
@@ -243,19 +240,28 @@ impl RustyFile {
                 .open(path)?,
         })
     }
-    pub fn write(&mut self, data: &PyAny) -> PyResult<usize> {
-        let mut input = data.extract::<BytesType>()?;
+    /// Write some bytes to the file, where input data can be anything in [`BytesType`](../enum.BytesType.html)
+    pub fn write(&mut self, mut input: BytesType) -> PyResult<usize> {
         let r = write(&mut input, self)?;
         Ok(r as usize)
     }
+    /// Read from the file in its current position, returns `bytes`; optionally specify number of
+    /// bytes to read.
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
         read(self, py, n_bytes)
     }
-    pub fn readinto(&mut self, output: &PyAny) -> PyResult<usize> {
-        let mut out = output.extract::<BytesType>()?;
-        let r = copy(self, &mut out)?;
+    /// Read from the file in its current position, into a [`BytesType`](../enum.BytesType.html) object.
+    pub fn readinto(&mut self, mut output: BytesType) -> PyResult<usize> {
+        let r = copy(self, &mut output)?;
         Ok(r as usize)
     }
+    /// Seek to a position within the file. `whence` follows the same values as [IOBase.seek](https://docs.python.org/3/library/io.html#io.IOBase.seek)
+    /// where:
+    /// ```bash
+    /// 0: from start of the stream
+    /// 1: from current stream position
+    /// 2: from end of the stream
+    /// ```
     pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
         let pos = match whence.unwrap_or_else(|| 0) {
             0 => SeekFrom::Start(position as u64),
@@ -270,17 +276,22 @@ impl RustyFile {
         let r = Seek::seek(self, pos)?;
         Ok(r as usize)
     }
+    /// Whether the file is seekable; here just for compatibility, it always returns True.
     pub fn seekable(&self) -> bool {
         true
     }
+    /// Give the current position of the file.
     pub fn tell(&mut self) -> PyResult<usize> {
         let r = self.inner.seek(SeekFrom::Current(0))?;
         Ok(r as usize)
     }
+    /// Set the length of the file. If less than current length, it will truncate to the size given;
+    /// otherwise will be null byte filled to the size.
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
         self.inner.set_len(size as u64)?;
         Ok(())
     }
+    /// Truncate the file.
     pub fn truncate(&mut self) -> PyResult<()> {
         self.set_len(0)
     }
@@ -304,10 +315,20 @@ pub struct RustyBuffer {
     pub(crate) inner: Cursor<Vec<u8>>,
 }
 
+/// A Buffer object, similar to [cramjam.File](struct.RustyFile.html) only the bytes are held in-memory
+///
+/// ### Example
+/// ```python
+/// from cramjam import Buffer
+/// buf = Buffer(b'start bytes')
+/// buf.read(5)
+/// b'start'
+/// ```
 #[pymethods]
 impl RustyBuffer {
+    /// Instantiate the object, optionally with any supported bytes-like object in [BytesType](../enum.BytesType.html)
     #[new]
-    pub fn new(mut data: Option<BytesType<'_>>) -> PyResult<Self> {
+    pub fn __init__(mut data: Option<BytesType<'_>>) -> PyResult<Self> {
         let mut buf = vec![];
         if let Some(bytes) = data.as_mut() {
             bytes.read_to_end(&mut buf)?;
@@ -316,15 +337,27 @@ impl RustyBuffer {
             inner: Cursor::new(buf),
         })
     }
-    pub fn write(&mut self, data: &PyAny) -> PyResult<usize> {
-        let mut input = data.extract::<BytesType>()?;
+    /// Write some bytes to the buffer, where input data can be anything in [BytesType](../enum.BytesType.html)
+    pub fn write(&mut self, mut input: BytesType) -> PyResult<usize> {
         let r = write(&mut input, self)?;
         Ok(r as usize)
     }
+    /// Read from the buffer in its current position, returns bytes; optionally specify number of bytes to read.
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
         read(self, py, n_bytes)
     }
-    pub fn seek(&mut self, position: i64, whence: Option<usize>) -> PyResult<usize> {
+    /// Read from the buffer in its current position, into a [BytesType](../enum.BytesType.html) object.
+    pub fn readinto(&mut self, mut output: BytesType) -> PyResult<usize> {
+        let r = copy(self, &mut output)?;
+        Ok(r as usize)
+    }
+    /// Seek to a position within the buffer. whence follows the same values as IOBase.seek where:
+    /// ```bash
+    /// 0: from start of the stream
+    /// 1: from current stream position
+    /// 2: from end of the stream
+    /// ```
+    pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
         let pos = match whence.unwrap_or_else(|| 0) {
             0 => SeekFrom::Start(position as u64),
             1 => SeekFrom::Current(position as i64),
@@ -338,23 +371,24 @@ impl RustyBuffer {
         let r = Seek::seek(self, pos)?;
         Ok(r as usize)
     }
+    /// Whether the buffer is seekable; here just for compatibility, it always returns True.
     pub fn seekable(&self) -> bool {
         true
     }
+    /// Give the current position of the buffer.
     pub fn tell(&self) -> usize {
         self.inner.position() as usize
     }
-    pub fn readinto(&mut self, output: &PyAny) -> PyResult<usize> {
-        let mut out = output.extract::<BytesType>()?;
-        let r = copy(self, &mut out)?;
-        Ok(r as usize)
-    }
+    /// Set the length of the buffer. If less than current length, it will truncate to the size given;
+    /// otherwise will be null byte filled to the size.
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
         self.inner.get_mut().resize(size, 0);
         Ok(())
     }
+    /// Truncate the buffer
     pub fn truncate(&mut self) -> PyResult<()> {
         self.inner.get_mut().truncate(0);
+        self.inner.set_position(0);
         Ok(())
     }
 }
