@@ -45,29 +45,42 @@ All available for use as:
 b"bytes here"
 ```
 
-Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts
-both `bytes` and `bytearray` objects.
+Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts 
+`bytes`/`bytearray`/`numpy.array`/`cramjam.File`/`cramjam.Buffer` objects.
 
 **de/compress_into**
-Additionally, all variants support `decompress_into` and `compress_into`.
-If you have a numpy array preallocated, that can be used as the output location for de/compression.  
+Additionally, all variants support `decompress_into` and `compress_into`. 
 Ex.
-```python 
->>> from cramjam import snappy
+```python
 >>> import numpy as np
->>> compressed_data  # some data that we know the size of when decompressed
->>> output = np.zeros(<<output length>>, dtype=np.uint8)
->>> snappy.decompress_into(compressed_data, output)  # returns number of bytes decoded
-<<int: the number of bytes affected>>
+>>> from cramjam import snappy, Buffer
+>>>
+>>> data = np.frombuffer(b'some bytes here', dtype=np.uint8)
+>>> data
+array([115, 111, 109, 101,  32,  98, 121, 116, 101, 115,  32, 104, 101,
+       114, 101], dtype=uint8)
+>>>
+>>> compressed = Buffer()
+>>> snappy.compress_into(data, compressed)
+33  # 33 bytes written to compressed buffer
+>>>
+>>> compressed.tell()  # Where is the buffer position?
+33  # goodie!
+>>>
+>>> compressed.seek(0)  # Go back to the start of the buffer so we can prepare to decompress
+>>> decompressed = b'0' * len(data)  # let's write to `bytes` as output
+>>> decompressed
+b'000000000000000'
+>>>
+>>> snappy.decompress_into(compressed, decompressed)
+15  # 15 bytes written to decompressed
+>>> decompressed
+b'some bytes here'
 ```
-This is very fast, as it avoids any buffer allocations on the rust side.
 
 **Special note!**  
 If you know the length of the de/compress output, you
 can provide `output_len=<<some int>>` to any `de/compress`
 to get ~1.5-3x performance increase as this allows single 
-buffer allocation. 
-
-For `snappy` with `bytearray`s, it's only a mild improvement
-as we currently are able to estimate the buffer size and can
-resize the resulting `bytearray` to the correct size.
+buffer allocation; doesn't really apply if you're using `cramjam.Buffer`
+or `cramjam.File` objects.
