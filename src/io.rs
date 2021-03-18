@@ -26,9 +26,6 @@ impl<'a> RustyNumpyArray<'a> {
     pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { self.inner.as_slice().unwrap() }
     }
-    pub(crate) fn as_slice(&self) -> &[u8] {
-        self.as_bytes()
-    }
 }
 impl<'a> From<&'a PyArray1<u8>> for RustyNumpyArray<'a> {
     fn from(inner: &'a PyArray1<u8>) -> Self {
@@ -130,11 +127,6 @@ impl<'a> RustyPyByteArray<'a> {
             inner,
             cursor: Cursor::new(unsafe { inner.as_bytes_mut() }),
         }
-    }
-    pub(crate) fn into_inner(mut self) -> PyResult<&'a PyByteArray> {
-        self.flush()
-            .map_err(|e| pyo3::exceptions::PyBufferError::new_err(e.to_string()))?;
-        Ok(self.inner)
     }
     pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { self.inner.as_bytes() }
