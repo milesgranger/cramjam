@@ -52,12 +52,21 @@ def test_snappy_raw(benchmark, file, use_cramjam: bool):
     import snappy
 
     data = bytearray(file.read_bytes())
+    input = cramjam.Buffer(data)
+    compressed = cramjam.Buffer()
+    decompressed = cramjam.Buffer()
+
+    def _roundtrip():
+        cramjam.snappy.compress_raw_into(input, compressed)
+        input.seek(0)
+        compressed.seek(0)
+        cramjam.snappy.decompress_raw_into(compressed, decompressed)
+        compressed.seek(0)
+        decompressed.seek(0)
+
     if use_cramjam:
         benchmark(
-            round_trip,
-            compress=cramjam.snappy.compress_raw,
-            decompress=cramjam.snappy.decompress_raw,
-            data=data,
+            _roundtrip
         )
     else:
         benchmark(
