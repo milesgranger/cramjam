@@ -236,7 +236,7 @@ pub(crate) mod internal {
     }
 
     /// Decompress snappy data raw into a mutable slice
-    pub fn decompress_raw<'a, W: Write>(input: BytesType<'a>, output: &mut W) -> std::io::Result<usize> {
+    pub fn decompress_raw<W: Write>(input: BytesType, output: &mut W) -> std::io::Result<usize> {
         let mut decoder = RawDecoder::new(&input);
         let n_bytes = std::io::copy(&mut decoder, output)?;
         Ok(n_bytes as usize)

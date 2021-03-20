@@ -87,7 +87,7 @@ pub(crate) mod internal {
         let start_pos = output.seek(SeekFrom::Current(0))?;
         let mut encoder = EncoderBuilder::new()
             .auto_flush(true)
-            .level(level.unwrap_or_else(|| 4))
+            .level(level.unwrap_or(4))
             .build(output)?;
 
         // this returns, bytes read from uncompressed, input; we want bytes written

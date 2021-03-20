@@ -1,7 +1,14 @@
 import pytest
 import numpy as np
-import cramjam
 import hashlib
+import pathlib
+import cramjam
+
+FILES = [
+    f
+    for f in pathlib.Path(__file__).parent.joinpath("../benchmarks/data").iterdir()
+    if f.is_file() and f.name != "COPYING"
+]
 
 
 def same_same(a, b):
@@ -56,7 +63,8 @@ def test_variants_raise_exception(variant_str):
 def test_variants_compress_into(variant_str, input_type, output_type, tmpdir):
     variant = getattr(cramjam, variant_str)
 
-    raw_data = b"oh what a beautiful morning, oh what a beautiful day!!" * 10000
+    n = 1_000_000 if not variant_str == "brotli" else 10_000  # brotli takes the longest.
+    raw_data = b"oh what a beautiful morning, oh what a beautiful day!!" * n
 
     # Setup input
     if input_type == "numpy":

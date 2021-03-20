@@ -78,7 +78,7 @@ pub(crate) mod internal {
 
     /// Compress via Brotli
     pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<u32>) -> Result<usize, Error> {
-        let level = level.unwrap_or_else(|| 11);
+        let level = level.unwrap_or(11);
         let mut encoder = BrotliEncoder::new(input, level);
         let n_bytes = std::io::copy(&mut encoder, output)?;
         Ok(n_bytes as usize)

@@ -224,11 +224,11 @@ impl RustyFile {
     ) -> PyResult<Self> {
         Ok(Self {
             inner: OpenOptions::new()
-                .read(read.unwrap_or_else(|| true))
-                .write(write.unwrap_or_else(|| true))
-                .truncate(truncate.unwrap_or_else(|| false))
+                .read(read.unwrap_or(true))
+                .write(write.unwrap_or(true))
+                .truncate(truncate.unwrap_or(false))
                 .create(true) // create if doesn't exist, but open if it does.
-                .append(append.unwrap_or_else(|| false))
+                .append(append.unwrap_or(false))
                 .open(path)?,
         })
     }
@@ -255,7 +255,7 @@ impl RustyFile {
     /// 2: from end of the stream
     /// ```
     pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
-        let pos = match whence.unwrap_or_else(|| 0) {
+        let pos = match whence.unwrap_or(0) {
             0 => SeekFrom::Start(position as u64),
             1 => SeekFrom::Current(position as i64),
             2 => SeekFrom::End(position as i64),
@@ -350,7 +350,7 @@ impl RustyBuffer {
     /// 2: from end of the stream
     /// ```
     pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
-        let pos = match whence.unwrap_or_else(|| 0) {
+        let pos = match whence.unwrap_or(0) {
             0 => SeekFrom::Start(position as u64),
             1 => SeekFrom::Current(position as i64),
             2 => SeekFrom::End(position as i64),
@@ -402,7 +402,7 @@ fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64
 fn read<'a, R: Read>(reader: &mut R, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
     match n_bytes {
         Some(n) => PyBytes::new_with(py, n, |buf| {
-            reader.read(buf)?;
+            reader.read_exact(buf)?;
             Ok(())
         }),
         None => {
