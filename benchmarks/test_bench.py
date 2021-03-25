@@ -3,7 +3,7 @@ import pytest
 import cramjam
 import pathlib
 import numpy as np
-
+from memory_profiler import profile
 
 FILES = [
     f
@@ -40,6 +40,19 @@ FILES.extend([FiftyFourMbRepeating(), FiftyFourMbRandom()])
 def round_trip(compress, decompress, data, **kwargs):
     return decompress(compress(data, **kwargs))
 
+
+@profile
+def memory_profile():
+
+    import snappy
+
+    data = FILES[-1].read_bytes()
+
+    out1 = cramjam.snappy.compress_raw(data, output_len=int(len(data)*1.2))
+    out2 = snappy.compress(data)
+
+if __name__ == '__main__':
+    memory_profile()
 
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "snappy"
