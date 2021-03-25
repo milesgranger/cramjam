@@ -151,8 +151,8 @@ impl<'a> BytesType<'a> {
 impl<'a> IntoPy<PyObject> for BytesType<'a> {
     fn into_py(self, py: Python) -> PyObject {
         match self {
-            Self::Bytes(bytes) => bytes.to_object(py),
-            Self::ByteArray(byte_array) => byte_array.to_object(py),
+            Self::Bytes(bytes) => bytes.inner.into(),
+            Self::ByteArray(byte_array) => byte_array.inner.into(),
             Self::RustyFile(file) => file.to_object(py),
             Self::RustyBuffer(buffer) => buffer.to_object(py),
             Self::NumpyArray(array) => array.to_object(py),
