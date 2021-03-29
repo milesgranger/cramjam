@@ -314,9 +314,9 @@ impl From<Vec<u8>> for RustyBuffer {
 }
 
 use pyo3::class::buffer::PyBufferProtocol;
-use pyo3::ffi;
 use pyo3::prelude::*;
 use pyo3::AsPyPointer;
+use pyo3::{ffi, PySequenceProtocol};
 
 #[pyproto]
 impl PyBufferProtocol for RustyBuffer {
@@ -367,6 +367,16 @@ impl PyBufferProtocol for RustyBuffer {
     fn bf_releasebuffer(slf: PyRefMut<Self>, _view: *mut ffi::Py_buffer) {}
 }
 
+#[pyproto]
+impl PySequenceProtocol for RustyBuffer {
+    fn __len__(&self) -> usize {
+        self.len()
+    }
+    fn __contains__(&self, x: u8) -> bool {
+        self.inner.get_ref().contains(&x)
+    }
+}
+
 /// A Buffer object, similar to [cramjam.File](struct.RustyFile.html) only the bytes are held in-memory
 ///
 /// ### Example
@@ -389,6 +399,12 @@ impl RustyBuffer {
             inner: Cursor::new(buf),
         })
     }
+
+    /// Length of the underlying buffer
+    pub fn len(&self) -> usize {
+        self.inner.get_ref().len()
+    }
+
     /// Write some bytes to the buffer, where input data can be anything in [BytesType](../enum.BytesType.html)
     pub fn write(&mut self, mut input: BytesType) -> PyResult<usize> {
         let r = write(&mut input, self)?;
