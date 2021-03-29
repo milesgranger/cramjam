@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
 use pyo3::{PyResult, Python};
-use std::io::Cursor;
+use std::io::{Cursor, Read};
 
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -58,7 +58,21 @@ pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usiz
 /// ```
 #[pyfunction]
 pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(decompress_raw(data), py = py, output_len = output_len)
+    let mut decoder = snap::raw::Decoder::new();
+    let output = match data {
+        BytesType::Bytes(pybytes) => decoder.decompress_vec(pybytes.as_bytes()),
+        BytesType::ByteArray(pybytes) => decoder.decompress_vec(pybytes.as_bytes()),
+        BytesType::NumpyArray(pybytes) => decoder.decompress_vec(pybytes.as_bytes()),
+        BytesType::RustyBuffer(pybytes) => decoder.decompress_vec(pybytes.borrow().inner.get_ref().as_slice()),
+        BytesType::RustyFile(file) => {
+            let mut py_ref = file.borrow_mut();
+            let mut input = vec![];
+            py_ref.inner.read_to_end(&mut input)?;
+            decoder.decompress_vec(&input)
+        }
+    };
+    let output = to_py_err!(DecompressionError -> output)?;
+    Ok(RustyBuffer::from(output))
 }
 
 /// Snappy compression raw.
@@ -71,7 +85,21 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Optio
 /// ```
 #[pyfunction]
 pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(compress_raw(data), py = py, output_len = output_len)
+    let mut encoder = snap::raw::Encoder::new();
+    let output = match data {
+        BytesType::Bytes(pybytes) => encoder.compress_vec(pybytes.as_bytes()),
+        BytesType::ByteArray(pybytes) => encoder.compress_vec(pybytes.as_bytes()),
+        BytesType::NumpyArray(pybytes) => encoder.compress_vec(pybytes.as_bytes()),
+        BytesType::RustyBuffer(pybytes) => encoder.compress_vec(pybytes.borrow().inner.get_ref().as_slice()),
+        BytesType::RustyFile(file) => {
+            let mut py_ref = file.borrow_mut();
+            let mut input = vec![];
+            py_ref.inner.read_to_end(&mut input)?;
+            encoder.compress_vec(&input)
+        }
+    };
+    let output = to_py_err!(CompressionError -> output)?;
+    Ok(RustyBuffer::from(output))
 }
 
 /// Compress directly into an output buffer

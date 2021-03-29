@@ -48,8 +48,9 @@ def memory_profile():
 
     data = bytearray(FILES[-1].read_bytes())
     out1 = bytes(cramjam.snappy.compress_raw(data))
-    _out1 = cramjam.snappy.decompress_raw(out1)
+    _out1 = bytes(cramjam.snappy.decompress_raw(out1))
     out2 = snappy.compress(data)
+    _ou2 = snappy.decompress(out2)
 
 if __name__ == '__main__':
     memory_profile()
