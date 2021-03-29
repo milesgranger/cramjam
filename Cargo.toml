@@ -12,8 +12,9 @@ readme = "README.md"
 crate-type = ["cdylib"]
 
 [features]
-default = ["mimallocator"]
+default = ["mimallocator", "extension-module"]
 mimallocator = ["mimalloc"]
+extension-module = ["pyo3/extension-module"]
 
 [profile.release]
 lto = "fat"
@@ -21,7 +22,7 @@ codegen-units = 1
 opt-level = 3
 
 [dependencies]
-pyo3 = { version = "0.13.2", features = ["extension-module"] }
+pyo3 = { version = "0.13.2", default-features = false, features = ["macros"] }
 snap = "^1"
 brotli2 = "^0.3"
 lz4 = "^1"
