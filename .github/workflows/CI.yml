@@ -87,7 +87,7 @@ jobs:
         if: matrix.platform.python-architecture == 'x64'
         run: cargo test --no-default-features --release
       - name: Install maturin
-        run: pip install maturin
+        run: pip install --pre maturin
       - name: Build wheels
         run: |
           maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }}
@@ -131,7 +131,7 @@ jobs:
         echo 'curl --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
         source ~/.cargo/env
         export PATH=/opt/python/cp36-cp36m/bin:/opt/python/cp37-cp37m/bin:/opt/python/cp38-cp38/bin:/opt/python/cp39-cp39/bin:$PATH
-        pip install maturin
+        pip install --pre maturin
         maturin build -i python${{ matrix.python-version }} --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }}
         ' > build-wheel.sh
 
