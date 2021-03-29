@@ -64,6 +64,7 @@ use pyo3::prelude::*;
 
 use crate::io::{RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 use exceptions::{CompressionError, DecompressionError};
+use std::borrow::Borrow;
 use std::io::{Read, Seek, SeekFrom, Write};
 
 #[cfg(feature = "mimallocator")]
@@ -154,7 +155,7 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
             Self::Bytes(bytes) => bytes.inner.into(),
             Self::ByteArray(byte_array) => byte_array.inner.into(),
             Self::RustyFile(file) => file.to_object(py),
-            Self::RustyBuffer(buffer) => buffer.to_object(py),
+            Self::RustyBuffer(buffer) => buffer.into_py(py),
             Self::NumpyArray(array) => array.to_object(py),
         }
     }
@@ -165,72 +166,18 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
 macro_rules! generic {
     ($op:ident($input:expr), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
         {
-            use crate::io::{RustyPyBytes, RustyPyByteArray, RustyNumpyArray};
+            use crate::io::RustyBuffer;
 
-            match $input {
-                BytesType::Bytes(_) => {
-                    match $output_len {
-                        Some(len) => {
-                            let pybytes = PyBytes::new_with($py, len, |buffer| {
-                                let mut cursor = Cursor::new(buffer);
-                                if stringify!($op) == "compress" {
-                                    to_py_err!(CompressionError -> self::internal::$op($input, &mut cursor $(, $level)? ))?;
-                                } else {
-                                    to_py_err!(DecompressionError -> self::internal::$op($input, &mut cursor $(, $level)? ))?;
-                                }
-                                Ok(())
-                            })?;
-                            Ok(BytesType::Bytes(RustyPyBytes::from(pybytes)))
-                        }
-                        None => {
-                            let mut buffer = Vec::new();
-                            if stringify!($op) == "compress" {
-                                to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut buffer) $(, $level)? ))?;
-                            } else {
-                                to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut buffer) $(, $level)? ))?;
-                            }
-
-                            Ok(BytesType::Bytes(RustyPyBytes::from(PyBytes::new($py, &buffer))))
-                        }
-                    }
-                },
-                BytesType::ByteArray(_) => {
-                    let mut pybytes = RustyPyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
-                    if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op($input, &mut pybytes $(, $level)? ))?;
-                    } else {
-                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut pybytes $(, $level)? ))?;
-                    }
-                    Ok(BytesType::ByteArray(pybytes))
-                },
-                BytesType::NumpyArray(_) => {
-                    let mut output = Vec::new();
-                    if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
-                    } else {
-                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
-                    }
-                    Ok(BytesType::NumpyArray(RustyNumpyArray::from_vec($py, output)))
-                },
-                BytesType::RustyFile(_) => {
-                    let mut output = crate::io::RustyBuffer::default();
-                    if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
-                    } else {
-                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
-                    }
-                    Ok(BytesType::RustyBuffer(PyCell::new($py, output).unwrap()))
-                },
-                BytesType::RustyBuffer(_) => {
-                    let mut output = crate::io::RustyBuffer::default();
-                    if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
-                    } else {
-                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
-                    }
-                    Ok(BytesType::RustyBuffer(PyCell::new($py, output).unwrap()))
-                }
+            let mut output: Vec<u8> = match $output_len {
+                Some(len) => vec![0; len],
+                None => vec![]
+            };
+            if stringify!($op) == "compress" {
+                to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
+            } else {
+                to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
             }
+            Ok(RustyBuffer::from(output))
         }
     }
 }

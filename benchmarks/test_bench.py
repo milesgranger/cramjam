@@ -46,9 +46,9 @@ def memory_profile():
 
     import snappy
 
-    data = FILES[-1].read_bytes()
-
-    out1 = cramjam.snappy.compress_raw(data, output_len=int(len(data)*1.2))
+    data = bytearray(FILES[-1].read_bytes())
+    out1 = bytes(cramjam.snappy.compress_raw(data))
+    _out1 = cramjam.snappy.decompress_raw(out1)
     out2 = snappy.compress(data)
 
 if __name__ == '__main__':
@@ -64,7 +64,7 @@ def test_snappy_raw(benchmark, file, use_cramjam: bool):
     """
     import snappy
 
-    data = bytearray(file.read_bytes())
+    data = file.read_bytes()
     if use_cramjam:
         benchmark(
             round_trip,

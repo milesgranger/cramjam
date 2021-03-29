@@ -1,5 +1,6 @@
 //! deflate de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
+use crate::io::RustyBuffer;
 use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -23,7 +24,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// >>> cramjam.deflate.decompress(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
-pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(decompress(data), py = py, output_len = output_len)
 }
 
@@ -40,7 +41,7 @@ pub fn compress<'a>(
     data: BytesType<'a>,
     level: Option<u32>,
     output_len: Option<usize>,
-) -> PyResult<BytesType<'a>> {
+) -> PyResult<RustyBuffer> {
     crate::generic!(compress(data), py = py, output_len = output_len, level = level)
 }
 

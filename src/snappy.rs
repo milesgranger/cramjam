@@ -1,5 +1,6 @@
 //! snappy de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
+use crate::io::RustyBuffer;
 use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -30,7 +31,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// >>> cramjam.snappy.decompress(compressed_bytes, output_len=Optional[None])
 /// ```
 #[pyfunction]
-pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(decompress(data), py = py, output_len = output_len)
 }
 
@@ -43,7 +44,7 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 /// >>> _ = cramjam.snappy.compress(bytearray(b'this avoids double allocation in rust side, and thus faster!'))  # <- use bytearray where possible
 /// ```
 #[pyfunction]
-pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(compress(data), py = py, output_len = output_len)
 }
 
@@ -56,7 +57,7 @@ pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usiz
 /// >>> cramjam.snappy.decompress_raw(compressed_raw_bytes)
 /// ```
 #[pyfunction]
-pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(decompress_raw(data), py = py, output_len = output_len)
 }
 
@@ -69,7 +70,7 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Optio
 /// >>> cramjam.snappy.compress_raw(b'some bytes here')
 /// ```
 #[pyfunction]
-pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(compress_raw(data), py = py, output_len = output_len)
 }
 

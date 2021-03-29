@@ -307,6 +307,66 @@ pub struct RustyBuffer {
     pub(crate) inner: Cursor<Vec<u8>>,
 }
 
+impl From<Vec<u8>> for RustyBuffer {
+    fn from(v: Vec<u8>) -> Self {
+        Self { inner: Cursor::new(v) }
+    }
+}
+
+use pyo3::class::buffer::PyBufferProtocol;
+use pyo3::ffi;
+use pyo3::prelude::*;
+use pyo3::AsPyPointer;
+
+#[pyproto]
+impl PyBufferProtocol for RustyBuffer {
+    fn bf_getbuffer(slf: PyRefMut<Self>, view: *mut ffi::Py_buffer, flags: std::os::raw::c_int) -> PyResult<()> {
+        if view.is_null() {
+            return Err(pyo3::exceptions::PyBufferError::new_err("View is null"));
+        }
+
+        if (flags & ffi::PyBUF_WRITABLE) == ffi::PyBUF_WRITABLE {
+            return Err(pyo3::exceptions::PyBufferError::new_err("Object is not writable"));
+        }
+
+        unsafe {
+            (*view).obj = slf.as_ptr();
+            ffi::Py_INCREF((*view).obj);
+        }
+
+        let bytes = slf.inner.get_ref().as_slice();
+
+        unsafe {
+            (*view).buf = bytes.as_ptr() as *mut std::os::raw::c_void;
+            (*view).len = bytes.len() as isize;
+            (*view).readonly = 1;
+            (*view).itemsize = 1;
+
+            (*view).format = std::ptr::null_mut();
+            if (flags & ffi::PyBUF_FORMAT) == ffi::PyBUF_FORMAT {
+                let msg = std::ffi::CStr::from_bytes_with_nul(b"B\0").unwrap();
+                (*view).format = msg.as_ptr() as *mut _;
+            }
+
+            (*view).ndim = 1;
+            (*view).shape = std::ptr::null_mut();
+            if (flags & ffi::PyBUF_ND) == ffi::PyBUF_ND {
+                (*view).shape = (&((*view).len)) as *const _ as *mut _;
+            }
+
+            (*view).strides = std::ptr::null_mut();
+            if (flags & ffi::PyBUF_STRIDES) == ffi::PyBUF_STRIDES {
+                (*view).strides = &((*view).itemsize) as *const _ as *mut _;
+            }
+
+            (*view).suboffsets = std::ptr::null_mut();
+            (*view).internal = std::ptr::null_mut();
+        }
+        Ok(())
+    }
+    fn bf_releasebuffer(slf: PyRefMut<Self>, _view: *mut ffi::Py_buffer) {}
+}
+
 /// A Buffer object, similar to [cramjam.File](struct.RustyFile.html) only the bytes are held in-memory
 ///
 /// ### Example

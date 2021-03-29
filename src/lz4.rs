@@ -1,5 +1,6 @@
 //! lz4 de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
+use crate::io::RustyBuffer;
 use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
@@ -25,7 +26,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// ```
 #[pyfunction]
 #[allow(unused_variables)] // TODO: Make use of output_len for lz4
-pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<BytesType<'a>> {
+pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(decompress(data), py = py, output_len = output_len)
 }
 
@@ -43,7 +44,7 @@ pub fn compress<'a>(
     mut data: BytesType<'a>,
     level: Option<u32>,
     output_len: Option<usize>,
-) -> PyResult<BytesType<'a>> {
+) -> PyResult<RustyBuffer> {
     crate::generic!(compress(&mut data), py = py, output_len = output_len, level = level)
 }
 
