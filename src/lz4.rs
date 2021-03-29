@@ -3,9 +3,8 @@ use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::RustyBuffer;
 use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
-use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
-use pyo3::{PyResult, Python};
+use pyo3::PyResult;
 use std::io::Cursor;
 
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
@@ -25,9 +24,8 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// >>> cramjam.lz4.decompress(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
-#[allow(unused_variables)] // TODO: Make use of output_len for lz4
-pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(decompress(data), py = py, output_len = output_len)
+pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(decompress(data), output_len = output_len)
 }
 
 /// lZ4 compression.
@@ -39,30 +37,20 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 /// >>> cramjam.lz4.compress(b'some bytes here', output_len=Optional[int])
 /// ```
 #[pyfunction]
-pub fn compress<'a>(
-    py: Python<'a>,
-    mut data: BytesType<'a>,
-    level: Option<u32>,
-    output_len: Option<usize>,
-) -> PyResult<RustyBuffer> {
-    crate::generic!(compress(&mut data), py = py, output_len = output_len, level = level)
+pub fn compress(mut data: BytesType, level: Option<u32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(compress(&mut data), output_len = output_len, level = level)
 }
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into<'a>(
-    _py: Python<'a>,
-    mut input: BytesType<'a>,
-    mut output: BytesType<'a>,
-    level: Option<u32>,
-) -> PyResult<usize> {
+pub fn compress_into(mut input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
     let r = internal::compress(&mut input, &mut output, level)?;
     Ok(r)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let r = internal::decompress(input, &mut output)?;
     Ok(r)
 }

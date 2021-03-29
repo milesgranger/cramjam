@@ -7,8 +7,11 @@ use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 
 use crate::BytesType;
 use numpy::PyArray1;
+use pyo3::class::buffer::PyBufferProtocol;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
+use pyo3::AsPyPointer;
+use pyo3::{ffi, PySequenceProtocol};
 
 /// Internal wrapper for `numpy.array`/`PyArray1`, to provide Read + Write and other traits
 pub struct RustyNumpyArray<'a> {
@@ -16,13 +19,6 @@ pub struct RustyNumpyArray<'a> {
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
 impl<'a> RustyNumpyArray<'a> {
-    pub(crate) fn from_vec(py: Python<'a>, v: Vec<u8>) -> Self {
-        let inner = PyArray1::from_vec(py, v);
-        Self {
-            inner,
-            cursor: Cursor::new(unsafe { inner.as_slice_mut().unwrap() }),
-        }
-    }
     pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { self.inner.as_slice().unwrap() }
     }
@@ -121,13 +117,6 @@ pub struct RustyPyByteArray<'a> {
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
 impl<'a> RustyPyByteArray<'a> {
-    pub(crate) fn new(py: Python<'a>, len: usize) -> Self {
-        let inner = PyByteArray::new_with(py, len, |_| Ok(())).unwrap();
-        Self {
-            inner,
-            cursor: Cursor::new(unsafe { inner.as_bytes_mut() }),
-        }
-    }
     pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { self.inner.as_bytes() }
     }
@@ -313,11 +302,6 @@ impl From<Vec<u8>> for RustyBuffer {
     }
 }
 
-use pyo3::class::buffer::PyBufferProtocol;
-use pyo3::prelude::*;
-use pyo3::AsPyPointer;
-use pyo3::{ffi, PySequenceProtocol};
-
 #[pyproto]
 impl PyBufferProtocol for RustyBuffer {
     fn bf_getbuffer(slf: PyRefMut<Self>, view: *mut ffi::Py_buffer, flags: std::os::raw::c_int) -> PyResult<()> {
@@ -364,7 +348,7 @@ impl PyBufferProtocol for RustyBuffer {
         }
         Ok(())
     }
-    fn bf_releasebuffer(slf: PyRefMut<Self>, _view: *mut ffi::Py_buffer) {}
+    fn bf_releasebuffer(_slf: PyRefMut<Self>, _view: *mut ffi::Py_buffer) {}
 }
 
 #[pyproto]

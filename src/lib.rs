@@ -64,7 +64,6 @@ use pyo3::prelude::*;
 
 use crate::io::{RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 use exceptions::{CompressionError, DecompressionError};
-use std::borrow::Borrow;
 use std::io::{Read, Seek, SeekFrom, Write};
 
 #[cfg(feature = "mimallocator")]
@@ -164,7 +163,7 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
 /// Macro for generating the implementation of de/compression against a variant interface
 #[macro_export]
 macro_rules! generic {
-    ($op:ident($input:expr), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
+    ($op:ident($input:expr), output_len=$output_len:ident $(, level=$level:ident)?) => {
         {
             use crate::io::RustyBuffer;
 

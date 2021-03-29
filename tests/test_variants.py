@@ -27,12 +27,13 @@ def test_variants_simple(variant_str, is_bytearray):
         uncompressed = bytearray(uncompressed)
 
     compressed = variant.compress(uncompressed)
-    assert compressed != uncompressed
-    assert type(compressed) == type(uncompressed)
+    assert compressed.read() != uncompressed
+    compressed.seek(0)
+    assert isinstance(compressed, cramjam.Buffer)
 
     decompressed = variant.decompress(compressed, output_len=len(uncompressed))
-    assert decompressed == uncompressed
-    assert type(decompressed) == type(uncompressed)
+    assert decompressed.read() == uncompressed
+    assert isinstance(decompressed, cramjam.Buffer)
 
 
 @pytest.mark.parametrize(

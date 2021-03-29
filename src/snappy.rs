@@ -3,9 +3,8 @@ use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::RustyBuffer;
 use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
-use pyo3::types::PyBytes;
 use pyo3::wrap_pyfunction;
-use pyo3::{PyResult, Python};
+use pyo3::PyResult;
 use std::io::{Cursor, Read};
 
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
@@ -31,8 +30,8 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// >>> cramjam.snappy.decompress(compressed_bytes, output_len=Optional[None])
 /// ```
 #[pyfunction]
-pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(decompress(data), py = py, output_len = output_len)
+pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(decompress(data), output_len = output_len)
 }
 
 /// Snappy compression.
@@ -44,8 +43,8 @@ pub fn decompress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<us
 /// >>> _ = cramjam.snappy.compress(bytearray(b'this avoids double allocation in rust side, and thus faster!'))  # <- use bytearray where possible
 /// ```
 #[pyfunction]
-pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(compress(data), py = py, output_len = output_len)
+pub fn compress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(compress(data), output_len = output_len)
 }
 
 /// Snappy decompression, raw
@@ -57,7 +56,8 @@ pub fn compress<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usiz
 /// >>> cramjam.snappy.decompress_raw(compressed_raw_bytes)
 /// ```
 #[pyfunction]
-pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+#[allow(unused_variables)]
+pub fn decompress_raw(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let mut decoder = snap::raw::Decoder::new();
     let output = match data {
         BytesType::Bytes(pybytes) => decoder.decompress_vec(pybytes.as_bytes()),
@@ -84,7 +84,8 @@ pub fn decompress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Optio
 /// >>> cramjam.snappy.compress_raw(b'some bytes here')
 /// ```
 #[pyfunction]
-pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+#[allow(unused_variables)]
+pub fn compress_raw(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let mut encoder = snap::raw::Encoder::new();
     let output = match data {
         BytesType::Bytes(pybytes) => encoder.compress_vec(pybytes.as_bytes()),
@@ -104,28 +105,28 @@ pub fn compress_raw<'a>(py: Python<'a>, data: BytesType<'a>, output_len: Option<
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+pub fn compress_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let r = internal::compress(input, &mut output)?;
     Ok(r)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let r = internal::decompress(input, &mut output)?;
     Ok(r as usize)
 }
 
 /// Compress raw format directly into an output buffer
 #[pyfunction]
-pub fn compress_raw_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+pub fn compress_raw_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let r = to_py_err!(CompressionError -> internal::compress_raw(input, &mut output))?;
     Ok(r)
 }
 
 /// Decompress raw format directly into an output buffer
 #[pyfunction]
-pub fn decompress_raw_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+pub fn decompress_raw_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let r = to_py_err!(DecompressionError -> internal::decompress_raw(input, &mut output))?;
     Ok(r)
 }
@@ -133,14 +134,14 @@ pub fn decompress_raw_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output
 /// Get the expected max compressed length for snappy raw compression; this is the size
 /// of buffer that should be passed to `compress_raw_into`
 #[pyfunction]
-pub fn compress_raw_max_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> usize {
+pub fn compress_raw_max_len(data: BytesType) -> usize {
     snap::raw::max_compress_len(data.len())
 }
 
 /// Get the decompressed length for the given data. This is the size of buffer
 /// that should be passed to `decompress_raw_into`
 #[pyfunction]
-pub fn decompress_raw_len<'a>(_py: Python<'a>, data: BytesType<'a>) -> PyResult<usize> {
+pub fn decompress_raw_len(data: BytesType) -> PyResult<usize> {
     to_py_err!(DecompressionError -> snap::raw::decompress_len(data.as_bytes()))
 }
 
