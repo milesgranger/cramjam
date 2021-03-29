@@ -161,7 +161,7 @@ jobs:
         echo 'curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
         source ~/.cargo/env
         rustup target add ${{ matrix.platform.target }}
-        maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }} --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=abi3,extension-module"  # disable mimallocator
+        maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }} --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
         ' > build-wheel.sh
 
         docker run --rm -v "$PWD":/io -w /io messense/manylinux2014-cross:${{ matrix.platform.arch }} bash build-wheel.sh
