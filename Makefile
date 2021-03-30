@@ -27,6 +27,9 @@ bench-brotli:
 bench-zstd:
 	$(BASE_BENCH_CMD) zstd
 
+docs:
+    cargo doc --open --no-deps
+
 dev-install:
 	rm -rf ./dist
 	maturin build --release --out dist --no-sdist --interpreter $(shell which python)

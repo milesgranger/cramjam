@@ -46,6 +46,13 @@ pub fn compress_into(input: BytesType, mut output: BytesType, level: Option<i32>
     Ok(r)
 }
 
+/// Decompress directly into an output buffer
+#[pyfunction]
+pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
+    let r = internal::decompress(input, &mut output)?;
+    Ok(r)
+}
+
 pub(crate) mod internal {
 
     use std::io::{Error, Read, Write};
@@ -64,11 +71,4 @@ pub(crate) mod internal {
         let n_bytes = std::io::copy(&mut encoder, output)?;
         Ok(n_bytes as usize)
     }
-}
-
-/// Decompress directly into an output buffer
-#[pyfunction]
-pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: BytesType<'a>) -> PyResult<usize> {
-    let r = internal::decompress(input, &mut output)?;
-    Ok(r)
 }
