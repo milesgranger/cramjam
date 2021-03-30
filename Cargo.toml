@@ -27,7 +27,7 @@ snap = "^1"
 brotli2 = "^0.3"
 lz4 = "^1"
 flate2 = "^1"
-zstd = "0.6.0+zstd.1.4.8"
+zstd = "0.6.1+zstd.1.4.9"
 numpy = "0.13.0"
 
 [dependencies.mimalloc]

@@ -66,7 +66,7 @@ pub(crate) mod internal {
 
     /// Compress gzip data
     pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<i32>) -> Result<usize, Error> {
-        let level = level.unwrap_or_else(|| 0); // 0 will use zstd's default, currently 11
+        let level = level.unwrap_or_else(|| 0); // 0 will use zstd's default, currently 3
         let mut encoder = zstd::stream::read::Encoder::new(input, level)?;
         let n_bytes = std::io::copy(&mut encoder, output)?;
         Ok(n_bytes as usize)
