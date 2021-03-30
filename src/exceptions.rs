@@ -5,3 +5,4 @@ use pyo3::exceptions::PyException;
 
 create_exception!(cramjam, CompressionError, PyException);
 create_exception!(cramjam, DecompressionError, PyException);
+create_exception!(cramjam, CramjamError, PyException);

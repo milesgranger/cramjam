@@ -18,7 +18,7 @@
 //! >>> data = b'some bytes here'
 //! >>> compressed = cramjam.snappy.compress(data)
 //! >>> decompressed = cramjam.snappy.decompress(compressed)
-//! >>> assert data == decompressed
+//! >>> assert bytes(data) == bytes(decompressed)
 //! >>>
 //! ```
 //!
@@ -62,7 +62,7 @@ pub mod zstd;
 
 use pyo3::prelude::*;
 
-use crate::io::{RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
+use crate::io::{AsBytes, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 use exceptions::{CompressionError, DecompressionError};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -90,6 +90,43 @@ pub enum BytesType<'a> {
     /// [`cramjam.Buffer`](io/struct.RustyBuffer.html)
     #[pyo3(transparent, annotation = "Buffer")]
     RustyBuffer(&'a PyCell<RustyBuffer>),
+}
+
+impl<'a> AsBytes for BytesType<'a> {
+    fn as_bytes(&self) -> &[u8] {
+        match self {
+            BytesType::Bytes(b) => b.as_bytes(),
+            BytesType::ByteArray(b) => b.as_bytes(),
+            BytesType::NumpyArray(b) => b.as_bytes(),
+            BytesType::RustyBuffer(b) => {
+                let py_ref = b.borrow();
+                let bytes = py_ref.as_bytes();
+                unsafe { std::slice::from_raw_parts(bytes.as_ptr(), bytes.len()) }
+            }
+            BytesType::RustyFile(b) => {
+                let py_ref = b.borrow();
+                let bytes = py_ref.as_bytes();
+                unsafe { std::slice::from_raw_parts(bytes.as_ptr(), bytes.len()) }
+            }
+        }
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        match self {
+            BytesType::Bytes(b) => b.as_bytes_mut(),
+            BytesType::ByteArray(b) => b.as_bytes_mut(),
+            BytesType::NumpyArray(b) => b.as_bytes_mut(),
+            BytesType::RustyBuffer(b) => {
+                let mut py_ref = b.borrow_mut();
+                let bytes = py_ref.as_bytes_mut();
+                unsafe { std::slice::from_raw_parts_mut(bytes.as_mut_ptr(), bytes.len()) }
+            }
+            BytesType::RustyFile(b) => {
+                let mut py_ref = b.borrow_mut();
+                let bytes = py_ref.as_bytes_mut();
+                unsafe { std::slice::from_raw_parts_mut(bytes.as_mut_ptr(), bytes.len()) }
+            }
+        }
+    }
 }
 
 impl<'a> Write for BytesType<'a> {
@@ -135,26 +172,18 @@ impl<'a> Seek for BytesType<'a> {
 }
 
 impl<'a> BytesType<'a> {
-    #[allow(dead_code)]
     fn len(&self) -> usize {
         self.as_bytes().len()
-    }
-    fn as_bytes(&self) -> &'_ [u8] {
-        match self {
-            Self::Bytes(b) => b.as_bytes(),
-            Self::ByteArray(b) => b.as_bytes(),
-            _ => unimplemented!("Converting Rust native types to bytes is not supported"),
-        }
     }
 }
 
 impl<'a> IntoPy<PyObject> for BytesType<'a> {
     fn into_py(self, py: Python) -> PyObject {
         match self {
-            Self::Bytes(bytes) => bytes.to_object(py),
-            Self::ByteArray(byte_array) => byte_array.to_object(py),
+            Self::Bytes(bytes) => bytes.inner.into(),
+            Self::ByteArray(byte_array) => byte_array.inner.into(),
             Self::RustyFile(file) => file.to_object(py),
-            Self::RustyBuffer(buffer) => buffer.to_object(py),
+            Self::RustyBuffer(buffer) => buffer.into_py(py),
             Self::NumpyArray(array) => array.to_object(py),
         }
     }
@@ -163,74 +192,20 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
 /// Macro for generating the implementation of de/compression against a variant interface
 #[macro_export]
 macro_rules! generic {
-    ($op:ident($input:expr), py=$py:ident, output_len=$output_len:ident $(, level=$level:ident)?) => {
+    ($op:ident($input:expr), output_len=$output_len:ident $(, level=$level:ident)?) => {
         {
-            use crate::io::{RustyPyBytes, RustyPyByteArray, RustyNumpyArray};
+            use crate::io::RustyBuffer;
 
-            match $input {
-                BytesType::Bytes(_) => {
-                    match $output_len {
-                        Some(len) => {
-                            let pybytes = PyBytes::new_with($py, len, |buffer| {
-                                let mut cursor = Cursor::new(buffer);
-                                if stringify!($op) == "compress" {
-                                    to_py_err!(CompressionError -> self::internal::$op($input, &mut cursor $(, $level)? ))?;
-                                } else {
-                                    to_py_err!(DecompressionError -> self::internal::$op($input, &mut cursor $(, $level)? ))?;
-                                }
-                                Ok(())
-                            })?;
-                            Ok(BytesType::Bytes(RustyPyBytes::from(pybytes)))
-                        }
-                        None => {
-                            let mut buffer = Vec::new();
-                            if stringify!($op) == "compress" {
-                                to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut buffer) $(, $level)? ))?;
-                            } else {
-                                to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut buffer) $(, $level)? ))?;
-                            }
-
-                            Ok(BytesType::Bytes(RustyPyBytes::from(PyBytes::new($py, &buffer))))
-                        }
-                    }
-                },
-                BytesType::ByteArray(_) => {
-                    let mut pybytes = RustyPyByteArray::new($py, $output_len.unwrap_or_else(|| 0));
-                    if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op($input, &mut pybytes $(, $level)? ))?;
-                    } else {
-                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut pybytes $(, $level)? ))?;
-                    }
-                    Ok(BytesType::ByteArray(pybytes))
-                },
-                BytesType::NumpyArray(_) => {
-                    let mut output = Vec::new();
-                    if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
-                    } else {
-                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
-                    }
-                    Ok(BytesType::NumpyArray(RustyNumpyArray::from_vec($py, output)))
-                },
-                BytesType::RustyFile(_) => {
-                    let mut output = crate::io::RustyBuffer::default();
-                    if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
-                    } else {
-                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
-                    }
-                    Ok(BytesType::RustyBuffer(PyCell::new($py, output).unwrap()))
-                },
-                BytesType::RustyBuffer(_) => {
-                    let mut output = crate::io::RustyBuffer::default();
-                    if stringify!($op) == "compress" {
-                        to_py_err!(CompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
-                    } else {
-                        to_py_err!(DecompressionError -> self::internal::$op($input, &mut output $(, $level)? ))?;
-                    }
-                    Ok(BytesType::RustyBuffer(PyCell::new($py, output).unwrap()))
-                }
+            let mut output: Vec<u8> = match $output_len {
+                Some(len) => vec![0; len],
+                None => vec![]
+            };
+            if stringify!($op) == "compress" {
+                to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
+            } else {
+                to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
             }
+            Ok(RustyBuffer::from(output))
         }
     }
 }

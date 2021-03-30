@@ -6,23 +6,34 @@ use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 
 use crate::BytesType;
+use crate::exceptions::CramjamError;
 use numpy::PyArray1;
+use pyo3::class::buffer::PyBufferProtocol;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
+use pyo3::{ffi, PySequenceProtocol};
+use pyo3::{AsPyPointer, PyObjectProtocol};
+use std::path::PathBuf;
+
+pub(crate) trait AsBytes {
+    fn as_bytes(&self) -> &[u8];
+    fn as_bytes_mut(&mut self) -> &mut [u8];
+}
 
 /// Internal wrapper for `numpy.array`/`PyArray1`, to provide Read + Write and other traits
 pub struct RustyNumpyArray<'a> {
     pub(crate) inner: &'a PyArray1<u8>,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
-impl<'a> RustyNumpyArray<'a> {
-    pub(crate) fn from_vec(py: Python<'a>, v: Vec<u8>) -> Self {
-        let inner = PyArray1::from_vec(py, v);
-        Self {
-            inner,
-            cursor: Cursor::new(unsafe { inner.as_slice_mut().unwrap() }),
-        }
+impl<'a> AsBytes for RustyNumpyArray<'a> {
+    fn as_bytes(&self) -> &[u8] {
+        self.cursor.get_ref().as_ref()
     }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        self.cursor.get_mut()
+    }
+}
+impl<'a> RustyNumpyArray<'a> {
     pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { self.inner.as_slice().unwrap() }
     }
@@ -71,9 +82,12 @@ pub struct RustyPyBytes<'a> {
     pub(crate) inner: &'a PyBytes,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
-impl<'a> RustyPyBytes<'a> {
-    pub(crate) fn as_bytes(&self) -> &[u8] {
+impl<'a> AsBytes for RustyPyBytes<'a> {
+    fn as_bytes(&self) -> &[u8] {
         self.inner.as_bytes()
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        self.cursor.get_mut()
     }
 }
 impl<'a> From<&'a PyBytes> for RustyPyBytes<'a> {
@@ -120,16 +134,12 @@ pub struct RustyPyByteArray<'a> {
     pub(crate) inner: &'a PyByteArray,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
-impl<'a> RustyPyByteArray<'a> {
-    pub(crate) fn new(py: Python<'a>, len: usize) -> Self {
-        let inner = PyByteArray::new_with(py, len, |_| Ok(())).unwrap();
-        Self {
-            inner,
-            cursor: Cursor::new(unsafe { inner.as_bytes_mut() }),
-        }
+impl<'a> AsBytes for RustyPyByteArray<'a> {
+    fn as_bytes(&self) -> &[u8] {
+        self.cursor.get_ref()
     }
-    pub(crate) fn as_bytes(&self) -> &[u8] {
-        unsafe { self.inner.as_bytes() }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        self.cursor.get_mut()
     }
 }
 impl<'a> From<&'a PyByteArray> for RustyPyByteArray<'a> {
@@ -200,7 +210,45 @@ impl<'a> Seek for RustyPyByteArray<'a> {
 ///
 #[pyclass(name = "File")]
 pub struct RustyFile {
+    pub(crate) path: PathBuf,
     pub(crate) inner: File,
+}
+
+#[pyproto]
+impl PyObjectProtocol for RustyFile {
+    fn __repr__(&self) -> PyResult<String> {
+        let path = match self.path.as_path().to_str() {
+            Some(path) => path.to_string(),
+            None => self.path.to_string_lossy().to_string(),
+        };
+        let repr = format!("cramjam.File(path={}, len={:?})", path, self.len()?);
+        Ok(repr)
+    }
+    fn __bool__(&self) -> PyResult<bool> {
+        Ok(self.len()? > 0)
+    }
+}
+
+#[pyproto]
+impl PySequenceProtocol for RustyFile {
+    fn __len__(&self) -> PyResult<usize> {
+        self.len()
+    }
+}
+
+impl AsBytes for RustyFile {
+    fn as_bytes(&self) -> &[u8] {
+        unimplemented!(
+            "Converting a File to bytes is not supported, as it'd require reading the \
+        entire file into memory; consider using cramjam.Buffer"
+        )
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        unimplemented!(
+            "Converting a File to bytes is not supported, as it'd require reading the \
+        entire file into memory; consider using cramjam.Buffer"
+        )
+    }
 }
 
 #[pymethods]
@@ -223,6 +271,7 @@ impl RustyFile {
         append: Option<bool>,
     ) -> PyResult<Self> {
         Ok(Self {
+            path: PathBuf::from(path),
             inner: OpenOptions::new()
                 .read(read.unwrap_or_else(|| true))
                 .write(write.unwrap_or_else(|| true))
@@ -287,6 +336,14 @@ impl RustyFile {
     pub fn truncate(&mut self) -> PyResult<()> {
         self.set_len(0)
     }
+    /// Length of the file in bytes
+    pub fn len(&self) -> PyResult<usize> {
+        let meta = self
+            .inner
+            .metadata()
+            .map_err(|e| CramjamError::new_err(e.to_string()))?;
+        Ok(meta.len() as usize)
+    }
 }
 
 /// A native Rust file-like object. Reading and writing takes place
@@ -305,6 +362,90 @@ impl RustyFile {
 #[derive(Default)]
 pub struct RustyBuffer {
     pub(crate) inner: Cursor<Vec<u8>>,
+}
+
+impl AsBytes for RustyBuffer {
+    fn as_bytes(&self) -> &[u8] {
+        self.inner.get_ref().as_slice()
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        self.inner.get_mut().as_mut_slice()
+    }
+}
+
+impl From<Vec<u8>> for RustyBuffer {
+    fn from(v: Vec<u8>) -> Self {
+        Self { inner: Cursor::new(v) }
+    }
+}
+
+#[pyproto]
+impl PyBufferProtocol for RustyBuffer {
+    fn bf_getbuffer(slf: PyRefMut<Self>, view: *mut ffi::Py_buffer, flags: std::os::raw::c_int) -> PyResult<()> {
+        if view.is_null() {
+            return Err(pyo3::exceptions::PyBufferError::new_err("View is null"));
+        }
+
+        if (flags & ffi::PyBUF_WRITABLE) == ffi::PyBUF_WRITABLE {
+            return Err(pyo3::exceptions::PyBufferError::new_err("Object is not writable"));
+        }
+
+        unsafe {
+            (*view).obj = slf.as_ptr();
+            ffi::Py_INCREF((*view).obj);
+        }
+
+        let bytes = slf.inner.get_ref().as_slice();
+
+        unsafe {
+            (*view).buf = bytes.as_ptr() as *mut std::os::raw::c_void;
+            (*view).len = bytes.len() as isize;
+            (*view).readonly = 1;
+            (*view).itemsize = 1;
+
+            (*view).format = std::ptr::null_mut();
+            if (flags & ffi::PyBUF_FORMAT) == ffi::PyBUF_FORMAT {
+                let msg = std::ffi::CStr::from_bytes_with_nul(b"B\0").unwrap();
+                (*view).format = msg.as_ptr() as *mut _;
+            }
+
+            (*view).ndim = 1;
+            (*view).shape = std::ptr::null_mut();
+            if (flags & ffi::PyBUF_ND) == ffi::PyBUF_ND {
+                (*view).shape = (&((*view).len)) as *const _ as *mut _;
+            }
+
+            (*view).strides = std::ptr::null_mut();
+            if (flags & ffi::PyBUF_STRIDES) == ffi::PyBUF_STRIDES {
+                (*view).strides = &((*view).itemsize) as *const _ as *mut _;
+            }
+
+            (*view).suboffsets = std::ptr::null_mut();
+            (*view).internal = std::ptr::null_mut();
+        }
+        Ok(())
+    }
+    fn bf_releasebuffer(_slf: PyRefMut<Self>, _view: *mut ffi::Py_buffer) {}
+}
+
+#[pyproto]
+impl PySequenceProtocol for RustyBuffer {
+    fn __len__(&self) -> usize {
+        self.len()
+    }
+    fn __contains__(&self, x: u8) -> bool {
+        self.inner.get_ref().contains(&x)
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for RustyBuffer {
+    fn __repr__(&self) -> String {
+        format!("cramjam.Buffer(len={:?})", self.len())
+    }
+    fn __bool__(&self) -> bool {
+        self.len() > 0
+    }
 }
 
 /// A Buffer object, similar to [cramjam.File](struct.RustyFile.html) only the bytes are held in-memory
@@ -329,6 +470,12 @@ impl RustyBuffer {
             inner: Cursor::new(buf),
         })
     }
+
+    /// Length of the underlying buffer
+    pub fn len(&self) -> usize {
+        self.inner.get_ref().len()
+    }
+
     /// Write some bytes to the buffer, where input data can be anything in [BytesType](../enum.BytesType.html)
     pub fn write(&mut self, mut input: BytesType) -> PyResult<usize> {
         let r = write(&mut input, self)?;
