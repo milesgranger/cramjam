@@ -13,10 +13,23 @@ use pyo3::types::{PyByteArray, PyBytes};
 use pyo3::AsPyPointer;
 use pyo3::{ffi, PySequenceProtocol};
 
+pub(crate) trait AsBytes {
+    fn as_bytes(&self) -> &[u8];
+    fn as_bytes_mut(&mut self) -> &mut [u8];
+}
+
 /// Internal wrapper for `numpy.array`/`PyArray1`, to provide Read + Write and other traits
 pub struct RustyNumpyArray<'a> {
     pub(crate) inner: &'a PyArray1<u8>,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
+}
+impl<'a> AsBytes for RustyNumpyArray<'a> {
+    fn as_bytes(&self) -> &[u8] {
+        self.cursor.get_ref().as_ref()
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        self.cursor.get_mut()
+    }
 }
 impl<'a> RustyNumpyArray<'a> {
     pub(crate) fn as_bytes(&self) -> &[u8] {
@@ -67,9 +80,12 @@ pub struct RustyPyBytes<'a> {
     pub(crate) inner: &'a PyBytes,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
-impl<'a> RustyPyBytes<'a> {
-    pub(crate) fn as_bytes(&self) -> &[u8] {
+impl<'a> AsBytes for RustyPyBytes<'a> {
+    fn as_bytes(&self) -> &[u8] {
         self.inner.as_bytes()
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        self.cursor.get_mut()
     }
 }
 impl<'a> From<&'a PyBytes> for RustyPyBytes<'a> {
@@ -116,9 +132,12 @@ pub struct RustyPyByteArray<'a> {
     pub(crate) inner: &'a PyByteArray,
     pub(crate) cursor: Cursor<&'a mut [u8]>,
 }
-impl<'a> RustyPyByteArray<'a> {
-    pub(crate) fn as_bytes(&self) -> &[u8] {
-        unsafe { self.inner.as_bytes() }
+impl<'a> AsBytes for RustyPyByteArray<'a> {
+    fn as_bytes(&self) -> &[u8] {
+        self.cursor.get_ref()
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        self.cursor.get_mut()
     }
 }
 impl<'a> From<&'a PyByteArray> for RustyPyByteArray<'a> {
@@ -190,6 +209,21 @@ impl<'a> Seek for RustyPyByteArray<'a> {
 #[pyclass(name = "File")]
 pub struct RustyFile {
     pub(crate) inner: File,
+}
+
+impl AsBytes for RustyFile {
+    fn as_bytes(&self) -> &[u8] {
+        unimplemented!(
+            "Converting a File to bytes is not supported, as it'd require reading the \
+        entire file into memory; consider using cramjam.Buffer"
+        )
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        unimplemented!(
+            "Converting a File to bytes is not supported, as it'd require reading the \
+        entire file into memory; consider using cramjam.Buffer"
+        )
+    }
 }
 
 #[pymethods]
@@ -294,6 +328,15 @@ impl RustyFile {
 #[derive(Default)]
 pub struct RustyBuffer {
     pub(crate) inner: Cursor<Vec<u8>>,
+}
+
+impl AsBytes for RustyBuffer {
+    fn as_bytes(&self) -> &[u8] {
+        self.inner.get_ref().as_slice()
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        self.inner.get_mut().as_mut_slice()
+    }
 }
 
 impl From<Vec<u8>> for RustyBuffer {

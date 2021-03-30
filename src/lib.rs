@@ -62,7 +62,7 @@ pub mod zstd;
 
 use pyo3::prelude::*;
 
-use crate::io::{RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
+use crate::io::{AsBytes, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 use exceptions::{CompressionError, DecompressionError};
 use std::io::{Read, Seek, SeekFrom, Write};
 
@@ -90,6 +90,43 @@ pub enum BytesType<'a> {
     /// [`cramjam.Buffer`](io/struct.RustyBuffer.html)
     #[pyo3(transparent, annotation = "Buffer")]
     RustyBuffer(&'a PyCell<RustyBuffer>),
+}
+
+impl<'a> AsBytes for BytesType<'a> {
+    fn as_bytes(&self) -> &[u8] {
+        match self {
+            BytesType::Bytes(b) => b.as_bytes(),
+            BytesType::ByteArray(b) => b.as_bytes(),
+            BytesType::NumpyArray(b) => b.as_bytes(),
+            BytesType::RustyBuffer(b) => {
+                let py_ref = b.borrow();
+                let bytes = py_ref.as_bytes();
+                unsafe { std::slice::from_raw_parts(bytes.as_ptr(), bytes.len()) }
+            }
+            BytesType::RustyFile(b) => {
+                let py_ref = b.borrow();
+                let bytes = py_ref.as_bytes();
+                unsafe { std::slice::from_raw_parts(bytes.as_ptr(), bytes.len()) }
+            }
+        }
+    }
+    fn as_bytes_mut(&mut self) -> &mut [u8] {
+        match self {
+            BytesType::Bytes(b) => b.as_bytes_mut(),
+            BytesType::ByteArray(b) => b.as_bytes_mut(),
+            BytesType::NumpyArray(b) => b.as_bytes_mut(),
+            BytesType::RustyBuffer(b) => {
+                let mut py_ref = b.borrow_mut();
+                let bytes = py_ref.as_bytes_mut();
+                unsafe { std::slice::from_raw_parts_mut(bytes.as_mut_ptr(), bytes.len()) }
+            }
+            BytesType::RustyFile(b) => {
+                let mut py_ref = b.borrow_mut();
+                let bytes = py_ref.as_bytes_mut();
+                unsafe { std::slice::from_raw_parts_mut(bytes.as_mut_ptr(), bytes.len()) }
+            }
+        }
+    }
 }
 
 impl<'a> Write for BytesType<'a> {
@@ -135,16 +172,8 @@ impl<'a> Seek for BytesType<'a> {
 }
 
 impl<'a> BytesType<'a> {
-    #[allow(dead_code)]
     fn len(&self) -> usize {
         self.as_bytes().len()
-    }
-    fn as_bytes(&self) -> &'_ [u8] {
-        match self {
-            Self::Bytes(b) => b.as_bytes(),
-            Self::ByteArray(b) => b.as_bytes(),
-            _ => unimplemented!("Converting Rust native types to bytes is not supported"),
-        }
     }
 }
 

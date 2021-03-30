@@ -1,11 +1,11 @@
 //! snappy de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
-use crate::io::RustyBuffer;
+use crate::io::{AsBytes, RustyBuffer};
 use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
-use std::io::{Cursor, Read};
+use std::io::Cursor;
 
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -59,19 +59,7 @@ pub fn compress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuf
 #[allow(unused_variables)]
 pub fn decompress_raw(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let mut decoder = snap::raw::Decoder::new();
-    let output = match data {
-        BytesType::Bytes(pybytes) => decoder.decompress_vec(pybytes.as_bytes()),
-        BytesType::ByteArray(pybytes) => decoder.decompress_vec(pybytes.as_bytes()),
-        BytesType::NumpyArray(pybytes) => decoder.decompress_vec(pybytes.as_bytes()),
-        BytesType::RustyBuffer(pybytes) => decoder.decompress_vec(pybytes.borrow().inner.get_ref().as_slice()),
-        BytesType::RustyFile(file) => {
-            let mut py_ref = file.borrow_mut();
-            let mut input = vec![];
-            py_ref.inner.read_to_end(&mut input)?;
-            decoder.decompress_vec(&input)
-        }
-    };
-    let output = to_py_err!(DecompressionError -> output)?;
+    let output = to_py_err!(DecompressionError -> decoder.decompress_vec(data.as_bytes()))?;
     Ok(RustyBuffer::from(output))
 }
 
@@ -87,19 +75,7 @@ pub fn decompress_raw(data: BytesType, output_len: Option<usize>) -> PyResult<Ru
 #[allow(unused_variables)]
 pub fn compress_raw(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let mut encoder = snap::raw::Encoder::new();
-    let output = match data {
-        BytesType::Bytes(pybytes) => encoder.compress_vec(pybytes.as_bytes()),
-        BytesType::ByteArray(pybytes) => encoder.compress_vec(pybytes.as_bytes()),
-        BytesType::NumpyArray(pybytes) => encoder.compress_vec(pybytes.as_bytes()),
-        BytesType::RustyBuffer(pybytes) => encoder.compress_vec(pybytes.borrow().inner.get_ref().as_slice()),
-        BytesType::RustyFile(file) => {
-            let mut py_ref = file.borrow_mut();
-            let mut input = vec![];
-            py_ref.inner.read_to_end(&mut input)?;
-            encoder.compress_vec(&input)
-        }
-    };
-    let output = to_py_err!(CompressionError -> output)?;
+    let output = to_py_err!(CompressionError -> encoder.compress_vec(data.as_bytes()))?;
     Ok(RustyBuffer::from(output))
 }
 
@@ -120,15 +96,17 @@ pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usiz
 /// Compress raw format directly into an output buffer
 #[pyfunction]
 pub fn compress_raw_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    let r = to_py_err!(CompressionError -> internal::compress_raw(input, &mut output))?;
-    Ok(r)
+    let mut encoder = snap::raw::Encoder::new();
+    let output = encoder.compress(input.as_bytes(), output.as_bytes_mut());
+    to_py_err!(CompressionError -> output)
 }
 
 /// Decompress raw format directly into an output buffer
 #[pyfunction]
 pub fn decompress_raw_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    let r = to_py_err!(DecompressionError -> internal::decompress_raw(input, &mut output))?;
-    Ok(r)
+    let mut decoder = snap::raw::Decoder::new();
+    let output = decoder.decompress(input.as_bytes(), output.as_bytes_mut());
+    to_py_err!(DecompressionError -> output)
 }
 
 /// Get the expected max compressed length for snappy raw compression; this is the size
@@ -146,138 +124,8 @@ pub fn decompress_raw_len(data: BytesType) -> PyResult<usize> {
 }
 
 pub(crate) mod internal {
-    use crate::BytesType;
-    use snap::raw::{decompress_len, max_compress_len, Decoder, Encoder};
     use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Cursor, Error, Read, Write};
-
-    pub(crate) struct RawEncoder<'a, 'b> {
-        inner: &'b BytesType<'a>,
-        overflow: Option<Cursor<Vec<u8>>>,
-        encoder: Encoder,
-        is_finished: bool,
-    }
-    impl<'a, 'b> RawEncoder<'a, 'b> {
-        pub fn new(inner: &'b BytesType<'a>) -> Self {
-            Self {
-                inner,
-                encoder: Encoder::new(),
-                overflow: None,
-                is_finished: false,
-            }
-        }
-        fn init_read(&mut self, bytes: &[u8], buf: &mut [u8]) -> std::io::Result<usize> {
-            let len = max_compress_len(bytes.len());
-            if buf.len() >= len {
-                let n = self.encoder.compress(bytes, buf)?;
-                self.is_finished = true; // if overflow is set, it will return 0 next iter
-                Ok(n)
-            } else {
-                let mut overflow = vec![0; len];
-                let n = self.encoder.compress(bytes, overflow.as_mut_slice())?;
-                overflow.truncate(n);
-                let mut overflow = Cursor::new(overflow);
-                let r = overflow.read(buf)?;
-                self.overflow = Some(overflow);
-                Ok(r)
-            }
-        }
-    }
-    impl<'a, 'b> Read for RawEncoder<'a, 'b> {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            if self.is_finished {
-                return Ok(0);
-            }
-            match self.overflow.as_mut() {
-                Some(overflow) => overflow.read(buf),
-                None => match self.inner {
-                    BytesType::Bytes(pybytes) => self.init_read(pybytes.as_bytes(), buf),
-                    BytesType::ByteArray(pybytes) => self.init_read(pybytes.as_bytes(), buf),
-                    BytesType::NumpyArray(array) => self.init_read(array.as_bytes(), buf),
-                    BytesType::RustyBuffer(buffer) => {
-                        let buffer_ref = buffer.borrow();
-                        self.init_read(buffer_ref.inner.get_ref(), buf)
-                    }
-                    BytesType::RustyFile(file) => {
-                        let mut buffer = vec![];
-                        file.borrow_mut().read_to_end(&mut buffer)?;
-                        self.init_read(buffer.as_slice(), buf)
-                    }
-                },
-            }
-        }
-    }
-
-    pub(crate) struct RawDecoder<'a, 'b> {
-        inner: &'b BytesType<'a>,
-        overflow: Option<Cursor<Vec<u8>>>,
-        decoder: Decoder,
-        is_finished: bool,
-    }
-    impl<'a, 'b> RawDecoder<'a, 'b> {
-        pub fn new(inner: &'b BytesType<'a>) -> Self {
-            Self {
-                inner,
-                decoder: Decoder::new(),
-                overflow: None,
-                is_finished: false,
-            }
-        }
-        fn init_read(&mut self, bytes: &[u8], buf: &mut [u8]) -> std::io::Result<usize> {
-            let len = decompress_len(bytes)?;
-            if buf.len() >= len {
-                let n = self.decoder.decompress(bytes, buf)?;
-                self.is_finished = true; // if overflow is set, it will return 0 next iter
-                Ok(n)
-            } else {
-                let mut overflow = vec![0; len];
-                let n = self.decoder.decompress(bytes, overflow.as_mut_slice())?;
-                overflow.truncate(n);
-                let mut overflow = Cursor::new(overflow);
-                let r = overflow.read(buf)?;
-                self.overflow = Some(overflow);
-                Ok(r)
-            }
-        }
-    }
-    impl<'a, 'b> Read for RawDecoder<'a, 'b> {
-        fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-            if self.is_finished {
-                return Ok(0);
-            }
-            match self.overflow.as_mut() {
-                Some(overflow) => overflow.read(buf),
-                None => match self.inner {
-                    BytesType::Bytes(pybytes) => self.init_read(pybytes.as_bytes(), buf),
-                    BytesType::ByteArray(pybytes) => self.init_read(pybytes.as_bytes(), buf),
-                    BytesType::NumpyArray(array) => self.init_read(array.as_bytes(), buf),
-                    BytesType::RustyBuffer(buffer) => {
-                        let buffer_ref = buffer.borrow();
-                        self.init_read(buffer_ref.inner.get_ref(), buf)
-                    }
-                    BytesType::RustyFile(file) => {
-                        let mut buffer = vec![];
-                        file.borrow_mut().read_to_end(&mut buffer)?;
-                        self.init_read(buffer.as_slice(), buf)
-                    }
-                },
-            }
-        }
-    }
-
-    /// Decompress snappy data raw into a mutable slice
-    pub fn decompress_raw<'a, W: Write>(input: BytesType<'a>, output: &mut W) -> std::io::Result<usize> {
-        let mut decoder = RawDecoder::new(&input);
-        let n_bytes = std::io::copy(&mut decoder, output)?;
-        Ok(n_bytes as usize)
-    }
-
-    /// Compress snappy data raw into a mutable slice
-    pub fn compress_raw<'a, W: Write>(input: BytesType<'a>, output: &'a mut W) -> std::io::Result<usize> {
-        let mut encoder = RawEncoder::new(&input);
-        let n_bytes = std::io::copy(&mut encoder, output)?;
-        Ok(n_bytes as usize)
-    }
+    use std::io::{Error, Read, Write};
 
     /// Decompress snappy data framed
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
