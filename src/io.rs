@@ -6,6 +6,7 @@ use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 
 use crate::BytesType;
+use crate::exceptions::CramjamError;
 use numpy::PyArray1;
 use pyo3::class::buffer::PyBufferProtocol;
 use pyo3::prelude::*;
@@ -340,7 +341,7 @@ impl RustyFile {
         let meta = self
             .inner
             .metadata()
-            .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+            .map_err(|e| CramjamError::new_err(e.to_string()))?;
         Ok(meta.len() as usize)
     }
 }
