@@ -10,8 +10,9 @@ use numpy::PyArray1;
 use pyo3::class::buffer::PyBufferProtocol;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
-use pyo3::AsPyPointer;
 use pyo3::{ffi, PySequenceProtocol};
+use pyo3::{AsPyPointer, PyObjectProtocol};
+use std::path::PathBuf;
 
 pub(crate) trait AsBytes {
     fn as_bytes(&self) -> &[u8];
@@ -208,7 +209,30 @@ impl<'a> Seek for RustyPyByteArray<'a> {
 ///
 #[pyclass(name = "File")]
 pub struct RustyFile {
+    pub(crate) path: PathBuf,
     pub(crate) inner: File,
+}
+
+#[pyproto]
+impl PyObjectProtocol for RustyFile {
+    fn __repr__(&self) -> PyResult<String> {
+        let path = match self.path.as_path().to_str() {
+            Some(path) => path.to_string(),
+            None => self.path.to_string_lossy().to_string(),
+        };
+        let repr = format!("cramjam.File(path={}, len={:?})", path, self.len()?);
+        Ok(repr)
+    }
+    fn __bool__(&self) -> PyResult<bool> {
+        Ok(self.len()? > 0)
+    }
+}
+
+#[pyproto]
+impl PySequenceProtocol for RustyFile {
+    fn __len__(&self) -> PyResult<usize> {
+        self.len()
+    }
 }
 
 impl AsBytes for RustyFile {
@@ -246,6 +270,7 @@ impl RustyFile {
         append: Option<bool>,
     ) -> PyResult<Self> {
         Ok(Self {
+            path: PathBuf::from(path),
             inner: OpenOptions::new()
                 .read(read.unwrap_or_else(|| true))
                 .write(write.unwrap_or_else(|| true))
@@ -309,6 +334,14 @@ impl RustyFile {
     /// Truncate the file.
     pub fn truncate(&mut self) -> PyResult<()> {
         self.set_len(0)
+    }
+    /// Length of the file in bytes
+    pub fn len(&self) -> PyResult<usize> {
+        let meta = self
+            .inner
+            .metadata()
+            .map_err(|e| pyo3::exceptions::PyIOError::new_err(e.to_string()))?;
+        Ok(meta.len() as usize)
     }
 }
 
@@ -401,6 +434,16 @@ impl PySequenceProtocol for RustyBuffer {
     }
     fn __contains__(&self, x: u8) -> bool {
         self.inner.get_ref().contains(&x)
+    }
+}
+
+#[pyproto]
+impl PyObjectProtocol for RustyBuffer {
+    fn __repr__(&self) -> String {
+        format!("cramjam.Buffer(len={:?})", self.len())
+    }
+    fn __bool__(&self) -> bool {
+        self.len() > 0
     }
 }
 

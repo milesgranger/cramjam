@@ -171,3 +171,22 @@ def test_variant_snappy_raw_into():
     assert n_bytes == len(data)
 
     assert same_same(decompressed_buffer[:n_bytes], data)
+
+
+@pytest.mark.parametrize("Obj", (cramjam.File, cramjam.Buffer))
+def test_dunders(Obj, tmpdir):
+    if Obj == cramjam.File:
+        path = str(tmpdir.join("tmp.txt"))
+        obj = Obj(path)
+    else:
+        obj = Obj()
+
+    assert len(obj) == 0
+    assert bool(obj) is False
+    obj.write(b"12345")
+    assert len(obj) == 5
+    assert bool(obj) is True
+
+    assert "len=5" in str(obj)
+    if isinstance(obj, cramjam.File):
+        assert f"path={path}" in str(obj)
