@@ -41,20 +41,6 @@ def round_trip(compress, decompress, data, **kwargs):
     return decompress(compress(data, **kwargs))
 
 
-@profile
-def memory_profile():
-
-    import snappy
-
-    data = bytearray(FILES[-1].read_bytes())
-    out1 = bytes(cramjam.snappy.compress_raw(data))
-    _out1 = bytes(cramjam.snappy.decompress_raw(out1))
-    out2 = snappy.compress(data)
-    _ou2 = snappy.decompress(out2)
-
-if __name__ == '__main__':
-    memory_profile()
-
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "snappy"
 )
@@ -111,7 +97,7 @@ def test_snappy_framed(benchmark, file, use_cramjam: bool):
         )
 
 
-@pytest.mark.parametrize("op", ("decompress_into", "compress_into"))
+@pytest.mark.parametrize("op", ("decompress_raw_into", "compress_raw_into"))
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
 def test_cramjam_snappy_de_compress_into(benchmark, op, file):
     """
@@ -137,33 +123,17 @@ def test_cramjam_snappy_de_compress_into(benchmark, op, file):
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "gzip"
 )
-@pytest.mark.parametrize(
-    "set_output_len", (True, False), ids=lambda val: f"used-output_len={val}"
-)
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
-def test_gzip(benchmark, file, use_cramjam: bool, set_output_len: bool):
+def test_gzip(benchmark, file, use_cramjam: bool):
     data = file.read_bytes()
     if use_cramjam:
-        if set_output_len:
-            compressed_len = len(cramjam.gzip.compress(data))
-            benchmark(
-                round_trip,
-                compress=lambda bytes: cramjam.gzip.compress(
-                    bytes, level=9, output_len=compressed_len
-                ),
-                decompress=lambda bytes: cramjam.gzip.decompress(
-                    bytes, output_len=len(data)
-                ),
-                data=data,
-            )
-        else:
-            benchmark(
-                round_trip,
-                compress=cramjam.gzip.compress,
-                decompress=cramjam.gzip.decompress,
-                data=data,
-                level=9,
-            )
+        benchmark(
+            round_trip,
+            compress=cramjam.gzip.compress,
+            decompress=cramjam.gzip.decompress,
+            data=data,
+            level=9,
+        )
     else:
         benchmark(
             round_trip,
@@ -203,7 +173,15 @@ def test_lz4(benchmark, file, use_cramjam: bool):
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "brotli"
 )
-@pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
+@pytest.mark.parametrize(
+    "file",
+    [
+        f
+        for f in FILES
+        if not (isinstance(f, FiftyFourMbRandom) or isinstance(f, FiftyFourMbRepeating))
+    ],
+    ids=lambda val: val.name,
+)
 def test_brotli(benchmark, file, use_cramjam: bool):
     import brotli
 
@@ -243,3 +221,19 @@ def test_zstd(benchmark, file, use_cramjam: bool):
         benchmark(
             round_trip, compress=zstd.compress, decompress=zstd.decompress, data=data,
         )
+
+
+@profile
+def memory_profile():
+
+    import snappy
+
+    data = bytearray(FILES[-1].read_bytes())
+    out1 = bytes(cramjam.snappy.compress_raw(data))
+    _out1 = bytes(cramjam.snappy.decompress_raw(out1))
+    out2 = snappy.compress(data)
+    _ou2 = snappy.decompress(out2)
+
+
+if __name__ == "__main__":
+    memory_profile()
