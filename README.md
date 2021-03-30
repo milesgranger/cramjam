@@ -40,9 +40,15 @@ All available for use as:
 
 ```python
 >>> import cramjam
+>>> import numpy as np
 >>> compressed = cramjam.snappy.compress(b"bytes here")
->>> cramjam.snappy.decompress(compressed)
+>>> decompressed = cramjam.snappy.decompress(compressed)
+>>> decompressed
+cramjam.Buffer(len=10)  # an object which implements the buffer protocol
+>>> bytes(decompressed)
 b"bytes here"
+>>> np.frombuffer(decompressed, dtype=np.uint8)
+array([ 98, 121, 116, 101, 115,  32, 104, 101, 114, 101], dtype=uint8)
 ```
 
 Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts 

@@ -18,7 +18,7 @@
 //! >>> data = b'some bytes here'
 //! >>> compressed = cramjam.snappy.compress(data)
 //! >>> decompressed = cramjam.snappy.decompress(compressed)
-//! >>> assert data == decompressed
+//! >>> assert bytes(data) == bytes(decompressed)
 //! >>>
 //! ```
 //!
