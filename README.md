@@ -35,6 +35,8 @@ Available algorithms:
 - [X] Gzip
 - [X] Deflate
 - [X] ZSTD
+- [X] LZO (optional, due to GPL license)
+  - **Note:** If installed/built with LZO feature, then the GPL License applies.
 
 All available for use as:
 
