@@ -61,6 +61,7 @@ pub mod snappy;
 pub mod zstd;
 
 #[cfg(feature = "lzo")]
+#[cfg(not(target_os = "windows"))]
 pub mod lzo;
 
 use pyo3::prelude::*;
@@ -244,6 +245,7 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> zstd);
 
     #[cfg(feature = "lzo")]
+    #[cfg(not(target_os = "windows"))]
     make_submodule!(py -> m -> lzo);
 
     Ok(())
