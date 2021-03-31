@@ -1,4 +1,4 @@
-//! snappy de/compression interface
+//! lzo de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::{AsBytes, RustyBuffer};
 use crate::{to_py_err, BytesType};

@@ -12,8 +12,9 @@ readme = "README.md"
 crate-type = ["cdylib"]
 
 [features]
-default = ["mimallocator", "extension-module"]
+default = ["mimallocator", "extension-module", "lzo"]
 mimallocator = ["mimalloc"]
+lzo = ["minilzo3"]
 extension-module = ["pyo3/extension-module"]
 
 [profile.release]
@@ -29,7 +30,7 @@ lz4 = "^1"
 flate2 = "^1"
 zstd = "0.6.1+zstd.1.4.9"
 numpy = "0.13.0"
-minilzo3 = { path = "../minilzo-rs" }
+minilzo3 = { path = "../minilzo-rs", optional = true }
 
 [dependencies.mimalloc]
 version = "0.1.24"
