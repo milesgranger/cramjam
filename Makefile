@@ -27,6 +27,9 @@ bench-brotli:
 bench-zstd:
 	$(BASE_BENCH_CMD) zstd
 
+bench-lzo:
+	$(BASE_BENCH_CMD) lzo
+
 dev-install:
 	rm -rf ./dist
 	maturin build --release --out dist --no-sdist --interpreter $(shell which python)
