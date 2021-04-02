@@ -1,0 +1,20 @@
+[package]
+name = "cramjam-lzo"
+version = "2.2.0"
+authors = ["milesgranger <miles59923@gmail.com>"]
+edition = "2018"
+license-file = "LICENSE"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "cramjam_lzo"
+crate-type = ["cdylib"]
+
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+
+[dependencies]
+minilzo3 = "^0.1"
+cramjam = { path = "../", version = "2.2.0" }
+pyo3 = { version = "0.13.2", default-features = false, features = ["macros"] }

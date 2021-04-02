@@ -61,8 +61,9 @@ pub mod zstd;
 use pyo3::prelude::*;
 
 pub use cramjam_core::exceptions::{CompressionError, DecompressionError};
-pub use cramjam_core::BytesType;
-pub use cramjam_core::{AsBytes, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
+pub use cramjam_core::{
+    to_py_err, AsBytes, BytesType, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes,
+};
 
 #[cfg(feature = "mimallocator")]
 #[global_allocator]
@@ -89,14 +90,6 @@ macro_rules! generic {
     }
 }
 
-/// Macro to convert an error into a specific Python exception.
-#[macro_export]
-macro_rules! to_py_err {
-    ($error:ident -> $expr:expr) => {
-        $expr.map_err(|err| PyErr::new::<$error, _>(err.to_string()))
-    };
-}
-
 macro_rules! make_submodule {
     ($py:ident -> $parent:ident -> $submodule:ident) => {
         let sub_mod = PyModule::new($py, stringify!($submodule))?;
@@ -119,6 +112,9 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> deflate);
     make_submodule!(py -> m -> zstd);
 
+    if let Ok(lzo) = PyModule::import(py, "cramjam_lzo") {
+        m.add("lzo", lzo)?;
+    }
     Ok(())
 }
 

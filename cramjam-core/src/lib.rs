@@ -135,3 +135,11 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
         }
     }
 }
+
+/// Macro to convert an error into a specific Python exception.
+#[macro_export]
+macro_rules! to_py_err {
+    ($error:ident -> $expr:expr) => {
+        $expr.map_err(|err| PyErr::new::<$error, _>(err.to_string()))
+    };
+}
