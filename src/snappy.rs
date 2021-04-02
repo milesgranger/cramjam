@@ -1,8 +1,7 @@
 //! snappy de/compression interface
 use crate::{to_py_err, BytesType};
-use cramjam_core::exceptions::{CompressionError, DecompressionError};
-use cramjam_core::io::RustyBuffer;
-use cramjam_core::AsBytes;
+use crate::exceptions::{CompressionError, DecompressionError};
+use crate::io::{RustyBuffer, AsBytes};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;

@@ -32,7 +32,8 @@ pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyB
 /// ```
 #[pyfunction]
 #[allow(unused_variables)]
-pub fn compress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+pub fn compress(py: Python, data: PyObject, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    let data: BytesType = data.extract(py)?;
     let output = to_py_err!(CompressionError -> minilzo3::compress_vec(data.as_bytes(), true))?;
     Ok(RustyBuffer::from(output))
 }

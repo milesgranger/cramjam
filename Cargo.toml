@@ -9,12 +9,10 @@ readme = "README.md"
 
 members = [
     ".",
-    "cramjam-core",
     "cramjam-lzo"
 ]
 default-members = [
     ".",
-    "cramjam-core"
 ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -32,7 +30,6 @@ mimallocator = ["mimalloc"]
 extension-module = ["pyo3/extension-module"]
 
 [dependencies]
-cramjam-core = { path = "cramjam-core", version = "2.2.0" }
 pyo3 = { version = "0.13.2", default-features = false, features = ["macros"] }
 snap = "^1"
 brotli2 = "^0.3"
