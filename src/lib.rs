@@ -10,7 +10,7 @@
 //!  - `bytes`
 //!  - `bytearray`
 //!  - [`cramjam.File`](io/struct.RustyFile.html)
-//!  - [`cramjam.Buffer`](io/struct.RustyBuffer.html)
+//!  - [`cramjam.Buffer`](./io/struct.RustyBuffer.html)
 //!
 //! ### Simple Python Example:
 //!
@@ -53,19 +53,22 @@
 
 pub mod brotli;
 pub mod deflate;
+pub mod exceptions;
 pub mod gzip;
+pub mod io;
 pub mod lz4;
 pub mod snappy;
 pub mod zstd;
 
 use pyo3::prelude::*;
 
-pub mod exceptions;
-pub mod io;
-
-pub use crate::io::{AsBytes, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 pub use crate::exceptions::{CompressionError, DecompressionError};
+pub use crate::io::{AsBytes, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 use std::io::{Read, Seek, SeekFrom, Write};
+
+#[cfg(feature = "mimallocator")]
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 /// Any possible input/output to de/compression algorithms.
 /// Typically, as a Python user, you never have to worry about this object. It's exposed here in
@@ -187,10 +190,6 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
     }
 }
 
-#[cfg(feature = "mimallocator")]
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
 /// Macro for generating the implementation of de/compression against a variant interface
 #[macro_export]
 macro_rules! generic {
@@ -219,7 +218,6 @@ macro_rules! to_py_err {
         $expr.map_err(|err| PyErr::new::<$error, _>(err.to_string()))
     };
 }
-
 
 macro_rules! make_submodule {
     ($py:ident -> $parent:ident -> $submodule:ident) => {

@@ -19,15 +19,15 @@ default-members = [
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[profile.release]
-lto = "fat"
-codegen-units = 1
-opt-level = 3
-
 [features]
 default = ["mimallocator", "extension-module"]
 mimallocator = ["mimalloc"]
 extension-module = ["pyo3/extension-module"]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
 
 [dependencies]
 pyo3 = { version = "0.13.2", default-features = false, features = ["macros"] }
@@ -37,4 +37,8 @@ lz4 = "^1"
 flate2 = "^1"
 zstd = "0.6.1+zstd.1.4.9"
 numpy = "0.13.0"
-mimalloc = { version = "0.1.24", default-features = false, optional = true }
+
+[dependencies.mimalloc]
+version = "0.1.24"
+default-features = false
+optional = true

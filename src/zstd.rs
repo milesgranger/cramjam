@@ -1,7 +1,7 @@
 //! zstd de/compression interface
-use crate::{to_py_err, BytesType};
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::RustyBuffer;
+use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
