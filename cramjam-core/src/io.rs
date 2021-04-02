@@ -14,8 +14,11 @@ use pyo3::{ffi, PySequenceProtocol};
 use pyo3::{AsPyPointer, PyObjectProtocol};
 use std::path::PathBuf;
 
-pub(crate) trait AsBytes {
+/// Obtain a bytes view of an object's data
+pub trait AsBytes {
+    /// Immutable bytes slice
     fn as_bytes(&self) -> &[u8];
+    /// Mutable bytes slice
     fn as_bytes_mut(&mut self) -> &mut [u8];
 }
 
