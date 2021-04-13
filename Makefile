@@ -18,6 +18,9 @@ bench-snappy-compress-into:
 bench-lz4:
 	$(BASE_BENCH_CMD) lz4
 
+bench-lz4-block:
+	$(BASE_BENCH_CMD) lz4_block
+
 bench-gzip:
 	$(BASE_BENCH_CMD) gzip
 
