@@ -190,3 +190,34 @@ def test_dunders(Obj, tmpdir):
     assert "len=5" in str(obj)
     if isinstance(obj, cramjam.File):
         assert f"path={path}" in str(obj)
+
+
+@pytest.mark.parametrize(
+    "compress_kwargs",
+    (
+        dict(mode="default", acceleration=1, compression=1, store_size=True),
+        dict(mode="fast", acceleration=2, compression=2, store_size=False),
+        dict(mode="high_compression", acceleration=3, compression=3, store_size=True),
+        dict(mode="default", acceleration=5, compression=4, store_size=False),
+    ),
+)
+def test_lz4_block(compress_kwargs):
+
+    from cramjam import lz4
+
+    data = b"howdy neighbor"
+
+    # What python-lz4 outputs in block mode
+    expected = b"\x0e\x00\x00\x00\xe0howdy neighbor"
+    assert bytes(lz4.compress_block(data)) == expected
+
+    # and what it does without 'store_size=True'
+    expected = b"\xe0howdy neighbor"
+    assert bytes(lz4.compress_block(data, store_size=False)) == expected
+
+    # Round trip the current collection of compression kwargs
+    out = lz4.decompress_block(
+        lz4.compress_block(data, **compress_kwargs),
+        output_len=len(data) if not compress_kwargs["store_size"] else None,
+    )
+    assert bytes(out) == data

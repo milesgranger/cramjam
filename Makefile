@@ -1,7 +1,7 @@
 BASE_BENCH_CMD = python -m pytest -v --benchmark-sort name --benchmark-only benchmarks/ -k
 
 test:
-	python -m pytest -v --ignore benchmarks
+	python -m pytest tests -v --ignore benchmarks
 
 bench:
 	python -m pytest -v --benchmark-only --benchmark-sort name benchmarks/
@@ -17,6 +17,9 @@ bench-snappy-compress-into:
 
 bench-lz4:
 	$(BASE_BENCH_CMD) lz4
+
+bench-lz4-block:
+	$(BASE_BENCH_CMD) lz4_block
 
 bench-gzip:
 	$(BASE_BENCH_CMD) gzip

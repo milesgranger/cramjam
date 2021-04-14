@@ -1,6 +1,6 @@
 //! lz4 de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
-use crate::io::RustyBuffer;
+use crate::io::{AsBytes, RustyBuffer};
 use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
@@ -10,6 +10,8 @@ use std::io::Cursor;
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
     m.add_function(wrap_pyfunction!(decompress, m)?)?;
+    m.add_function(wrap_pyfunction!(compress_block, m)?)?;
+    m.add_function(wrap_pyfunction!(decompress_block, m)?)?;
     m.add_function(wrap_pyfunction!(compress_into, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_into, m)?)?;
     Ok(())
@@ -53,6 +55,66 @@ pub fn compress_into(mut input: BytesType, mut output: BytesType, level: Option<
 pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let r = internal::decompress(input, &mut output)?;
     Ok(r)
+}
+
+/// LZ4 _block_ decompression.
+///
+/// `output_len` is optional, it's the upper bound length of decompressed data; if it's not provided,
+/// then it's assumed `store_size=True` was used during compression and length will then be taken
+/// from the header.
+///
+/// Python Example
+/// --------------
+/// ```python
+/// >>> cramjam.lz4.decompress_block(compressed_bytes, output_len=Optional[int])
+/// ```
+#[pyfunction]
+pub fn decompress_block(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    use lz4::block;
+    let out = to_py_err!(DecompressionError -> block::decompress(data.as_bytes(), output_len.map(|v| v as i32)))?;
+    Ok(RustyBuffer::from(out))
+}
+
+/// lZ4 _block_ compression.
+///
+/// The kwargs mostly follow the same definition found in [python-lz4 block.compress](https://python-lz4.readthedocs.io/en/stable/lz4.block.html#module-lz4.block)
+///
+/// Python Example
+/// --------------
+/// ```python
+/// >>> cramjam.lz4.compress_block(
+/// ...     b'some bytes here',
+/// ...     output_len=Optional[int],
+/// ...     mode=Option[str],
+/// ...     acceleration=Option[int],
+/// ...     compression=Option[int],
+/// ...     store_size=Option[bool]
+/// ... )
+/// ```
+#[pyfunction]
+#[allow(unused_variables)]
+pub fn compress_block(
+    data: BytesType,
+    output_len: Option<usize>,
+    mode: Option<&str>,
+    acceleration: Option<i32>,
+    compression: Option<i32>,
+    store_size: Option<bool>,
+) -> PyResult<RustyBuffer> {
+    use lz4::{block, block::CompressionMode};
+
+    let store_size = store_size.unwrap_or(true);
+    let mode = match mode {
+        Some(m) => match m {
+            "default" => CompressionMode::DEFAULT,
+            "fast" => CompressionMode::FAST(acceleration.unwrap_or(1)),
+            "high_compression" => CompressionMode::HIGHCOMPRESSION(compression.unwrap_or(9)),
+            _ => return Err(DecompressionError::new_err(format!("Unrecognized mode '{}'", m))),
+        },
+        None => CompressionMode::DEFAULT,
+    };
+    let out = to_py_err!(CompressionError -> block::compress(data.as_bytes(), Some(mode), store_size))?;
+    Ok(RustyBuffer::from(out))
 }
 
 pub(crate) mod internal {

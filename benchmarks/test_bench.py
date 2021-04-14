@@ -171,6 +171,27 @@ def test_lz4(benchmark, file, use_cramjam: bool):
 
 
 @pytest.mark.parametrize(
+    "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "python-lz4"
+)
+@pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
+def test_lz4_block(benchmark, file, use_cramjam: bool):
+    from lz4 import block
+
+    data = file.read_bytes()
+    if use_cramjam:
+        benchmark(
+            round_trip,
+            compress=cramjam.lz4.compress_block,
+            decompress=cramjam.lz4.decompress_block,
+            data=data,
+        )
+    else:
+        benchmark(
+            round_trip, compress=block.compress, decompress=block.decompress, data=data,
+        )
+
+
+@pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "brotli"
 )
 @pytest.mark.parametrize(
