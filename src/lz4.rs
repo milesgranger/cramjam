@@ -57,7 +57,7 @@ pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usiz
     Ok(r)
 }
 
-/// LZ4 _block_ compression.
+/// LZ4 _block_ decompression.
 ///
 /// `output_len` is optional, it's the upper bound length of decompressed data; if it's not provided,
 /// then it's assumed `store_size=True` was used during compression and length will then be taken
@@ -70,8 +70,8 @@ pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usiz
 /// ```
 #[pyfunction]
 pub fn decompress_block(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    use lz4::block::decompress as _decompress_block;
-    let out = to_py_err!(DecompressionError -> _decompress_block(data.as_bytes(), output_len.map(|v| v as i32)))?;
+    use lz4::block;
+    let out = to_py_err!(DecompressionError -> block::decompress(data.as_bytes(), output_len.map(|v| v as i32)))?;
     Ok(RustyBuffer::from(out))
 }
 
@@ -101,8 +101,7 @@ pub fn compress_block(
     compression: Option<i32>,
     store_size: Option<bool>,
 ) -> PyResult<RustyBuffer> {
-    use lz4::block::compress as _compress_block;
-    use lz4::block::CompressionMode;
+    use lz4::{block, block::CompressionMode};
 
     let store_size = store_size.unwrap_or(true);
     let mode = match mode {
@@ -114,7 +113,7 @@ pub fn compress_block(
         },
         None => CompressionMode::DEFAULT,
     };
-    let out = to_py_err!(CompressionError -> _compress_block(data.as_bytes(), Some(mode), store_size))?;
+    let out = to_py_err!(CompressionError -> block::compress(data.as_bytes(), Some(mode), store_size))?;
     Ok(RustyBuffer::from(out))
 }
 
