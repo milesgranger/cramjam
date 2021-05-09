@@ -32,21 +32,20 @@ jobs:
         run: cargo build --release
       - name: Tests
         run: cargo test --no-default-features --release
-      - name: Install maturin
-        run: pip install maturin
       - name: Build wheels - x86_64
+        uses: messense/maturin-action@v1
+        with:
+          target: x86_64-apple-darwin
+          args: -i python --release --out dist
+      - name: Install built wheel - x86_64
         run: |
-          maturin build -i python --target x86_64-apple-darwin --release --out dist
           pip install cramjam --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
-        env:
-          DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
-          MACOSX_DEPLOYMENT_TARGET: '10.9'
-          PYO3_CROSS_LIB_DIR: /Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.8/lib
+        uses: messense/maturin-action@v1
+        with:
+          args: -i python --release --universal2 --out dist --no-sdist
+      - name: Install built wheel - universal2
         run: |
-          # set SDKROOT for C dependencies
-          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-          maturin build -i python --release --universal2 --out dist --no-sdist
           pip install cramjam --no-index --find-links dist --force-reinstall
       - name: Python UnitTest
         run: |
@@ -86,11 +85,13 @@ jobs:
       - name: Tests
         if: matrix.platform.python-architecture == 'x64'
         run: cargo test --no-default-features --release
-      - name: Install maturin
-        run: pip install --pre maturin
       - name: Build wheels
+        uses: messense/maturin-action@v1
+        with:
+          target: ${{ matrix.platform.target }}
+          args: -i python --release --out dist --no-sdist
+      - name: Install built wheel
         run: |
-          maturin build -i python --release --out dist --no-sdist --target ${{ matrix.platform.target }}
           pip install cramjam --no-index --find-links dist --force-reinstall
       - name: Python UnitTest
         run: |
@@ -107,10 +108,9 @@ jobs:
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
-        platform: [
-          { manylinux: '2010', target: "x86_64-unknown-linux-gnu", arch: "x86_64" },
-          { manylinux: '2010', target: "i686-unknown-linux-gnu", arch: "i686" },
-        ]
+        target:
+          - x86_64-unknown-linux-gnu
+          - i686-unknown-linux-gnu
     steps:
     - uses: actions/checkout@v2
     - name: Install Rust toolchain
@@ -127,17 +127,13 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Build Wheels
-      run: |
-        echo 'curl --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-        source ~/.cargo/env
-        export PATH=/opt/python/cp36-cp36m/bin:/opt/python/cp37-cp37m/bin:/opt/python/cp38-cp38/bin:/opt/python/cp39-cp39/bin:$PATH
-        pip install --pre maturin
-        maturin build -i python${{ matrix.python-version }} --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }}
-        ' > build-wheel.sh
-
-        docker run --rm -v "$PWD":/io -w /io quay.io/pypa/manylinux${{ matrix.platform.manylinux }}_${{ matrix.platform.arch }} bash build-wheel.sh
+      uses: messense/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        manylinux: auto
+        args: -i python${{ matrix.python-version }} --release --out dist --no-sdist
     - name: Python UnitTest
-      if: matrix.platform.arch == 'x86_64'
+      if: matrix.target == 'x86_64-unknown-linux-gnu'
       run: |
         pip install cramjam --no-index --find-links dist --force-reinstall
         pip install -r dev-requirements.txt
@@ -153,33 +149,28 @@ jobs:
     strategy:
       matrix:
         python: [
-          { version: '3.6', abi: 'm' },
-          { version: '3.7', abi: 'm' },
-          { version: '3.8', abi: '' },
-          { version: '3.9', abi: '' },
+          { version: '3.6', abi: 'cp36-cp36m' },
+          { version: '3.7', abi: 'cp37-cp37m' },
+          { version: '3.8', abi: 'cp38-cp38' },
+          { version: '3.9', abi: 'cp39-cp39' },
         ]
         platform: [
-          { manylinux: "2014", target: "aarch64-unknown-linux-gnu", arch: "aarch64" },
-          { manylinux: "2014", target: "armv7-unknown-linux-gnueabihf", arch: "armv7" },
+          { target: "aarch64-unknown-linux-gnu", arch: "aarch64" },
+          { target: "armv7-unknown-linux-gnueabihf", arch: "armv7" },
+          { target: "s390x-unknown-linux-gnu", arch: "s390x" },
+          { target: "powerpc64le-unknown-linux-gnu", arch: "ppc64le" },
         ]
     steps:
     - uses: actions/checkout@v2
     - name: Build Wheels
-      run: |
-        echo 'curl -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-        source ~/.cargo/env
-        rustup target add ${{ matrix.platform.target }}
-
-        export PYO3_CROSS_PYTHON_VERSION=${{ matrix.python.version }}
-        PY_VER="${PYO3_CROSS_PYTHON_VERSION//./}"
-        PY_ABI=${{ matrix.python.abi }}
-        PY_TAG="cp$PY_VER-cp$PY_VER$PY_ABI"
-        export PYO3_CROSS_LIB_DIR=/opt/python/$PY_TAG/lib
-
-        maturin build -i "python$PYO3_CROSS_PYTHON_VERSION" --release --out dist --no-sdist --target ${{ matrix.platform.target }} --manylinux ${{ matrix.platform.manylinux }} --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
-        ' > build-wheel.sh
-
-        docker run --rm -v "$PWD":/io -w /io messense/manylinux2014-cross:${{ matrix.platform.arch }} bash build-wheel.sh
+      uses: messense/maturin-action@v1
+      env:
+        PYO3_CROSS_LIB_DIR: /opt/python/${{ matrix.python.abi }}/lib
+      with:
+        maturin-version: 'v0.10.5-beta.4'
+        target: ${{ matrix.platform.target }}
+        manylinux: auto
+        args: -i python3.9 --release --out dist --no-sdist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
     - uses: uraimo/run-on-arch-action@v2.0.5
       name: Install built wheel
       with:
@@ -192,13 +183,13 @@ jobs:
         install: |
           apt-get update
           apt-get install -y --no-install-recommends python3 python3-pip software-properties-common
-          pip3 install -U pip
           add-apt-repository ppa:deadsnakes/ppa
           apt-get update
           apt-get install -y python3.6 python3.7 python3.9
         run: |
           ls -lrth /artifacts
           PYTHON=python${{ matrix.python.version }}
+          $PYTHON -m pip install -U pip
           $PYTHON -m pip install cramjam --no-index --find-links /artifacts --force-reinstall
           $PYTHON -c 'import cramjam'
     - name: Upload wheels
