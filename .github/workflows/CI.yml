@@ -159,6 +159,7 @@ jobs:
           { target: "armv7-unknown-linux-gnueabihf", arch: "armv7" },
           { target: "s390x-unknown-linux-gnu", arch: "s390x" },
           { target: "powerpc64le-unknown-linux-gnu", arch: "ppc64le" },
+          { target: "powerpc64-unknown-linux-gnu", arch: "ppc64" },
         ]
     steps:
     - uses: actions/checkout@v2
@@ -167,11 +168,13 @@ jobs:
       env:
         PYO3_CROSS_LIB_DIR: /opt/python/${{ matrix.python.abi }}/lib
       with:
-        maturin-version: 'v0.10.5-beta.4'
+        maturin-version: 'v0.10.5-beta.5'
         target: ${{ matrix.platform.target }}
         manylinux: auto
         args: -i python3.9 --release --out dist --no-sdist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
     - uses: uraimo/run-on-arch-action@v2.0.5
+      # run-on-arch-action doesn't have ppc64 support
+      if: matrix.platform.arch != 'ppc64'
       name: Install built wheel
       with:
         arch: ${{ matrix.platform.arch }}
