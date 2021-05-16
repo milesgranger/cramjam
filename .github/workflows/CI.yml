@@ -139,6 +139,7 @@ jobs:
         pip install -r dev-requirements.txt
         make test
     - name: Test no numpy installed works
+      if: matrix.target == 'x86_64-unknown-linux-gnu'
       run: |
         pip uninstall numpy -y
         python -m pytest tests/test_no_numpy.py
