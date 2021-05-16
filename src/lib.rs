@@ -81,15 +81,15 @@ pub enum BytesType<'a> {
     /// `bytearray`
     #[pyo3(transparent, annotation = "bytearray")]
     ByteArray(RustyPyByteArray<'a>),
-    /// `numpy.array` with `dtype=np.uint8`
-    #[pyo3(transparent, annotation = "numpy")]
-    NumpyArray(RustyNumpyArray<'a>),
     /// [`cramjam.File`](io/struct.RustyFile.html)
     #[pyo3(transparent, annotation = "File")]
     RustyFile(&'a PyCell<RustyFile>),
     /// [`cramjam.Buffer`](io/struct.RustyBuffer.html)
     #[pyo3(transparent, annotation = "Buffer")]
     RustyBuffer(&'a PyCell<RustyBuffer>),
+    /// `numpy.array` with `dtype=np.uint8`
+    #[pyo3(transparent, annotation = "numpy")]
+    NumpyArray(RustyNumpyArray<'a>)
 }
 
 impl<'a> AsBytes for BytesType<'a> {
