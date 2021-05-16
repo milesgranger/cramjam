@@ -138,6 +138,10 @@ jobs:
         pip install cramjam --no-index --find-links dist --force-reinstall
         pip install -r dev-requirements.txt
         make test
+    - name: Test no numpy installed works
+      run: |
+        pip uninstall numpy -y
+        python -m pytest tests/test_no_numpy.py
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
