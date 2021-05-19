@@ -35,7 +35,7 @@ jobs:
       - name: Build wheels - x86_64
         uses: messense/maturin-action@v1
         with:
-          target: x86_64-apple-darwin
+          target: x86_64
           args: -i python --release --out dist
       - name: Install built wheel - x86_64
         run: |
@@ -62,33 +62,30 @@ jobs:
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
-        platform: [
-          { python-architecture: "x64", target: "x86_64-pc-windows-msvc" },
-          { python-architecture: "x86", target: "i686-pc-windows-msvc" },
-        ]
+        target: [x64, x86]
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.platform.python-architecture }}
+          architecture: ${{ matrix.target }}
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-          target: ${{ matrix.platform.target }}
+          target: ${{ matrix.target }}
           profile: minimal
           default: true
       - name: Build
-        if: matrix.platform.python-architecture == 'x64'
+        if: matrix.target == 'x64'
         run: cargo build --release
       - name: Tests
-        if: matrix.platform.python-architecture == 'x64'
+        if: matrix.target == 'x64'
         run: cargo test --no-default-features --release
       - name: Build wheels
         uses: messense/maturin-action@v1
         with:
-          target: ${{ matrix.platform.target }}
+          target: ${{ matrix.target }}
           args: -i python --release --out dist --no-sdist
       - name: Install built wheel
         run: |
@@ -108,9 +105,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.6, 3.7, 3.8, 3.9]
-        target:
-          - x86_64-unknown-linux-gnu
-          - i686-unknown-linux-gnu
+        target: [x86_64, i686]
     steps:
     - uses: actions/checkout@v2
     - name: Install Rust toolchain
@@ -133,13 +128,13 @@ jobs:
         manylinux: auto
         args: -i python${{ matrix.python-version }} --release --out dist --no-sdist
     - name: Python UnitTest
-      if: matrix.target == 'x86_64-unknown-linux-gnu'
+      if: matrix.target == 'x86_64'
       run: |
         pip install cramjam --no-index --find-links dist --force-reinstall
         pip install -r dev-requirements.txt
         make test
     - name: Test no numpy installed works
-      if: matrix.target == 'x86_64-unknown-linux-gnu'
+      if: matrix.target == 'x86_64'
       run: |
         pip uninstall numpy -y
         python -m pytest tests/test_no_numpy.py
@@ -159,13 +154,7 @@ jobs:
           { version: '3.8', abi: 'cp38-cp38' },
           { version: '3.9', abi: 'cp39-cp39' },
         ]
-        platform: [
-          { target: "aarch64-unknown-linux-gnu", arch: "aarch64" },
-          { target: "armv7-unknown-linux-gnueabihf", arch: "armv7" },
-          { target: "s390x-unknown-linux-gnu", arch: "s390x" },
-          { target: "powerpc64le-unknown-linux-gnu", arch: "ppc64le" },
-          { target: "powerpc64-unknown-linux-gnu", arch: "ppc64" },
-        ]
+        target: [aarch64, armv7, s390x, ppc64le, ppc64]
     steps:
     - uses: actions/checkout@v2
     - name: Build Wheels
@@ -174,15 +163,15 @@ jobs:
         PYO3_CROSS_LIB_DIR: /opt/python/${{ matrix.python.abi }}/lib
       with:
         maturin-version: 'v0.10.5-beta.5'
-        target: ${{ matrix.platform.target }}
+        target: ${{ matrix.target }}
         manylinux: auto
         args: -i python3.9 --release --out dist --no-sdist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
     - uses: uraimo/run-on-arch-action@v2.0.5
       # run-on-arch-action doesn't have ppc64 support
-      if: matrix.platform.arch != 'ppc64'
+      if: matrix.target != 'ppc64'
       name: Install built wheel
       with:
-        arch: ${{ matrix.platform.arch }}
+        arch: ${{ matrix.target }}
         distro: ubuntu20.04
         githubToken: ${{ github.token }}
         # Mount the dist directory as /artifacts in the container
