@@ -69,6 +69,8 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.target }}
+      - name: Update rustup
+        run: rustup self update
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
