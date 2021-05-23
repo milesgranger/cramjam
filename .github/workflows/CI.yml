@@ -163,7 +163,6 @@ jobs:
       env:
         PYO3_CROSS_LIB_DIR: /opt/python/${{ matrix.python.abi }}/lib
       with:
-        maturin-version: 'v0.10.5-beta.5'
         target: ${{ matrix.target }}
         manylinux: auto
         args: -i python3.9 --release --out dist --no-sdist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
