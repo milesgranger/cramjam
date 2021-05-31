@@ -3,6 +3,9 @@ BASE_BENCH_CMD = python -m pytest -v --benchmark-sort name --benchmark-only benc
 test:
 	python -m pytest tests -v --ignore benchmarks
 
+test-bench:
+	python -m pytest -v --benchmark-disable benchmarks/
+
 bench:
 	python -m pytest -v --benchmark-only --benchmark-sort name benchmarks/
 
