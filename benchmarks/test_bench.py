@@ -97,7 +97,7 @@ def test_snappy_framed(benchmark, file, use_cramjam: bool):
         )
 
 
-@pytest.mark.parametrize("op", ("decompress_raw_into", "compress_raw_into"))
+@pytest.mark.parametrize("op", ("decompress_into", "compress_into"))
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
 def test_cramjam_snappy_de_compress_into(benchmark, op, file):
     """
@@ -110,7 +110,8 @@ def test_cramjam_snappy_de_compress_into(benchmark, op, file):
 
     operation = getattr(snappy, op)
     buffer = np.zeros(
-        len(data) if op == "decompress_into" else len(compressed_data), dtype=np.uint8
+        len(data) if op == "decompress_into" else len(compressed_data),
+        dtype=np.uint8,
     )
 
     benchmark(
@@ -187,7 +188,10 @@ def test_lz4_block(benchmark, file, use_cramjam: bool):
         )
     else:
         benchmark(
-            round_trip, compress=block.compress, decompress=block.decompress, data=data,
+            round_trip,
+            compress=block.compress,
+            decompress=block.decompress,
+            data=data,
         )
 
 
@@ -240,7 +244,10 @@ def test_zstd(benchmark, file, use_cramjam: bool):
         )
     else:
         benchmark(
-            round_trip, compress=zstd.compress, decompress=zstd.decompress, data=data,
+            round_trip,
+            compress=zstd.compress,
+            decompress=zstd.decompress,
+            data=data,
         )
 
 

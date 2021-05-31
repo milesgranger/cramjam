@@ -118,7 +118,7 @@ jobs:
     - name: Build
       run: cargo build --release
     - name: Tests
-      run: cargo test --no-default-features
+      run: cargo test --no-default-features --release
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
@@ -139,6 +139,12 @@ jobs:
       run: |
         pip uninstall numpy -y
         python -m pytest tests/test_no_numpy.py
+    - name: Test benchmarks
+      if: matrix.target == 'x86_64'
+      run: |
+        sudo apt-get install -y libsnappy-dev
+        pip install -r benchmark-requirements.txt
+        make test-bench
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
@@ -211,7 +217,7 @@ jobs:
     - name: Build
       run: cargo build --release
     - name: Tests
-      run: cargo test --no-default-features
+      run: cargo test --no-default-features --release
     - uses: actions/setup-python@v2
       with:
         python-version: pypy-3.6
