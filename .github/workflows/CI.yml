@@ -118,7 +118,7 @@ jobs:
     - name: Build
       run: cargo build --release
     - name: Tests
-      run: cargo test --no-default-features
+      run: cargo test --no-default-features --release
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
@@ -217,7 +217,7 @@ jobs:
     - name: Build
       run: cargo build --release
     - name: Tests
-      run: cargo test --no-default-features
+      run: cargo test --no-default-features --release
     - uses: actions/setup-python@v2
       with:
         python-version: pypy-3.6
