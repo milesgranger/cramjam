@@ -22,13 +22,13 @@ codegen-units = 1
 opt-level = 3
 
 [dependencies]
-pyo3 = { version = "0.13.2", default-features = false, features = ["macros"] }
+pyo3 = { version = "0.14.1", default-features = false, features = ["macros"] }
 snap = "^1"
 brotli2 = "^0.3"
 lz4 = "^1"
 flate2 = "^1"
-zstd = "0.6.1+zstd.1.4.9"
-numpy = "0.13.0"
+zstd = "0.9.0+zstd.1.5.0"
+numpy = "0.14.0"
 
 [dependencies.mimalloc]
 version = "0.1.24"
