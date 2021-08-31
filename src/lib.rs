@@ -89,7 +89,7 @@ pub enum BytesType<'a> {
     RustyBuffer(&'a PyCell<RustyBuffer>),
     /// `numpy.array` with `dtype=np.uint8`
     #[pyo3(transparent, annotation = "numpy")]
-    NumpyArray(RustyNumpyArray<'a>)
+    NumpyArray(RustyNumpyArray<'a>),
 }
 
 impl<'a> AsBytes for BytesType<'a> {
