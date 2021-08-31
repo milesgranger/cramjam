@@ -1,3 +1,4 @@
+import gzip
 import pytest
 import numpy as np
 import cramjam
@@ -221,3 +222,20 @@ def test_lz4_block(compress_kwargs):
         output_len=len(data) if not compress_kwargs["store_size"] else None,
     )
     assert bytes(out) == data
+
+
+def test_gzip_multiple_streams():
+
+    out1 = gzip.compress(b"foo")
+    out2 = gzip.compress(b"bar")
+    assert gzip.decompress(out1 + out2) == b"foobar"
+
+    # works with data compressed by std gzip lib
+    out = bytes(cramjam.gzip.decompress(out1 + out2))
+    assert out == b"foobar"
+
+    # works with data compressed by cramjam
+    o1 = bytes(cramjam.gzip.compress(b"foo"))
+    o2 = bytes(cramjam.gzip.compress(b"bar"))
+    out = bytes(cramjam.gzip.decompress(o1 + o2))
+    assert out == b"foobar"
