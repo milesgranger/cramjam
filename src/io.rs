@@ -5,6 +5,7 @@
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 
+use crate::exceptions::CompressionError;
 use crate::BytesType;
 use numpy::PyArray1;
 use pyo3::class::buffer::PyBufferProtocol;
@@ -593,5 +594,44 @@ impl Read for RustyBuffer {
 impl Read for RustyFile {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.inner.read(buf)
+    }
+}
+
+// general stream compression interface. Can't use associated types due to pyo3::pyclass
+// not supporting generic structs.
+#[inline(always)]
+pub(crate) fn stream_compress<W: Write>(encoder: &mut Option<W>, input: &[u8]) -> PyResult<usize> {
+    match encoder {
+        Some(encoder) => {
+            let result = std::io::copy(&mut Cursor::new(input), encoder).map(|v| v as usize);
+            crate::to_py_err!(CompressionError -> result)
+        }
+        None => Err(CompressionError::new_err(
+            "Compressor looks to have been consumed via `finish()`. \
+            please create a new compressor instance.",
+        )),
+    }
+}
+
+// general stream finish interface. Can't use associated types due to pyo3::pyclass
+// not supporting generic structs.
+#[inline(always)]
+pub(crate) fn stream_finish<W, F, E>(encoder: &mut Option<W>, into_vec: F) -> PyResult<RustyBuffer>
+where
+    W: Write,
+    E: ToString,
+    F: Fn(W) -> Result<Vec<u8>, E>,
+{
+    // &mut encoder is part of a Compressor, often the .finish portion consumes
+    // the struct; which cannot be done with pyclass. So we'll swap it out for None
+    let mut detached_encoder = None;
+    std::mem::swap(&mut detached_encoder, encoder);
+
+    match detached_encoder {
+        Some(encoder) => {
+            let result = crate::to_py_err!(CompressionError -> into_vec(encoder))?;
+            Ok(RustyBuffer::from(result))
+        }
+        None => Ok(RustyBuffer::from(vec![])),
     }
 }

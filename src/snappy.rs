@@ -18,6 +18,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decompress_raw_into, m)?)?;
     m.add_function(wrap_pyfunction!(compress_raw_max_len, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_raw_len, m)?)?;
+    m.add_class::<Compressor>()?;
     Ok(())
 }
 
@@ -121,6 +122,33 @@ pub fn compress_raw_max_len(data: BytesType) -> usize {
 #[pyfunction]
 pub fn decompress_raw_len(data: BytesType) -> PyResult<usize> {
     to_py_err!(DecompressionError -> snap::raw::decompress_len(data.as_bytes()))
+}
+
+/// Snappy Compressor object for streaming compression
+#[pyclass]
+pub struct Compressor {
+    inner: Option<snap::write::FrameEncoder<Cursor<Vec<u8>>>>,
+}
+
+#[pymethods]
+impl Compressor {
+    /// Initialize a new `Compressor` instance.
+    #[new]
+    pub fn __init__() -> PyResult<Self> {
+        let inner = snap::write::FrameEncoder::new(Cursor::new(vec![]));
+        Ok(Self { inner: Some(inner) })
+    }
+
+    /// Compress input into the current compressor's stream.
+    pub fn compress(&mut self, input: &[u8]) -> PyResult<usize> {
+        crate::io::stream_compress(&mut self.inner, input)
+    }
+
+    /// Consume the current compressor state and return the compressed stream
+    /// **NB** The compressor will not be usable after this method is called.
+    pub fn finish(&mut self) -> PyResult<RustyBuffer> {
+        crate::io::stream_finish(&mut self.inner, |inner| inner.into_inner().map(|c| c.into_inner()))
+    }
 }
 
 pub(crate) mod internal {

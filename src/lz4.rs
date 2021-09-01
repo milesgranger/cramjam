@@ -7,6 +7,8 @@ use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
 use std::io::Cursor;
 
+const DEFAULT_COMPRESSION_LEVEL: u32 = 4;
+
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
     m.add_function(wrap_pyfunction!(decompress, m)?)?;
@@ -14,6 +16,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(decompress_block, m)?)?;
     m.add_function(wrap_pyfunction!(compress_into, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_into, m)?)?;
+    m.add_class::<Compressor>()?;
     Ok(())
 }
 
@@ -117,7 +120,41 @@ pub fn compress_block(
     Ok(RustyBuffer::from(out))
 }
 
+/// Snappy Compressor object for streaming compression
+#[pyclass]
+pub struct Compressor {
+    inner: Option<lz4::Encoder<Cursor<Vec<u8>>>>,
+}
+
+#[pymethods]
+impl Compressor {
+    /// Initialize a new `Compressor` instance.
+    #[new]
+    pub fn __init__(level: Option<u32>) -> PyResult<Self> {
+        let inner = lz4::EncoderBuilder::new()
+            .auto_flush(true)
+            .level(level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL))
+            .build(Cursor::new(vec![]))?;
+        Ok(Self { inner: Some(inner) })
+    }
+
+    /// Compress input into the current compressor's stream.
+    pub fn compress(&mut self, input: &[u8]) -> PyResult<usize> {
+        crate::io::stream_compress(&mut self.inner, input)
+    }
+
+    /// Consume the current compressor state and return the compressed stream
+    /// **NB** The compressor will not be usable after this method is called.
+    pub fn finish(&mut self) -> PyResult<RustyBuffer> {
+        crate::io::stream_finish(&mut self.inner, |inner| {
+            let (cursor, result) = inner.finish();
+            result.map(|_| cursor.into_inner())
+        })
+    }
+}
+
 pub(crate) mod internal {
+    use crate::lz4::DEFAULT_COMPRESSION_LEVEL;
     use lz4::{Decoder, EncoderBuilder};
     use std::io::{Error, Read, Seek, SeekFrom, Write};
 
@@ -138,7 +175,7 @@ pub(crate) mod internal {
         let start_pos = output.seek(SeekFrom::Current(0))?;
         let mut encoder = EncoderBuilder::new()
             .auto_flush(true)
-            .level(level.unwrap_or_else(|| 4))
+            .level(level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL))
             .build(output)?;
 
         // this returns, bytes read from uncompressed, input; we want bytes written

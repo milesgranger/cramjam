@@ -7,11 +7,14 @@ use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
 use std::io::Cursor;
 
+const DEFAULT_COMPRESSION_LEVEL: i32 = 0;
+
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
     m.add_function(wrap_pyfunction!(decompress, m)?)?;
     m.add_function(wrap_pyfunction!(compress_into, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_into, m)?)?;
+    m.add_class::<Compressor>()?;
     Ok(())
 }
 
@@ -53,8 +56,36 @@ pub fn decompress_into<'a>(_py: Python<'a>, input: BytesType<'a>, mut output: By
     Ok(r)
 }
 
+/// ZSTD Compressor object for streaming compression
+#[pyclass]
+pub struct Compressor {
+    inner: Option<zstd::stream::write::Encoder<'static, Cursor<Vec<u8>>>>,
+}
+
+#[pymethods]
+impl Compressor {
+    /// Initialize a new `Compressor` instance.
+    #[new]
+    pub fn __init__(level: Option<i32>) -> PyResult<Self> {
+        let inner = zstd::stream::write::Encoder::new(Cursor::new(vec![]), level.unwrap_or(DEFAULT_COMPRESSION_LEVEL))?;
+        Ok(Self { inner: Some(inner) })
+    }
+
+    /// Compress input into the current compressor's stream.
+    pub fn compress(&mut self, input: &[u8]) -> PyResult<usize> {
+        crate::io::stream_compress(&mut self.inner, input)
+    }
+
+    /// Consume the current compressor state and return the compressed stream
+    /// **NB** The compressor will not be usable after this method is called.
+    pub fn finish(&mut self) -> PyResult<RustyBuffer> {
+        crate::io::stream_finish(&mut self.inner, |inner| inner.finish().map(|v| v.into_inner()))
+    }
+}
+
 pub(crate) mod internal {
 
+    use crate::zstd::DEFAULT_COMPRESSION_LEVEL;
     use std::io::{Error, Read, Write};
 
     /// Decompress gzip data
@@ -66,7 +97,7 @@ pub(crate) mod internal {
 
     /// Compress gzip data
     pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<i32>) -> Result<usize, Error> {
-        let level = level.unwrap_or_else(|| 0); // 0 will use zstd's default, currently 3
+        let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL); // 0 will use zstd's default, currently 3
         let mut encoder = zstd::stream::read::Encoder::new(input, level)?;
         let n_bytes = std::io::copy(&mut encoder, output)?;
         Ok(n_bytes as usize)
