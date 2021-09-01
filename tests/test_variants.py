@@ -239,3 +239,31 @@ def test_gzip_multiple_streams():
     o2 = bytes(cramjam.gzip.compress(b"bar"))
     out = bytes(cramjam.gzip.decompress(o1 + o2))
     assert out == b"foobar"
+
+
+@pytest.mark.parametrize(
+    "mod",
+    (
+        cramjam.brotli,
+        cramjam.deflate,
+        cramjam.gzip,
+        cramjam.lz4,
+        cramjam.snappy,
+        cramjam.zstd,
+    ),
+)
+def test_streams_compressor(mod):
+    compressor = mod.Compressor()
+    compressor.compress(b"foo")
+    compressor.compress(b"bar")
+    out = compressor.finish()
+    decompressed = mod.decompress(out)
+    assert bytes(decompressed) == b"foobar"
+
+    # just empty bytes after the first .finish()
+    # same behavior as brotli.Compressor()
+    assert bytes(compressor.finish()) == b""
+
+    # compress will raise an error as the stream is completed
+    with pytest.raises(cramjam.CompressionError):
+        compressor.compress(b'data')
