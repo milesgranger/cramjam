@@ -3,6 +3,7 @@ name = "cramjam"
 version = "2.3.2"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2018"
+license = "MIT License"
 license-file = "LICENSE"
 description = "Thin Python bindings to de/compression algorithms in Rust"
 readme = "README.md"
