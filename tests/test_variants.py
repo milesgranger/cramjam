@@ -254,9 +254,14 @@ def test_gzip_multiple_streams():
 )
 def test_streams_compressor(mod):
     compressor = mod.Compressor()
+
     compressor.compress(b"foo")
+    out = bytes(compressor.flush())
+
     compressor.compress(b"bar")
-    out = compressor.finish()
+    out += bytes(compressor.flush())
+
+    out += bytes(compressor.finish())
     decompressed = mod.decompress(out)
     assert bytes(decompressed) == b"foobar"
 
@@ -266,4 +271,4 @@ def test_streams_compressor(mod):
 
     # compress will raise an error as the stream is completed
     with pytest.raises(cramjam.CompressionError):
-        compressor.compress(b'data')
+        compressor.compress(b"data")

@@ -77,6 +77,11 @@ impl Compressor {
         crate::io::stream_compress(&mut self.inner, input)
     }
 
+    /// Flush and return current compressed stream
+    pub fn flush(&mut self) -> PyResult<RustyBuffer> {
+        crate::io::stream_flush(&mut self.inner, |e| e.get_mut())
+    }
+
     /// Consume the current compressor state and return the compressed stream
     /// **NB** The compressor will not be usable after this method is called.
     pub fn finish(&mut self) -> PyResult<RustyBuffer> {

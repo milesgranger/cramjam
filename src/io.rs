@@ -635,3 +635,22 @@ where
         None => Ok(RustyBuffer::from(vec![])),
     }
 }
+
+// flush inner encoder data out
+pub(crate) fn stream_flush<W, F>(encoder: &mut Option<W>, cursor_mut_ref: F) -> PyResult<RustyBuffer>
+where
+    W: Write,
+    F: Fn(&mut W) -> &mut Cursor<Vec<u8>>,
+{
+    match encoder {
+        Some(inner) => {
+            crate::to_py_err!(CompressionError -> inner.flush())?;
+            let cursor = cursor_mut_ref(inner);
+            let buf = RustyBuffer::from(cursor.get_ref().clone());
+            cursor.get_mut().truncate(0);
+            cursor.set_position(0);
+            Ok(buf)
+        }
+        None => Ok(RustyBuffer::from(vec![])),
+    }
+}
