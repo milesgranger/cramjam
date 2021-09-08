@@ -143,6 +143,15 @@ impl Compressor {
         crate::io::stream_compress(&mut self.inner, input)
     }
 
+    /// Flush and return current compressed stream
+    #[allow(mutable_transmutes)] // TODO: feature req to lz4 to get mut ref to writer
+    pub fn flush(&mut self) -> PyResult<RustyBuffer> {
+        crate::io::stream_flush(&mut self.inner, |e| {
+            let writer = e.writer();
+            unsafe { std::mem::transmute::<&Cursor<Vec<u8>>, &mut Cursor<Vec<u8>>>(writer) }
+        })
+    }
+
     /// Consume the current compressor state and return the compressed stream
     /// **NB** The compressor will not be usable after this method is called.
     pub fn finish(&mut self) -> PyResult<RustyBuffer> {
