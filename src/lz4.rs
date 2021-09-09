@@ -148,6 +148,7 @@ impl Compressor {
     pub fn flush(&mut self) -> PyResult<RustyBuffer> {
         crate::io::stream_flush(&mut self.inner, |e| {
             let writer = e.writer();
+            // no other mutations to buf b/c it'll be truncated and return immediately after this
             unsafe { std::mem::transmute::<&Cursor<Vec<u8>>, &mut Cursor<Vec<u8>>>(writer) }
         })
     }

@@ -637,6 +637,7 @@ where
 }
 
 // flush inner encoder data out
+#[inline(always)]
 pub(crate) fn stream_flush<W, F>(encoder: &mut Option<W>, cursor_mut_ref: F) -> PyResult<RustyBuffer>
 where
     W: Write,
