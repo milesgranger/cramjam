@@ -3,6 +3,7 @@ import pytest
 import numpy as np
 import cramjam
 import hashlib
+from hypothesis import strategies as st, given
 
 
 def same_same(a, b):
@@ -19,11 +20,11 @@ def test_has_version():
 @pytest.mark.parametrize(
     "variant_str", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
 )
-def test_variants_simple(variant_str, is_bytearray):
+@given(uncompressed=st.binary(min_size=1))
+def test_variants_simple(variant_str, is_bytearray, uncompressed: bytes):
 
     variant = getattr(cramjam, variant_str)
 
-    uncompressed = b"some bytes to compress 123" * 100000
     if is_bytearray:
         uncompressed = bytearray(uncompressed)
 
@@ -55,16 +56,19 @@ def test_variants_raise_exception(variant_str):
 @pytest.mark.parametrize(
     "variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd", "lz4")
 )
-def test_variants_compress_into(variant_str, input_type, output_type, tmpdir):
+@given(raw_data=st.binary())
+def test_variants_compress_into(
+    variant_str, input_type, output_type, raw_data, tmp_path_factory
+):
     variant = getattr(cramjam, variant_str)
-
-    raw_data = b"oh what a beautiful morning, oh what a beautiful day!!" * 10000
 
     # Setup input
     if input_type == "numpy":
         input = np.frombuffer(raw_data, dtype=np.uint8)
     elif input_type == cramjam.File:
-        input = cramjam.File(str(tmpdir.join("input.txt")))
+        path = tmp_path_factory.mktemp("tmp").joinpath("input.txt")
+        path.touch()
+        input = cramjam.File(str(path))
         input.write(raw_data)
         input.seek(0)
     elif input_type == cramjam.Buffer:
@@ -81,7 +85,9 @@ def test_variants_compress_into(variant_str, input_type, output_type, tmpdir):
     if output_type == "numpy":
         output = np.zeros(compressed_len, dtype=np.uint8)
     elif output_type == cramjam.File:
-        output = cramjam.File(str(tmpdir.join("output.txt")))
+        path = tmp_path_factory.mktemp("tmp").joinpath("output.txt")
+        path.touch()
+        output = cramjam.File(str(path))
     elif output_type == cramjam.Buffer:
         output = cramjam.Buffer()
     else:
@@ -109,17 +115,21 @@ def test_variants_compress_into(variant_str, input_type, output_type, tmpdir):
 @pytest.mark.parametrize(
     "variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd", "lz4")
 )
-def test_variants_decompress_into(variant_str, input_type, output_type, tmpdir):
+@given(raw_data=st.binary())
+def test_variants_decompress_into(
+    variant_str, input_type, output_type, tmp_path_factory, raw_data
+):
     variant = getattr(cramjam, variant_str)
 
-    raw_data = b"oh what a beautiful morning, oh what a beautiful day!!" * 100
     compressed = variant.compress(raw_data)
 
     # Setup input
     if input_type == "numpy":
         input = np.frombuffer(compressed, dtype=np.uint8)
     elif input_type == cramjam.File:
-        input = cramjam.File(str(tmpdir.join("input.txt")))
+        path = tmp_path_factory.mktemp("tmp").joinpath("input.txt")
+        path.touch()
+        input = cramjam.File(str(path))
         input.write(compressed)
         input.seek(0)
     elif input_type == cramjam.Buffer:
@@ -133,7 +143,9 @@ def test_variants_decompress_into(variant_str, input_type, output_type, tmpdir):
     if output_type == "numpy":
         output = np.zeros(len(raw_data), dtype=np.uint8)
     elif output_type == cramjam.File:
-        output = cramjam.File(str(tmpdir.join("output.txt")))
+        path = tmp_path_factory.mktemp("tmp").joinpath("output.txt")
+        path.touch()
+        output = cramjam.File(str(path))
     elif output_type == cramjam.Buffer:
         output = cramjam.Buffer()
     else:
@@ -152,12 +164,12 @@ def test_variants_decompress_into(variant_str, input_type, output_type, tmpdir):
     assert same_same(output, raw_data)
 
 
-def test_variant_snappy_raw_into():
+@given(data=st.binary())
+def test_variant_snappy_raw_into(data):
     """
     A little more special than other de/compress_into variants, as the underlying
     snappy raw api makes a hard expectation that its calculated len is used.
     """
-    data = b"oh what a beautiful morning, oh what a beautiful day!!" * 1000000
 
     compressed = cramjam.snappy.compress_raw(data)
     compressed_size = cramjam.snappy.compress_raw_max_len(data)
@@ -175,20 +187,22 @@ def test_variant_snappy_raw_into():
 
 
 @pytest.mark.parametrize("Obj", (cramjam.File, cramjam.Buffer))
-def test_dunders(Obj, tmpdir):
+@given(data=st.binary())
+def test_dunders(Obj, tmp_path_factory, data):
     if Obj == cramjam.File:
-        path = str(tmpdir.join("tmp.txt"))
-        obj = Obj(path)
+        path = tmp_path_factory.mktemp("tmp").joinpath("tmp.txt")
+        path.touch()
+        obj = Obj(str(path))
     else:
         obj = Obj()
 
     assert len(obj) == 0
     assert bool(obj) is False
-    obj.write(b"12345")
-    assert len(obj) == 5
-    assert bool(obj) is True
+    obj.write(data)
+    assert len(obj) == len(data)
+    assert bool(obj) is bool(len(data))
 
-    assert "len=5" in str(obj)
+    assert f"len={len(data)}" in str(obj)
     if isinstance(obj, cramjam.File):
         assert f"path={path}" in str(obj)
 
@@ -224,21 +238,22 @@ def test_lz4_block(compress_kwargs):
     assert bytes(out) == data
 
 
-def test_gzip_multiple_streams():
+@given(first=st.binary(), second=st.binary())
+def test_gzip_multiple_streams(first: bytes, second: bytes):
 
-    out1 = gzip.compress(b"foo")
-    out2 = gzip.compress(b"bar")
-    assert gzip.decompress(out1 + out2) == b"foobar"
+    out1 = gzip.compress(first)
+    out2 = gzip.compress(second)
+    assert gzip.decompress(out1 + out2) == first + second
 
     # works with data compressed by std gzip lib
     out = bytes(cramjam.gzip.decompress(out1 + out2))
-    assert out == b"foobar"
+    assert out == first + second
 
     # works with data compressed by cramjam
-    o1 = bytes(cramjam.gzip.compress(b"foo"))
-    o2 = bytes(cramjam.gzip.compress(b"bar"))
+    o1 = bytes(cramjam.gzip.compress(first))
+    o2 = bytes(cramjam.gzip.compress(second))
     out = bytes(cramjam.gzip.decompress(o1 + o2))
-    assert out == b"foobar"
+    assert out == first + second
 
 
 @pytest.mark.parametrize(
@@ -252,18 +267,19 @@ def test_gzip_multiple_streams():
         cramjam.zstd,
     ),
 )
-def test_streams_compressor(mod):
+@given(first=st.binary(), second=st.binary())
+def test_streams_compressor(mod, first: bytes, second: bytes):
     compressor = mod.Compressor()
 
-    compressor.compress(b"foo")
+    compressor.compress(first)
     out = bytes(compressor.flush())
 
-    compressor.compress(b"bar")
+    compressor.compress(second)
     out += bytes(compressor.flush())
 
     out += bytes(compressor.finish())
     decompressed = mod.decompress(out)
-    assert bytes(decompressed) == b"foobar"
+    assert bytes(decompressed) == first + second
 
     # just empty bytes after the first .finish()
     # same behavior as brotli.Compressor()
