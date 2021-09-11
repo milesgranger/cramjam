@@ -1,9 +1,16 @@
+import os
 import gzip
 import pytest
 import numpy as np
 import cramjam
 import hashlib
-from hypothesis import strategies as st, given
+from hypothesis import strategies as st, given, settings
+
+
+# Some OS can be slow or have higher variability in their runtimes on CI
+settings.register_profile("CI", deadline=None)
+if os.getenv("CI"):
+    settings.load_profile("CI")
 
 
 def same_same(a, b):
