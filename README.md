@@ -33,6 +33,7 @@ Available algorithms:
 
 - [X] Snappy
 - [X] Brotli
+- [X] Bzip2
 - [X] Lz4
 - [X] Gzip
 - [X] Deflate

@@ -52,6 +52,7 @@
 //! ```
 
 pub mod brotli;
+pub mod bzip2;
 pub mod deflate;
 pub mod exceptions;
 pub mod gzip;
@@ -235,6 +236,7 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<crate::io::RustyBuffer>()?;
     make_submodule!(py -> m -> snappy);
     make_submodule!(py -> m -> brotli);
+    make_submodule!(py -> m -> bzip2);
     make_submodule!(py -> m -> lz4);
     make_submodule!(py -> m -> gzip);
     make_submodule!(py -> m -> deflate);
@@ -310,6 +312,7 @@ mod tests {
     test_variant!(snappy, compressed_len = 2572398,);
     test_variant!(gzip, compressed_len = 157192, level = None);
     test_variant!(brotli, compressed_len = 729, level = None);
+    test_variant!(bzip2, compressed_len = 14207, level = None);
     test_variant!(deflate, compressed_len = 157174, level = None);
     test_variant!(zstd, compressed_len = 4990, level = None);
     test_variant!(lz4, compressed_len = 303278, level = None);
