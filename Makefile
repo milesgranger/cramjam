@@ -30,6 +30,9 @@ bench-gzip:
 bench-brotli:
 	$(BASE_BENCH_CMD) brotli
 
+bench-bzip2:
+	$(BASE_BENCH_CMD) bzip2
+
 bench-zstd:
 	$(BASE_BENCH_CMD) zstd
 

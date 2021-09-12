@@ -251,6 +251,30 @@ def test_zstd(benchmark, file, use_cramjam: bool):
         )
 
 
+@pytest.mark.parametrize(
+    "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "bzip2"
+)
+@pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
+def test_bzip2(benchmark, file, use_cramjam: bool):
+    import bz2
+
+    data = file.read_bytes()
+    if use_cramjam:
+        benchmark(
+            round_trip,
+            compress=cramjam.bzip2.compress,
+            decompress=cramjam.bzip2.decompress,
+            data=data,
+        )
+    else:
+        benchmark(
+            round_trip,
+            compress=bz2.compress,
+            decompress=bz2.decompress,
+            data=data,
+        )
+
+
 @profile
 def memory_profile():
 
