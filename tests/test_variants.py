@@ -4,13 +4,18 @@ import pytest
 import numpy as np
 import cramjam
 import hashlib
+from datetime import timedelta
 from hypothesis import strategies as st, given, settings
 
+VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd")
 
 # Some OS can be slow or have higher variability in their runtimes on CI
+settings.register_profile("local", deadline=timedelta(milliseconds=1000))
 settings.register_profile("CI", deadline=None)
 if os.getenv("CI"):
     settings.load_profile("CI")
+else:
+    settings.load_profile("local")
 
 
 def same_same(a, b):
@@ -24,9 +29,7 @@ def test_has_version():
 
 
 @pytest.mark.parametrize("is_bytearray", (True, False))
-@pytest.mark.parametrize(
-    "variant_str", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
-)
+@pytest.mark.parametrize("variant_str", VARIANTS)
 @given(uncompressed=st.binary(min_size=1))
 def test_variants_simple(variant_str, is_bytearray, uncompressed: bytes):
 
@@ -45,9 +48,7 @@ def test_variants_simple(variant_str, is_bytearray, uncompressed: bytes):
     assert isinstance(decompressed, cramjam.Buffer)
 
 
-@pytest.mark.parametrize(
-    "variant_str", ("snappy", "brotli", "lz4", "gzip", "deflate", "zstd")
-)
+@pytest.mark.parametrize("variant_str", VARIANTS)
 def test_variants_raise_exception(variant_str):
     variant = getattr(cramjam, variant_str)
     with pytest.raises(cramjam.DecompressionError):
@@ -60,9 +61,7 @@ def test_variants_raise_exception(variant_str):
 @pytest.mark.parametrize(
     "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File)
 )
-@pytest.mark.parametrize(
-    "variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd", "lz4")
-)
+@pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_compress_into(
     variant_str, input_type, output_type, raw_data, tmp_path_factory
@@ -119,9 +118,7 @@ def test_variants_compress_into(
 @pytest.mark.parametrize(
     "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File)
 )
-@pytest.mark.parametrize(
-    "variant_str", ("snappy", "brotli", "gzip", "deflate", "zstd", "lz4")
-)
+@pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_decompress_into(
     variant_str, input_type, output_type, tmp_path_factory, raw_data
@@ -267,6 +264,7 @@ def test_gzip_multiple_streams(first: bytes, second: bytes):
     "mod",
     (
         cramjam.brotli,
+        cramjam.bzip2,
         cramjam.deflate,
         cramjam.gzip,
         cramjam.lz4,
