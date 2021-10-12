@@ -2,6 +2,6 @@ pytest-benchmark==3.2.3
 python-snappy==0.5.4
 lz4==3.1.0
 brotlipy==0.7.0
-zstd==1.4.5.1
+zstd==1.5.0.2
 numpy
 memory-profiler
