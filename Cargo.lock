@@ -161,9 +161,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.106"
+version = "0.2.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a60553f9a9e039a333b4e9b20573b9e9b9c0bb3a11e201ccc48ef4283456d673"
+checksum = "fbe5e23404da5b4f555ef85ebed98fb4083e55a00c317800bc2a50ede9f3d219"
 
 [[package]]
 name = "libmimalloc-sys"
@@ -274,8 +274,9 @@ dependencies = [
 
 [[package]]
 name = "numpy"
-version = "0.14.1"
-source = "git+https://github.com/PyO3/rust-numpy.git?branch=main#2cab9df30cf9cc1bb2f370cb069b87465308b1ea"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e590538dba8432d54d3587b06df73d7c044e83cfa4b200cbc7d0567f924ac0a7"
 dependencies = [
  "cfg-if 0.1.10",
  "libc",
