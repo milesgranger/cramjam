@@ -202,12 +202,40 @@ jobs:
         name: wheels
         path: dist
 
-  pypy:
-    runs-on: ${{ matrix.os }}
+  pypy-linux:
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [ pypy-3.6, pypy-3.7, pypy-3.8 ]
-        os: [ ubuntu-latest, macos-latest ]
+        python: [
+          { version: pypy-3.7, abi: pp37-pypy37_pp73 },
+          { version: pypy-3.8, abi: pp38-pypy38_pp73 },
+        ]
+    steps:
+    - uses: actions/checkout@v2
+    - uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python.version }}
+    - name: Build Wheels
+      uses: messense/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        manylinux: auto
+        args: -i /opt/python/${{ matrix.python.abi }}/bin/pypy --release --out dist --no-sdist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
+    - name: Python UnitTest
+      run: |
+        pip install cramjam --no-index --find-links dist
+        pypy -c "import cramjam"
+    - name: Upload wheels
+      uses: actions/upload-artifact@v2
+      with:
+        name: wheels
+        path: dist
+
+  pypy-macos:
+    runs-on: macos-latest
+    strategy:
+      matrix:
+        python-version: [ pypy-3.7, pypy-3.8 ]
     steps:
     - uses: actions/checkout@v2
     - name: Install Rust toolchain
@@ -216,10 +244,6 @@ jobs:
         toolchain: stable
         profile: minimal
         default: true
-    - name: Build
-      run: cargo build --release
-    - name: Tests
-      run: cargo test --no-default-features --release
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
@@ -243,7 +267,7 @@ jobs:
     name: Release
     runs-on: ubuntu-latest
     if: "startsWith(github.ref, 'refs/tags/')"
-    needs: [ macos, windows, linux, linux-cross, pypy ]
+    needs: [ macos, windows, linux, linux-cross, pypy-linux, pypy-macos ]
     steps:
       - uses: actions/download-artifact@v2
         with:
