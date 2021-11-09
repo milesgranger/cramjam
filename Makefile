@@ -44,4 +44,3 @@ dev-install:
 
 pypy-build:
 	maturin build -i $(shell which pypy) --release --out dist
-	pypy ./pypy_patch.py
