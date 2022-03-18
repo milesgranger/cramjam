@@ -4,15 +4,14 @@
 //!
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
+use std::os::raw::c_int;
 
 use crate::exceptions::CompressionError;
 use crate::BytesType;
 use numpy::PyArray1;
-use pyo3::class::buffer::PyBufferProtocol;
 use pyo3::prelude::*;
 use pyo3::types::{PyByteArray, PyBytes};
-use pyo3::{ffi, PySequenceProtocol};
-use pyo3::{AsPyPointer, PyObjectProtocol};
+use pyo3::{ffi, AsPyPointer};
 use std::path::PathBuf;
 
 pub(crate) trait AsBytes {
@@ -214,28 +213,6 @@ pub struct RustyFile {
     pub(crate) inner: File,
 }
 
-#[pyproto]
-impl PyObjectProtocol for RustyFile {
-    fn __repr__(&self) -> PyResult<String> {
-        let path = match self.path.as_path().to_str() {
-            Some(path) => path.to_string(),
-            None => self.path.to_string_lossy().to_string(),
-        };
-        let repr = format!("cramjam.File(path={}, len={:?})", path, self.len()?);
-        Ok(repr)
-    }
-    fn __bool__(&self) -> PyResult<bool> {
-        Ok(self.len()? > 0)
-    }
-}
-
-#[pyproto]
-impl PySequenceProtocol for RustyFile {
-    fn __len__(&self) -> PyResult<usize> {
-        self.len()
-    }
-}
-
 impl AsBytes for RustyFile {
     fn as_bytes(&self) -> &[u8] {
         unimplemented!(
@@ -344,6 +321,21 @@ impl RustyFile {
             .map_err(|e| pyo3::exceptions::PyOSError::new_err(e.to_string()))?;
         Ok(meta.len() as usize)
     }
+
+    fn __repr__(&self) -> PyResult<String> {
+        let path = match self.path.as_path().to_str() {
+            Some(path) => path.to_string(),
+            None => self.path.to_string_lossy().to_string(),
+        };
+        let repr = format!("cramjam.File(path={}, len={:?})", path, self.len()?);
+        Ok(repr)
+    }
+    fn __bool__(&self) -> PyResult<bool> {
+        Ok(self.len()? > 0)
+    }
+    fn __len__(&self) -> PyResult<usize> {
+        self.len()
+    }
 }
 
 /// A native Rust file-like object. Reading and writing takes place
@@ -376,75 +368,6 @@ impl AsBytes for RustyBuffer {
 impl From<Vec<u8>> for RustyBuffer {
     fn from(v: Vec<u8>) -> Self {
         Self { inner: Cursor::new(v) }
-    }
-}
-
-#[pyproto]
-impl PyBufferProtocol for RustyBuffer {
-    fn bf_getbuffer(slf: PyRefMut<Self>, view: *mut ffi::Py_buffer, flags: std::os::raw::c_int) -> PyResult<()> {
-        if view.is_null() {
-            return Err(pyo3::exceptions::PyBufferError::new_err("View is null"));
-        }
-
-        if (flags & ffi::PyBUF_WRITABLE) == ffi::PyBUF_WRITABLE {
-            return Err(pyo3::exceptions::PyBufferError::new_err("Object is not writable"));
-        }
-
-        unsafe {
-            (*view).obj = slf.as_ptr();
-            ffi::Py_INCREF((*view).obj);
-        }
-
-        let bytes = slf.inner.get_ref().as_slice();
-
-        unsafe {
-            (*view).buf = bytes.as_ptr() as *mut std::os::raw::c_void;
-            (*view).len = bytes.len() as isize;
-            (*view).readonly = 1;
-            (*view).itemsize = 1;
-
-            (*view).format = std::ptr::null_mut();
-            if (flags & ffi::PyBUF_FORMAT) == ffi::PyBUF_FORMAT {
-                let msg = std::ffi::CStr::from_bytes_with_nul(b"B\0").unwrap();
-                (*view).format = msg.as_ptr() as *mut _;
-            }
-
-            (*view).ndim = 1;
-            (*view).shape = std::ptr::null_mut();
-            if (flags & ffi::PyBUF_ND) == ffi::PyBUF_ND {
-                (*view).shape = (&((*view).len)) as *const _ as *mut _;
-            }
-
-            (*view).strides = std::ptr::null_mut();
-            if (flags & ffi::PyBUF_STRIDES) == ffi::PyBUF_STRIDES {
-                (*view).strides = &((*view).itemsize) as *const _ as *mut _;
-            }
-
-            (*view).suboffsets = std::ptr::null_mut();
-            (*view).internal = std::ptr::null_mut();
-        }
-        Ok(())
-    }
-    fn bf_releasebuffer(_slf: PyRefMut<Self>, _view: *mut ffi::Py_buffer) {}
-}
-
-#[pyproto]
-impl PySequenceProtocol for RustyBuffer {
-    fn __len__(&self) -> usize {
-        self.len()
-    }
-    fn __contains__(&self, x: u8) -> bool {
-        self.inner.get_ref().contains(&x)
-    }
-}
-
-#[pyproto]
-impl PyObjectProtocol for RustyBuffer {
-    fn __repr__(&self) -> String {
-        format!("cramjam.Buffer(len={:?})", self.len())
-    }
-    fn __bool__(&self) -> bool {
-        self.len() > 0
     }
 }
 
@@ -530,6 +453,60 @@ impl RustyBuffer {
         self.inner.set_position(0);
         Ok(())
     }
+
+    fn __len__(&self) -> usize {
+        self.len()
+    }
+    fn __contains__(&self, x: u8) -> bool {
+        self.inner.get_ref().contains(&x)
+    }
+    fn __repr__(&self) -> String {
+        format!("cramjam.Buffer(len={:?})", self.len())
+    }
+    fn __bool__(&self) -> bool {
+        self.len() > 0
+    }
+    unsafe fn __getbuffer__(slf: PyRefMut<Self>, view: *mut ffi::Py_buffer, flags: c_int) -> PyResult<()> {
+        if view.is_null() {
+            return Err(pyo3::exceptions::PyBufferError::new_err("View is null"));
+        }
+
+        if (flags & ffi::PyBUF_WRITABLE) == ffi::PyBUF_WRITABLE {
+            return Err(pyo3::exceptions::PyBufferError::new_err("Object is not writable"));
+        }
+
+        (*view).obj = slf.as_ptr();
+        ffi::Py_INCREF((*view).obj);
+
+        let bytes = slf.inner.get_ref().as_slice();
+
+        (*view).buf = bytes.as_ptr() as *mut std::os::raw::c_void;
+        (*view).len = bytes.len() as isize;
+        (*view).readonly = 1;
+        (*view).itemsize = 1;
+
+        (*view).format = std::ptr::null_mut();
+        if (flags & ffi::PyBUF_FORMAT) == ffi::PyBUF_FORMAT {
+            let msg = std::ffi::CStr::from_bytes_with_nul(b"B\0").unwrap();
+            (*view).format = msg.as_ptr() as *mut _;
+        }
+
+        (*view).ndim = 1;
+        (*view).shape = std::ptr::null_mut();
+        if (flags & ffi::PyBUF_ND) == ffi::PyBUF_ND {
+            (*view).shape = (&((*view).len)) as *const _ as *mut _;
+        }
+
+        (*view).strides = std::ptr::null_mut();
+        if (flags & ffi::PyBUF_STRIDES) == ffi::PyBUF_STRIDES {
+            (*view).strides = &((*view).itemsize) as *const _ as *mut _;
+        }
+
+        (*view).suboffsets = std::ptr::null_mut();
+        (*view).internal = std::ptr::null_mut();
+        Ok(())
+    }
+    unsafe fn __releasebuffer__(&self, _view: *mut ffi::Py_buffer) {}
 }
 
 fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64> {
