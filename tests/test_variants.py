@@ -202,6 +202,7 @@ def test_variant_lz4_block_into(data):
     compressed_buffer = np.zeros(compressed_size, dtype=np.uint8)
     n_bytes = cramjam.lz4.compress_block_into(data, compressed_buffer)
     assert n_bytes == len(compressed)
+    assert same_same(compressed, compressed_buffer[:n_bytes])
 
     decompressed_buffer = np.zeros(len(data), dtype=np.uint8)
     n_bytes = cramjam.lz4.decompress_block_into(
