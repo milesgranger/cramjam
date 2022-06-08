@@ -2,6 +2,7 @@
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::{AsBytes, RustyBuffer};
 use crate::{to_py_err, BytesType};
+use lz4::{block, block::CompressionMode};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
@@ -79,7 +80,6 @@ pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usiz
 /// ```
 #[pyfunction]
 pub fn decompress_block(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    use lz4::block;
     let out = to_py_err!(DecompressionError -> block::decompress(data.as_bytes(), output_len.map(|v| v as i32)))?;
     Ok(RustyBuffer::from(out))
 }
@@ -110,18 +110,8 @@ pub fn compress_block(
     compression: Option<i32>,
     store_size: Option<bool>,
 ) -> PyResult<RustyBuffer> {
-    use lz4::{block, block::CompressionMode};
-
     let store_size = store_size.unwrap_or(true);
-    let mode = match mode {
-        Some(m) => match m {
-            "default" => CompressionMode::DEFAULT,
-            "fast" => CompressionMode::FAST(acceleration.unwrap_or(1)),
-            "high_compression" => CompressionMode::HIGHCOMPRESSION(compression.unwrap_or(9)),
-            _ => return Err(DecompressionError::new_err(format!("Unrecognized mode '{}'", m))),
-        },
-        None => CompressionMode::DEFAULT,
-    };
+    let mode = compression_mode(mode, compression, acceleration)?;
     let out = to_py_err!(CompressionError -> block::compress(data.as_bytes(), Some(mode), store_size))?;
     Ok(RustyBuffer::from(out))
 }
@@ -135,7 +125,6 @@ pub fn compress_block(
 /// ```
 #[pyfunction]
 pub fn decompress_block_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    use lz4::block;
     to_py_err!(DecompressionError -> block::decompress_to_buffer(input.as_bytes(), None, output.as_bytes_mut()))
 }
 
@@ -165,10 +154,18 @@ pub fn compress_block_into(
     compression: Option<i32>,
     store_size: Option<bool>,
 ) -> PyResult<usize> {
-    use lz4::{block, block::CompressionMode};
-
     let store_size = store_size.unwrap_or(true);
-    let mode = match mode {
+    let mode = compression_mode(mode, compression, acceleration)?;
+    to_py_err!(CompressionError -> block::compress_to_buffer(data.as_bytes(), Some(mode), store_size, output.as_bytes_mut()))
+}
+
+#[inline]
+fn compression_mode(
+    mode: Option<&str>,
+    compression: Option<i32>,
+    acceleration: Option<i32>,
+) -> PyResult<CompressionMode> {
+    let m = match mode {
         Some(m) => match m {
             "default" => CompressionMode::DEFAULT,
             "fast" => CompressionMode::FAST(acceleration.unwrap_or(1)),
@@ -177,7 +174,7 @@ pub fn compress_block_into(
         },
         None => CompressionMode::DEFAULT,
     };
-    to_py_err!(CompressionError -> block::compress_to_buffer(data.as_bytes(), Some(mode), store_size, output.as_bytes_mut()))
+    Ok(m)
 }
 
 ///
@@ -198,7 +195,7 @@ pub fn compress_block_into(
 /// ```
 #[pyfunction]
 pub fn compress_block_bound(src: BytesType) -> PyResult<usize> {
-    lz4::block::compress_bound(src.len()).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    block::compress_bound(src.len()).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
 }
 
 /// Snappy Compressor object for streaming compression
