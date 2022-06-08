@@ -190,6 +190,28 @@ def test_variant_snappy_raw_into(data):
     assert same_same(decompressed_buffer[:n_bytes], data)
 
 
+@given(data=st.binary())
+def test_variant_lz4_block_into(data):
+    """
+    A little more special than other de/compress_into variants, as the underlying
+    snappy raw api makes a hard expectation that its calculated len is used.
+    """
+
+    compressed = cramjam.lz4.compress_block(data)
+    compressed_size = cramjam.lz4.compress_block_bound(data)
+    compressed_buffer = np.zeros(compressed_size, dtype=np.uint8)
+    n_bytes = cramjam.lz4.compress_block_into(data, compressed_buffer)
+    assert n_bytes == len(compressed)
+
+    decompressed_buffer = np.zeros(len(data), dtype=np.uint8)
+    n_bytes = cramjam.lz4.decompress_block_into(
+        compressed_buffer[:n_bytes].tobytes(), decompressed_buffer
+    )
+    assert n_bytes == len(data)
+
+    assert same_same(decompressed_buffer[:n_bytes], data)
+
+
 @pytest.mark.parametrize("Obj", (cramjam.File, cramjam.Buffer))
 @given(data=st.binary())
 def test_dunders(Obj, tmp_path_factory, data):
