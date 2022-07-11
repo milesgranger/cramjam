@@ -33,7 +33,7 @@ jobs:
         uses: messense/maturin-action@v1
         with:
           target: x86_64
-          args: -i python --release --out dist
+          args: -i python --release --out dist --sdist
       - name: Install built wheel - x86_64
         run: |
           pip install cramjam --no-index --find-links dist --force-reinstall
@@ -41,7 +41,7 @@ jobs:
         if: ${{ matrix.python-version >= '3.8' || matrix.python-version == '3.10' }}
         uses: messense/maturin-action@v1
         with:
-          args: -i python --release --universal2 --out dist --no-sdist
+          args: -i python --release --universal2 --out dist
       - name: Install built wheel - universal2
         if: ${{ matrix.python-version >= '3.8' }}
         run: |
@@ -86,7 +86,7 @@ jobs:
         uses: messense/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: -i python --release --out dist --no-sdist
+          args: -i python --release --out dist
       - name: Install built wheel
         run: |
           pip install cramjam --no-index --find-links dist --force-reinstall
@@ -126,7 +126,7 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python-version }} --release --out dist --no-sdist
+        args: -i ${{ matrix.python-version }} --release --out dist
     - name: Python UnitTest
       if: matrix.target == 'x86_64'
       run: |
@@ -174,7 +174,7 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist --no-sdist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
+        args: -i ${{ matrix.python }} --release --out dist --no-default-features --features=extension-module  # disable mimallocator
     - uses: uraimo/run-on-arch-action@v2.2.0
       # skipped cross compiled pypy wheel tests for now
       if: ${{ !startsWith(matrix.python, 'pypy') }}
@@ -223,7 +223,7 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist --no-sdist --cargo-extra-args="--no-default-features" --cargo-extra-args="--features=extension-module"  # disable mimallocator
+        args: -i ${{ matrix.python }} --release --out dist --no-default-features --features=extension-module  # disable mimallocator
     - name: Python UnitTest
       run: |
         pip install cramjam --no-index --find-links dist

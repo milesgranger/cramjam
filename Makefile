@@ -38,7 +38,7 @@ bench-zstd:
 
 dev-install:
 	rm -rf ./dist
-	maturin build --release --out dist --no-sdist --interpreter $(shell which python)
+	maturin build --release --out dist --interpreter $(shell which python)
 	pip uninstall cramjam -y
 	pip install cramjam --no-index --find-links dist/
 
