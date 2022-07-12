@@ -121,7 +121,7 @@ pub fn compress_raw_max_len(data: BytesType) -> usize {
 /// that should be passed to `decompress_raw_into`
 #[pyfunction]
 pub fn decompress_raw_len(data: BytesType) -> PyResult<usize> {
-    to_py_err!(DecompressionError -> snap::raw::decompress_len(data.as_bytes()))
+    snap::raw::decompress_len(data.as_bytes()).map_err(|e| PyErr::new<DecompressionError, _>(e.to_string()))
 }
 
 /// Snappy Compressor object for streaming compression
