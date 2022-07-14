@@ -350,7 +350,7 @@ impl RustyFile {
 /// b'bytes'
 /// ```
 ///
-#[pyclass(name = "Buffer")]
+#[pyclass(subclass, name = "Buffer")]
 #[derive(Default)]
 pub struct RustyBuffer {
     pub(crate) inner: Cursor<Vec<u8>>,
