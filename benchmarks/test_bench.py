@@ -134,7 +134,7 @@ def test_gzip(benchmark, file, lib):
             compress=cramjam.gzip.compress,
             decompress=cramjam.gzip.decompress,
             data=data,
-            level=9,
+            level=3,
         )
     elif lib == "gzip":
         benchmark(
@@ -142,7 +142,7 @@ def test_gzip(benchmark, file, lib):
             compress=gzip.compress,
             decompress=gzip.decompress,
             data=data,
-            compresslevel=9,
+            compresslevel=3,
         )
     else:
         benchmark(
@@ -150,7 +150,7 @@ def test_gzip(benchmark, file, lib):
             compress=igzip.compress,
             decompress=igzip.decompress,
             data=data,
-            compresslevel=igzip._COMPRESS_LEVEL_BEST
+            compresslevel=igzip._COMPRESS_LEVEL_BEST  # 3
         )
 
 
