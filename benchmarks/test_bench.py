@@ -121,27 +121,35 @@ def test_cramjam_snappy_de_compress_into(benchmark, op, file):
     )
 
 
-@pytest.mark.parametrize(
-    "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "gzip"
-)
+@pytest.mark.parametrize("lib", ("gzip", "cramjam", "isal"), ids=lambda val: val)
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
-def test_gzip(benchmark, file, use_cramjam: bool):
+def test_gzip(benchmark, file, lib):
+    from isal import igzip
+
     data = file.read_bytes()
-    if use_cramjam:
+    if lib == "cramjam":
         benchmark(
             round_trip,
             compress=cramjam.gzip.compress,
             decompress=cramjam.gzip.decompress,
             data=data,
-            level=9,
+            level=3,
         )
-    else:
+    elif lib == "gzip":
         benchmark(
             round_trip,
             compress=gzip.compress,
             decompress=gzip.decompress,
             data=data,
-            compresslevel=9,
+            compresslevel=3,
+        )
+    else:
+        benchmark(
+            round_trip,
+            compress=igzip.compress,
+            decompress=igzip.decompress,
+            data=data,
+            compresslevel=igzip._COMPRESS_LEVEL_BEST,  # 3
         )
 
 
