@@ -138,12 +138,6 @@ jobs:
       run: |
         pip uninstall numpy -y
         python -m pytest tests/test_no_numpy.py
-    - name: Test benchmarks
-      if: ${{ matrix.target == 'x86_64' && matrix.python-version != '3.11' }}  # TODO: isal install issue for 3.11
-      run: |
-        sudo apt-get install -y libsnappy-dev
-        pip install -r benchmark-requirements.txt
-        make test-bench
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
