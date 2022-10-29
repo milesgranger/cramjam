@@ -121,6 +121,8 @@ jobs:
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
+    - name: Audit
+      run: cargo install cargo-audit && cargo audit
     - name: Build Wheels
       uses: messense/maturin-action@v1
       with:
