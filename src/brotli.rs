@@ -5,9 +5,11 @@ use crate::{to_py_err, BytesType};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
-use std::io::Cursor;
+use std::io::{Cursor, Write};
 
 const DEFAULT_COMPRESSION_LEVEL: u32 = 11;
+const BUF_SIZE: usize = 1 << 17; // Taken from brotli kCompressFragementTwoPassBlockSize
+const LGWIN: u32 = 22;
 
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress, m)?)?;
@@ -59,7 +61,7 @@ pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usiz
 /// Brotli Compressor object for streaming compression
 #[pyclass]
 pub struct Compressor {
-    inner: Option<brotli2::write::BrotliEncoder<Cursor<Vec<u8>>>>,
+    inner: Option<brotli::CompressorWriter<Cursor<Vec<u8>>>>,
 }
 
 #[pymethods]
@@ -68,7 +70,7 @@ impl Compressor {
     #[new]
     pub fn __init__(level: Option<u32>) -> PyResult<Self> {
         let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
-        let inner = brotli2::write::BrotliEncoder::new(Cursor::new(vec![]), level);
+        let inner = brotli::CompressorWriter::new(Cursor::new(vec![]), BUF_SIZE, level, LGWIN);
         Ok(Self { inner: Some(inner) })
     }
 
@@ -85,20 +87,21 @@ impl Compressor {
     /// Consume the current compressor state and return the compressed stream
     /// **NB** The compressor will not be usable after this method is called.
     pub fn finish(&mut self) -> PyResult<RustyBuffer> {
-        crate::io::stream_finish(&mut self.inner, |inner| inner.finish().map(|c| c.into_inner()))
+        crate::io::stream_finish(&mut self.inner, |mut inner| {
+            inner.flush().map(|_| inner.into_inner().into_inner())
+        })
     }
 }
 
 pub(crate) mod internal {
 
-    use crate::brotli::DEFAULT_COMPRESSION_LEVEL;
-    use brotli2::read::{BrotliDecoder, BrotliEncoder};
+    use crate::brotli::{BUF_SIZE, DEFAULT_COMPRESSION_LEVEL, LGWIN};
     use std::io::prelude::*;
     use std::io::Error;
 
     /// Decompress via Brotli
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
-        let mut decoder = BrotliDecoder::new(input);
+        let mut decoder = brotli::Decompressor::new(input, BUF_SIZE);
         let n_bytes = std::io::copy(&mut decoder, output)?;
         Ok(n_bytes as usize)
     }
@@ -106,7 +109,7 @@ pub(crate) mod internal {
     /// Compress via Brotli
     pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
-        let mut encoder = BrotliEncoder::new(input, level);
+        let mut encoder = brotli::CompressorReader::new(input, BUF_SIZE, level, LGWIN);
         let n_bytes = std::io::copy(&mut encoder, output)?;
         Ok(n_bytes as usize)
     }

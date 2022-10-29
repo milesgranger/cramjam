@@ -311,7 +311,7 @@ mod tests {
 
     test_variant!(snappy, compressed_len = 2572398,);
     test_variant!(gzip, compressed_len = 157192, level = None);
-    test_variant!(brotli, compressed_len = 729, level = None);
+    test_variant!(brotli, compressed_len = 128, level = None);
     test_variant!(bzip2, compressed_len = 14207, level = None);
     test_variant!(deflate, compressed_len = 157174, level = None);
     test_variant!(zstd, compressed_len = 4990, level = None);
