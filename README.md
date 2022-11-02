@@ -3,7 +3,7 @@
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 [![CI](https://github.com/milesgranger/pyrus-cramjam/workflows/CI/badge.svg?branch=master)](https://github.com/milesgranger/pyrus-cramjam/actions?query=branch=master)
 [![PyPI](https://img.shields.io/pypi/v/cramjam.svg)](https://pypi.org/project/cramjam)
-[![Anaconda-Server Badge](https://anaconda.org/conda-forge/cramjam/badges/installer/conda.svg)](https://conda.anaconda.org/conda-forge)
+[![Anaconda-Server Badge](https://anaconda.org/conda-forge/cramjam/badges/version.svg)](https://anaconda.org/conda-forge/cramjam)
 [![Downloads](https://pepy.tech/badge/cramjam/month)](https://pepy.tech/project/cramjam)
 
 [API Documentation](https://docs.rs/cramjam)
