@@ -14,23 +14,20 @@ jobs:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: stable
-          target: aarch64-apple-darwin
-          profile: minimal
-          default: true
+          targets: aarch64-apple-darwin
       - name: Build
         run: cargo build --release
       - name: Tests
         run: cargo test --no-default-features --release
       - name: Build wheels - x86_64
-        uses: messense/maturin-action@v1
+        uses: PyO3/maturin-action@v1
         with:
           target: x86_64
           args: -i python --release --out dist --sdist
@@ -39,7 +36,7 @@ jobs:
           pip install cramjam --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
         if: ${{ matrix.python-version >= '3.8' || matrix.python-version == '3.10' }}
-        uses: messense/maturin-action@v1
+        uses: PyO3/maturin-action@v1
         with:
           args: -i python --release --universal2 --out dist
       - name: Install built wheel - universal2
@@ -51,7 +48,7 @@ jobs:
           pip install -r dev-requirements.txt
           make test
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
@@ -63,19 +60,13 @@ jobs:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
         target: [x64, x86]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.target }}
-      - name: Update rustup
-        run: rustup self update
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          profile: minimal
-          default: true
+        uses: dtolnay/rust-toolchain@stable
       - name: Build
         if: matrix.target == 'x64'
         run: cargo build --release
@@ -83,7 +74,7 @@ jobs:
         if: matrix.target == 'x64'
         run: cargo test --no-default-features --release
       - name: Build wheels
-        uses: messense/maturin-action@v1
+        uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
           args: -i python --release --out dist
@@ -95,7 +86,7 @@ jobs:
           pip install -r dev-requirements.txt
           make test
       - name: Upload wheels
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
@@ -107,24 +98,20 @@ jobs:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
         target: [x86_64, i686]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        default: true
+      uses: dtolnay/rust-toolchain@stable
     - name: Build
       run: cargo build --release
     - name: Tests
       run: cargo test --no-default-features --release
-    - uses: actions/setup-python@v2
+    - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Audit
       run: cargo install cargo-audit && cargo audit
     - name: Build Wheels
-      uses: messense/maturin-action@v1
+      uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
         manylinux: auto
@@ -141,7 +128,7 @@ jobs:
         pip uninstall numpy -y
         python -m pytest tests/test_no_numpy.py
     - name: Upload wheels
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: wheels
         path: dist
@@ -165,14 +152,14 @@ jobs:
           - python: pypy3.9
             target: aarch64
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Build Wheels
-      uses: messense/maturin-action@v1
+      uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
         manylinux: auto
         args: -i ${{ matrix.python }} --release --out dist --no-default-features --features=extension-module  # disable mimallocator
-    - uses: uraimo/run-on-arch-action@v2.2.0
+    - uses: uraimo/run-on-arch-action@v2.3.0
       # skipped cross compiled pypy wheel tests for now
       if: ${{ !startsWith(matrix.python, 'pypy') }}
       name: Install built wheel
@@ -197,7 +184,7 @@ jobs:
           venv/bin/pip install cramjam --no-index --find-links /artifacts --force-reinstall
           venv/bin/python -c 'import cramjam'
     - name: Upload wheels
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: wheels
         path: dist
@@ -211,12 +198,12 @@ jobs:
           - pypy-3.8
           - pypy-3.9
     steps:
-    - uses: actions/checkout@v2
-    - uses: actions/setup-python@v2
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
     - name: Build Wheels
-      uses: messense/maturin-action@v1
+      uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
         manylinux: auto
@@ -226,7 +213,7 @@ jobs:
         pip install cramjam --no-index --find-links dist
         pypy -c "import cramjam"
     - name: Upload wheels
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: wheels
         path: dist
@@ -237,14 +224,10 @@ jobs:
       matrix:
         python-version: [ pypy-3.7, pypy-3.8, pypy-3.9 ]
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        profile: minimal
-        default: true
-    - uses: actions/setup-python@v2
+      uses: dtolnay/rust-toolchain@stable
+    - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install maturin
@@ -258,7 +241,7 @@ jobs:
         pip install cramjam --no-index --find-links dist
         pypy -c "import cramjam"
     - name: Upload wheels
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: wheels
         path: dist
@@ -269,16 +252,16 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     needs: [ macos, windows, linux, linux-cross, pypy-linux, pypy-macos ]
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: wheels
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
-          python-version: 3.9
-      - name: Publish to PyPi
+          python-version: '3.10'
+      - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
         run: |
-          pip install --upgrade wheel pip setuptools twine
+          pip install --upgrade twine
           twine upload --skip-existing *
