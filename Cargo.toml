@@ -1,6 +1,6 @@
 [package]
 name = "cramjam"
-version = "2.6.1"
+version = "2.6.2"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2018"
 license-file = "LICENSE"
@@ -22,14 +22,14 @@ codegen-units = 1
 opt-level = 3
 
 [dependencies]
-pyo3 = { version = "0.16", default-features = false, features = ["macros"] }
+pyo3 = { version = "^0.17", default-features = false, features = ["macros"] }
 snap = "^1"
 brotli = { version = "^3", default-features = false, features = ["std"] }
 bzip2 = "^0.4"
 lz4 = "^1"
 flate2 = "^1"
 zstd = "0.11.1+zstd.1.5.2"
-numpy = "0.16"
+numpy = "^0.17"
 
 [dependencies.mimalloc]
 version = "0.1.24"
