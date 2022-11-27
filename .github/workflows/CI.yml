@@ -35,12 +35,12 @@ jobs:
         run: |
           pip install cramjam --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
-        if: ${{ matrix.python-version >= '3.8' || matrix.python-version == '3.10' }}
+        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11"]'), matrix.python-version) }}
         uses: PyO3/maturin-action@v1
         with:
           args: -i python --release --universal2 --out dist
       - name: Install built wheel - universal2
-        if: ${{ matrix.python-version >= '3.8' }}
+        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11"]'), matrix.python-version) }}
         run: |
           pip install cramjam --no-index --find-links dist --force-reinstall
       - name: Python UnitTest
