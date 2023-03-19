@@ -208,6 +208,67 @@ macro_rules! generic {
             }
             Ok(RustyBuffer::from(output))
         }
+    };
+    // de/compress
+    ($py:ident, $op:path[$input:expr], output_len=$output_len:ident $(, level=$level:ident)?) => {
+        {
+            use crate::io::RustyBuffer;
+
+            let mut output: Vec<u8> = match $output_len {
+                Some(len) => vec![0; len],
+                None => vec![]
+            };
+            match $input {
+                BytesType::RustyFile(f) => {
+                    let borrowed = f.borrow();
+                    let file = &borrowed.inner;
+                    $py.allow_threads(|| {
+                        $op(file, &mut Cursor::new(&mut output) $(, $level)? )
+                    })?;
+                },
+                _ => {
+                    let bytes = $input.as_bytes();
+                    $py.allow_threads(|| {
+                        $op(bytes, &mut Cursor::new(&mut output) $(, $level)? )
+                    })?;
+                }
+
+            }
+            Ok(RustyBuffer::from(output))
+        }
+    };
+    // de/compress_into
+    ($py:ident, $op:ident($input:ident, $output:ident) $(, level=$level:ident)?) => {
+        {
+            match $input {
+                BytesType::RustyFile(f) => {
+                    let borrowed = f.borrow();
+                    let f_in = &borrowed.inner;
+                    match $output {
+                        BytesType::RustyFile(f) => {
+                            let mut borrowed = f.borrow_mut();
+                            let mut f_out = &mut borrowed.inner;
+                            $py.allow_threads(|| {
+                                self::internal::$op(f_in, &mut f_out $(, $level)? )
+                            })
+                        },
+                        _ => {
+                            let mut bytes_out = $output.as_bytes_mut();
+                            $py.allow_threads(|| {
+                                self::internal::$op(f_in, &mut bytes_out $(, $level)?)
+                            })
+                        }
+                    }
+                },
+                _ =>  {
+                    let bytes_in = $input.as_bytes();
+                    let bytes_out = $output.as_bytes_mut();
+                    $py.allow_threads(|| {
+                        self::internal::$op(bytes_in, &mut Cursor::new(bytes_out) $(, $level)?)
+                    })
+                }
+            }
+        }
     }
 }
 

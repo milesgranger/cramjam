@@ -31,8 +31,9 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// >>> cramjam.snappy.decompress(compressed_bytes, output_len=Optional[None])
 /// ```
 #[pyfunction]
-pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(decompress(data), output_len = output_len)
+pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(py, internal::decompress[data], output_len = output_len)
+        .map_err(|e: snap::Error| DecompressionError::new_err(e.to_string()))
 }
 
 /// Snappy compression.
@@ -44,8 +45,8 @@ pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyB
 /// >>> _ = cramjam.snappy.compress(bytearray(b'this avoids double allocation in rust side, and thus faster!'))  # <- use bytearray where possible
 /// ```
 #[pyfunction]
-pub fn compress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(compress(data), output_len = output_len)
+pub fn compress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(py, internal::compress[data], output_len = output_len)
 }
 
 /// Snappy decompression, raw
@@ -82,9 +83,8 @@ pub fn compress_raw(data: BytesType, output_len: Option<usize>) -> PyResult<Rust
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    let r = internal::compress(input, &mut output)?;
-    Ok(r)
+pub fn compress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
+    crate::generic!(py, compress(input, output)).map_err(|e| CompressionError::new_err(e.to_string()))
 }
 
 /// Decompress directly into an output buffer
