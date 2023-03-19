@@ -238,7 +238,7 @@ macro_rules! generic {
         }
     };
     // de/compress_into
-    ($py:ident, $op:ident($input:ident, $output:ident) $(, level=$level:ident)?) => {
+    ($py:ident, $op:path[$input:ident, $output:ident] $(, level=$level:ident)?) => {
         {
             match $input {
                 BytesType::RustyFile(f) => {
@@ -249,13 +249,13 @@ macro_rules! generic {
                             let mut borrowed = f.borrow_mut();
                             let mut f_out = &mut borrowed.inner;
                             $py.allow_threads(|| {
-                                self::internal::$op(f_in, &mut f_out $(, $level)? )
+                                $op(f_in, &mut f_out $(, $level)? )
                             })
                         },
                         _ => {
                             let mut bytes_out = $output.as_bytes_mut();
                             $py.allow_threads(|| {
-                                self::internal::$op(f_in, &mut bytes_out $(, $level)?)
+                                $op(f_in, &mut bytes_out $(, $level)?)
                             })
                         }
                     }
@@ -264,7 +264,7 @@ macro_rules! generic {
                     let bytes_in = $input.as_bytes();
                     let bytes_out = $output.as_bytes_mut();
                     $py.allow_threads(|| {
-                        self::internal::$op(bytes_in, &mut Cursor::new(bytes_out) $(, $level)?)
+                        $op(bytes_in, &mut Cursor::new(bytes_out) $(, $level)?)
                     })
                 }
             }
