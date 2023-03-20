@@ -33,7 +33,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 #[pyfunction]
 pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(py, internal::decompress[data], output_len = output_len)
-        .map_err(|e: snap::Error| DecompressionError::new_err(e.to_string()))
+        .map_err(DecompressionError::from_err::<snap::Error>)
 }
 
 /// Snappy compression.
@@ -47,7 +47,7 @@ pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyR
 #[pyfunction]
 pub fn compress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(py, internal::compress[data], output_len = output_len)
-        .map_err(|e: snap::Error| CompressionError::new_err(e.to_string()))
+        .map_err(CompressionError::from_err::<snap::Error>)
 }
 
 /// Snappy decompression, raw
@@ -63,7 +63,7 @@ pub fn compress(py: Python, data: BytesType, output_len: Option<usize>) -> PyRes
 pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let bytes = data.as_bytes();
     py.allow_threads(|| snap::raw::Decoder::new().decompress_vec(bytes))
-        .map_err(|e| DecompressionError::new_err(e.to_string()))
+        .map_err(DecompressionError::from_err)
         .map(From::from)
 }
 
@@ -80,20 +80,20 @@ pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) ->
 pub fn compress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let bytes = data.as_bytes();
     py.allow_threads(|| snap::raw::Encoder::new().compress_vec(bytes))
-        .map_err(|e| CompressionError::new_err(e.to_string()))
+        .map_err(CompressionError::from_err)
         .map(From::from)
 }
 
 /// Compress directly into an output buffer
 #[pyfunction]
 pub fn compress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    crate::generic!(py, internal::compress[input, output]).map_err(|e| CompressionError::new_err(e.to_string()))
+    crate::generic!(py, internal::compress[input, output]).map_err(CompressionError::from_err)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
 pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    crate::generic!(py, internal::decompress[input, output]).map_err(|e| DecompressionError::new_err(e.to_string()))
+    crate::generic!(py, internal::decompress[input, output]).map_err(DecompressionError::from_err)
 }
 
 /// Compress raw format directly into an output buffer
@@ -102,7 +102,7 @@ pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) ->
     let bytes_in = input.as_bytes();
     let bytes_out = output.as_bytes_mut();
     py.allow_threads(|| snap::raw::Encoder::new().compress(bytes_in, bytes_out))
-        .map_err(|e| CompressionError::new_err(e.to_string()))
+        .map_err(CompressionError::from_err)
 }
 
 /// Decompress raw format directly into an output buffer
@@ -111,7 +111,7 @@ pub fn decompress_raw_into(py: Python, input: BytesType, mut output: BytesType) 
     let bytes_in = input.as_bytes();
     let bytes_out = output.as_bytes_mut();
     py.allow_threads(|| snap::raw::Decoder::new().decompress(bytes_in, bytes_out))
-        .map_err(|e| DecompressionError::new_err(e.to_string()))
+        .map_err(DecompressionError::from_err)
 }
 
 /// Get the expected max compressed length for snappy raw compression; this is the size
@@ -125,7 +125,7 @@ pub fn compress_raw_max_len(data: BytesType) -> usize {
 /// that should be passed to `decompress_raw_into`
 #[pyfunction]
 pub fn decompress_raw_len(data: BytesType) -> PyResult<usize> {
-    to_py_err!(DecompressionError -> snap::raw::decompress_len(data.as_bytes()))
+    snap::raw::decompress_len(data.as_bytes()).map_err(DecompressionError::from_err)
 }
 
 /// Snappy Compressor object for streaming compression
