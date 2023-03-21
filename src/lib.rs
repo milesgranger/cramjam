@@ -253,9 +253,9 @@ macro_rules! generic {
                             })
                         },
                         _ => {
-                            let mut bytes_out = $output.as_bytes_mut();
+                            let bytes_out = $output.as_bytes_mut();
                             $py.allow_threads(|| {
-                                $op(f_in, &mut bytes_out $(, $level)?)
+                                $op(f_in, &mut Cursor::new(bytes_out) $(, $level)?)
                             })
                         }
                     }

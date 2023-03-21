@@ -1,7 +1,7 @@
 //! lz4 de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::{AsBytes, RustyBuffer};
-use crate::{to_py_err, BytesType};
+use crate::BytesType;
 use lz4::{block, block::CompressionMode};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
@@ -36,8 +36,8 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// >>> cramjam.lz4.decompress(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
-pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(decompress(data), output_len = output_len)
+pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(py, internal::decompress[data], output_len = output_len)
 }
 
 /// lZ4 compression.
@@ -49,22 +49,20 @@ pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyB
 /// >>> cramjam.lz4.compress(b'some bytes here', output_len=Optional[int])
 /// ```
 #[pyfunction]
-pub fn compress(mut data: BytesType, level: Option<u32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(compress(&mut data), output_len = output_len, level = level)
+pub fn compress(py: Python, data: BytesType, level: Option<u32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(py, internal::compress[data], output_len = output_len, level = level)
 }
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into(mut input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
-    let r = internal::compress(&mut input, &mut output, level)?;
-    Ok(r)
+pub fn compress_into(py: Python, input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
+    crate::generic!(py, internal::compress[input, output], level = level).map_err(CompressionError::from_err)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    let r = internal::decompress(input, &mut output)?;
-    Ok(r)
+pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
+    crate::generic!(py, internal::decompress[input, output]).map_err(DecompressionError::from_err)
 }
 
 /// LZ4 _block_ decompression.
@@ -79,9 +77,11 @@ pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usiz
 /// >>> cramjam.lz4.decompress_block(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
-pub fn decompress_block(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    let out = to_py_err!(DecompressionError -> block::decompress(data.as_bytes(), output_len.map(|v| v as i32)))?;
-    Ok(RustyBuffer::from(out))
+pub fn decompress_block(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    let bytes = data.as_bytes();
+    py.allow_threads(|| block::decompress(bytes, output_len.map(|v| v as i32)))
+        .map_err(DecompressionError::from_err)
+        .map(RustyBuffer::from)
 }
 
 /// lZ4 _block_ compression.
@@ -103,6 +103,7 @@ pub fn decompress_block(data: BytesType, output_len: Option<usize>) -> PyResult<
 #[pyfunction]
 #[allow(unused_variables)]
 pub fn compress_block(
+    py: Python,
     data: BytesType,
     output_len: Option<usize>,
     mode: Option<&str>,
@@ -110,10 +111,14 @@ pub fn compress_block(
     compression: Option<i32>,
     store_size: Option<bool>,
 ) -> PyResult<RustyBuffer> {
-    let store_size = store_size.unwrap_or(true);
-    let mode = compression_mode(mode, compression, acceleration)?;
-    let out = to_py_err!(CompressionError -> block::compress(data.as_bytes(), Some(mode), store_size))?;
-    Ok(RustyBuffer::from(out))
+    let bytes = data.as_bytes();
+    py.allow_threads(|| {
+        let store_size = store_size.unwrap_or(true);
+        let mode = compression_mode(mode, compression, acceleration)?;
+        block::compress(bytes, Some(mode), store_size)
+    })
+    .map_err(CompressionError::from_err)
+    .map(RustyBuffer::from)
 }
 
 /// LZ4 _block_ decompression into a pre-allocated buffer.
@@ -124,8 +129,12 @@ pub fn compress_block(
 /// >>> cramjam.lz4.decompress_block_into(compressed_bytes, output_buffer)
 /// ```
 #[pyfunction]
-pub fn decompress_block_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    to_py_err!(DecompressionError -> block::decompress_to_buffer(input.as_bytes(), None, output.as_bytes_mut()))
+pub fn decompress_block_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
+    let bytes = input.as_bytes();
+    let out_bytes = output.as_bytes_mut();
+    py.allow_threads(|| block::decompress_to_buffer(bytes, None, out_bytes))
+        .map_err(DecompressionError::from_err)
+        .map(|v| v as _)
 }
 
 /// lZ4 _block_ compression into pre-allocated buffer.
@@ -147,6 +156,7 @@ pub fn decompress_block_into(input: BytesType, mut output: BytesType) -> PyResul
 #[pyfunction]
 #[allow(unused_variables)]
 pub fn compress_block_into(
+    py: Python,
     data: BytesType,
     mut output: BytesType,
     mode: Option<&str>,
@@ -154,9 +164,15 @@ pub fn compress_block_into(
     compression: Option<i32>,
     store_size: Option<bool>,
 ) -> PyResult<usize> {
-    let store_size = store_size.unwrap_or(true);
-    let mode = compression_mode(mode, compression, acceleration)?;
-    to_py_err!(CompressionError -> block::compress_to_buffer(data.as_bytes(), Some(mode), store_size, output.as_bytes_mut()))
+    let bytes = data.as_bytes();
+    let out_bytes = output.as_bytes_mut();
+    py.allow_threads(|| {
+        let store_size = store_size.unwrap_or(true);
+        let mode = compression_mode(mode, compression, acceleration)?;
+        block::compress_to_buffer(bytes, Some(mode), store_size, out_bytes)
+    })
+    .map_err(CompressionError::from_err)
+    .map(|v| v as _)
 }
 
 #[inline]
@@ -244,7 +260,7 @@ impl Compressor {
 pub(crate) mod internal {
     use crate::lz4::DEFAULT_COMPRESSION_LEVEL;
     use lz4::{Decoder, EncoderBuilder};
-    use std::io::{Error, Read, Seek, SeekFrom, Write};
+    use std::io::{BufReader, Error, Read, Seek, SeekFrom, Write};
 
     /// Decompress lz4 data
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
@@ -256,7 +272,7 @@ pub(crate) mod internal {
 
     /// Compress lz4 data
     pub fn compress<W: Write + ?Sized + Seek, R: Read>(
-        input: &mut R,
+        input: R,
         output: &mut W,
         level: Option<u32>,
     ) -> Result<usize, Error> {
@@ -268,7 +284,8 @@ pub(crate) mod internal {
 
         // this returns, bytes read from uncompressed, input; we want bytes written
         // but lz4 only implements Read for Encoder
-        std::io::copy(input, &mut encoder)?;
+        let mut buf = BufReader::new(input);
+        std::io::copy(&mut buf, &mut encoder)?;
         let (w, r) = encoder.finish();
         r?;
         let ending_pos = w.seek(SeekFrom::Current(0))?;
