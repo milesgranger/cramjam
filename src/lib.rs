@@ -193,22 +193,6 @@ impl<'a> IntoPy<PyObject> for BytesType<'a> {
 /// Macro for generating the implementation of de/compression against a variant interface
 #[macro_export]
 macro_rules! generic {
-    ($op:ident($input:expr), output_len=$output_len:ident $(, level=$level:ident)?) => {
-        {
-            use crate::io::RustyBuffer;
-
-            let mut output: Vec<u8> = match $output_len {
-                Some(len) => vec![0; len],
-                None => vec![]
-            };
-            if stringify!($op) == "compress" {
-                to_py_err!(CompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
-            } else {
-                to_py_err!(DecompressionError -> self::internal::$op($input, &mut Cursor::new(&mut output) $(, $level)? ))?;
-            }
-            Ok(RustyBuffer::from(output))
-        }
-    };
     // de/compress
     ($py:ident, $op:path[$input:expr], output_len=$output_len:ident $(, level=$level:ident)?) => {
         {
