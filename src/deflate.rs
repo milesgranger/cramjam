@@ -1,7 +1,7 @@
 //! deflate de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::RustyBuffer;
-use crate::{to_py_err, BytesType};
+use crate::{AsBytes, BytesType};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
@@ -26,8 +26,9 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// >>> cramjam.deflate.decompress(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
-pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(decompress(data), output_len = output_len)
+pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(py, internal::decompress[data], output_len = output_len)
+        .map_err(DecompressionError::from_err::<std::io::Error>)
 }
 
 /// Deflate compression.
@@ -38,22 +39,20 @@ pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyB
 /// >>> cramjam.deflate.compress(b'some bytes here', level=5, output_len=Optional[int])  # level defaults to 6
 /// ```
 #[pyfunction]
-pub fn compress(data: BytesType, level: Option<u32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(compress(data), output_len = output_len, level = level)
+pub fn compress(py: Python, data: BytesType, level: Option<u32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(py, internal::compress[data], output_len = output_len, level = level)
 }
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into(input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
-    let r = internal::compress(input, &mut output, level)?;
-    Ok(r)
+pub fn compress_into(py: Python, input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
+    crate::generic!(py, internal::compress[input, output], level = level).map_err(CompressionError::from_err)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    let r = internal::decompress(input, &mut output)?;
-    Ok(r)
+pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
+    crate::generic!(py, internal::decompress[input, output]).map_err(DecompressionError::from_err)
 }
 
 /// Deflate Compressor object for streaming compression
