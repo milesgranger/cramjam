@@ -263,6 +263,7 @@ pub(crate) mod internal {
     use std::io::{BufReader, Error, Read, Seek, SeekFrom, Write};
 
     /// Decompress lz4 data
+    #[inline(always)]
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = Decoder::new(input)?;
         let n_bytes = std::io::copy(&mut decoder, output)?;
@@ -271,6 +272,7 @@ pub(crate) mod internal {
     }
 
     /// Compress lz4 data
+    #[inline(always)]
     pub fn compress<W: Write + ?Sized + Seek, R: Read>(
         input: R,
         output: &mut W,
