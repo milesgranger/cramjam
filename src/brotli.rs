@@ -99,6 +99,7 @@ pub(crate) mod internal {
     use std::io::Error;
 
     /// Decompress via Brotli
+    #[inline(always)]
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = brotli::Decompressor::new(input, BUF_SIZE);
         let n_bytes = std::io::copy(&mut decoder, output)?;
@@ -106,6 +107,7 @@ pub(crate) mod internal {
     }
 
     /// Compress via Brotli
+    #[inline(always)]
     pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
         let mut encoder = brotli::CompressorReader::new(input, BUF_SIZE, level, LGWIN);

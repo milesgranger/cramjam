@@ -95,6 +95,7 @@ pub(crate) mod internal {
     use std::io::{Cursor, Error};
 
     /// Decompress gzip data
+    #[inline(always)]
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = MultiGzDecoder::new(input);
         let mut out = vec![];
@@ -104,6 +105,7 @@ pub(crate) mod internal {
     }
 
     /// Compress gzip data
+    #[inline(always)]
     pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
         let mut encoder = GzEncoder::new(input, Compression::new(level));
