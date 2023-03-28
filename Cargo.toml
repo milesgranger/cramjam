@@ -27,7 +27,7 @@ snap = "^1"
 brotli = { version = "^3", default-features = false, features = ["std"] }
 bzip2 = "^0.4"
 lz4 = "^1"
-flate2 = { version = "1.0.25", features = ["zlib-ng"], default-features = false }
+flate2 = "1.0.25"
 zstd = "0.11.1+zstd.1.5.2"
 numpy = "^0.18"
 
