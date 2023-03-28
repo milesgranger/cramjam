@@ -214,7 +214,7 @@ pub fn compress_block_bound(src: BytesType) -> PyResult<usize> {
     block::compress_bound(src.len()).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
 }
 
-/// Snappy Compressor object for streaming compression
+/// lz4 Compressor object for streaming compression
 #[pyclass]
 pub struct Compressor {
     inner: Option<lz4::Encoder<Cursor<Vec<u8>>>>,

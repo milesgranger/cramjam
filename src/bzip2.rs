@@ -96,6 +96,7 @@ pub(crate) mod internal {
     use std::io::Error;
 
     /// Decompress via bzip2
+    #[inline(always)]
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = MultiBzDecoder::new(input);
         let n_bytes = std::io::copy(&mut decoder, output)?;
@@ -103,6 +104,7 @@ pub(crate) mod internal {
     }
 
     /// Compress via bzip2
+    #[inline(always)]
     pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
         let mut encoder = BzEncoder::new(input, bzip2::Compression::new(level));

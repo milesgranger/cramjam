@@ -256,14 +256,6 @@ macro_rules! generic {
     }
 }
 
-/// Macro to convert an error into a specific Python exception.
-#[macro_export]
-macro_rules! to_py_err {
-    ($error:ident -> $expr:expr) => {
-        $expr.map_err(|err| PyErr::new::<$error, _>(err.to_string()))
-    };
-}
-
 macro_rules! make_submodule {
     ($py:ident -> $parent:ident -> $submodule:ident) => {
         let sub_mod = PyModule::new($py, stringify!($submodule))?;

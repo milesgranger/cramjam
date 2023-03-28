@@ -103,7 +103,7 @@ dependencies = [
 
 [[package]]
 name = "cramjam"
-version = "2.6.2"
+version = "2.6.3"
 dependencies = [
  "brotli",
  "bzip2",

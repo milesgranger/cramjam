@@ -579,10 +579,9 @@ impl Read for RustyFile {
 #[inline(always)]
 pub(crate) fn stream_compress<W: Write>(encoder: &mut Option<W>, input: &[u8]) -> PyResult<usize> {
     match encoder {
-        Some(encoder) => {
-            let result = std::io::copy(&mut Cursor::new(input), encoder).map(|v| v as usize);
-            crate::to_py_err!(CompressionError -> result)
-        }
+        Some(encoder) => std::io::copy(&mut Cursor::new(input), encoder)
+            .map(|v| v as usize)
+            .map_err(CompressionError::from_err),
         None => Err(CompressionError::new_err(
             "Compressor looks to have been consumed via `finish()`. \
             please create a new compressor instance.",
@@ -606,7 +605,7 @@ where
 
     match detached_encoder {
         Some(encoder) => {
-            let result = crate::to_py_err!(CompressionError -> into_vec(encoder))?;
+            let result = into_vec(encoder).map_err(CompressionError::from_err)?;
             Ok(RustyBuffer::from(result))
         }
         None => Ok(RustyBuffer::from(vec![])),
@@ -622,7 +621,7 @@ where
 {
     match encoder {
         Some(inner) => {
-            crate::to_py_err!(CompressionError -> inner.flush())?;
+            inner.flush().map_err(CompressionError::from_err)?;
             let cursor = cursor_mut_ref(inner);
             let buf = RustyBuffer::from(cursor.get_ref().clone());
             cursor.get_mut().truncate(0);
