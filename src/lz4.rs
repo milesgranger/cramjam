@@ -24,6 +24,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress_block_bound, m)?)?;
 
     m.add_class::<Compressor>()?;
+    m.add_class::<Decompressor>()?;
     Ok(())
 }
 
@@ -256,6 +257,8 @@ impl Compressor {
         })
     }
 }
+
+crate::make_decompressor!();
 
 pub(crate) mod internal {
     use crate::lz4::DEFAULT_COMPRESSION_LEVEL;

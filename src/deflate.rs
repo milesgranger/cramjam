@@ -15,6 +15,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress_into, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_into, m)?)?;
     m.add_class::<Compressor>()?;
+    m.add_class::<Decompressor>()?;
     Ok(())
 }
 
@@ -88,6 +89,8 @@ impl Compressor {
         crate::io::stream_finish(&mut self.inner, |inner| inner.finish().map(|c| c.into_inner()))
     }
 }
+
+crate::make_decompressor!();
 
 pub(crate) mod internal {
 

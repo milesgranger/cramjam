@@ -23,7 +23,9 @@ def plaintext(integration_dir):
 Variant = namedtuple("Variant", ("name", "suffix"))
 
 
-@pytest.mark.skipif(sys.platform.startswith("win"), reason="Bytes comparison fails on windows")
+@pytest.mark.skipif(
+    sys.platform.startswith("win"), reason="Bytes comparison fails on windows"
+)
 @pytest.mark.parametrize(
     "variant",
     (

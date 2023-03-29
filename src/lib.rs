@@ -256,6 +256,100 @@ macro_rules! generic {
     }
 }
 
+/// Generate a `Decompressor` from a library's decompressor which implements Read
+#[macro_export]
+macro_rules! make_decompressor {
+    () => {
+        /// Decompressor object for streaming decompression
+        /// **NB** This is mostly here for API complement to `Compressor`
+        /// You'll almost always be statisfied with `de/compress` / `de/compress_into` functions.
+        #[pyclass]
+        pub struct Decompressor {
+            inner: Option<Cursor<Vec<u8>>>,
+        }
+        #[pymethods]
+        impl Decompressor {
+            /// Initialize a new `Decompressor` instance.
+            #[new]
+            pub fn __init__() -> PyResult<Self> {
+                Ok(Self {
+                    inner: Some(Default::default()),
+                })
+            }
+
+            /// Length of internal buffer containing decompressed data.
+            pub fn len(&self) -> usize {
+                self.inner
+                    .as_ref()
+                    .map(|c| c.get_ref().len())
+                    .unwrap_or_else(|| 0)
+            }
+
+            /// Decompress this input into the inner buffer.
+            pub fn decompress(&mut self, py: Python, mut input: BytesType) -> PyResult<usize> {
+                match self.inner.as_mut() {
+                    Some(ref mut inner) => match &mut input {
+                        BytesType::RustyFile(f) => {
+                            let mut borrowed = f.borrow_mut();
+                            let f_in = &mut borrowed.inner;
+                            py.allow_threads(|| internal::decompress(f_in, inner).map_err(Into::into))
+                        }
+                        _ => {
+                            let bytes = input.as_bytes();
+                            py.allow_threads(|| internal::decompress(&mut Cursor::new(bytes), inner).map_err(Into::into))
+                        }
+                    },
+                    None => Err(DecompressionError::new_err(
+                        "Appears `finish()` was called on this instance",
+                    )),
+                }
+            }
+
+            /// Flush and return current decompressed stream.
+            pub fn flush(&mut self) -> PyResult<RustyBuffer> {
+                match self.inner.as_mut() {
+                    Some(ref mut inner) => {
+                        let mut out = vec![];
+                        std::mem::swap(&mut out, inner.get_mut());
+                        inner.set_position(0);
+                        Ok(RustyBuffer::from(out))
+                    }
+                    None => Err(DecompressionError::new_err(
+                        "Appears `finish()` was called on this instance",
+                    )),
+                }
+            }
+
+            /// Consume the current Decompressor state and return the decompressed stream
+            /// **NB** The Decompressor will not be usable after this method is called.
+            pub fn finish(&mut self) -> PyResult<RustyBuffer> {
+                match std::mem::take(&mut self.inner) {
+                    Some(inner) => Ok(RustyBuffer::from(inner.into_inner())),
+                    None => Err(DecompressionError::new_err(
+                        "Appears `finish()` was called on this instance",
+                    )),
+                }
+            }
+
+            fn __len__(&self) -> usize {
+                self.len()
+            }
+            fn __contains__(&self, x: u8) -> bool {
+                self.inner
+                    .as_ref()
+                    .map(|c| c.get_ref().contains(&x))
+                    .unwrap_or_else(|| false)
+            }
+            fn __repr__(&self) -> String {
+                format!("Decompressor<len={}>", self.len())
+            }
+            fn __bool__(&self) -> bool {
+                self.inner.is_some() && self.len() > 0
+            }
+        }
+    };
+}
+
 macro_rules! make_submodule {
     ($py:ident -> $parent:ident -> $submodule:ident) => {
         let sub_mod = PyModule::new($py, stringify!($submodule))?;
