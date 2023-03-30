@@ -106,7 +106,7 @@ def test_cramjam_snappy_de_compress_into(benchmark, op, file):
     from cramjam import snappy
 
     data = file.read_bytes()
-    compressed_data = cramjam.snappy.compress(data)
+    compressed_data = bytes(cramjam.snappy.compress(data))
 
     operation = getattr(snappy, op)
     buffer = np.zeros(
