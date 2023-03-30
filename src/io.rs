@@ -457,8 +457,9 @@ impl RustyBuffer {
     fn __len__(&self) -> usize {
         self.len()
     }
-    fn __contains__(&self, x: u8) -> bool {
-        self.inner.get_ref().contains(&x)
+    fn __contains__(&self, py: Python, x: BytesType) -> bool {
+        let bytes = x.as_bytes();
+        py.allow_threads(|| self.inner.get_ref().windows(bytes.len()).any(|w| w == bytes))
     }
     fn __repr__(&self) -> String {
         format!("cramjam.Buffer(len={:?})", self.len())

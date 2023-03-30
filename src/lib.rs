@@ -334,11 +334,14 @@ macro_rules! make_decompressor {
             fn __len__(&self) -> usize {
                 self.len()
             }
-            fn __contains__(&self, x: u8) -> bool {
-                self.inner
-                    .as_ref()
-                    .map(|c| c.get_ref().contains(&x))
-                    .unwrap_or_else(|| false)
+            fn __contains__(&self, py: Python, x: BytesType) -> bool {
+                let bytes = x.as_bytes();
+                py.allow_threads(|| {
+                    self.inner
+                        .as_ref()
+                        .map(|c| c.get_ref().windows(bytes.len()).any(|w| w == bytes))
+                        .unwrap_or_else(|| false)
+                })
             }
             fn __repr__(&self) -> String {
                 format!("Decompressor<len={}>", self.len())
