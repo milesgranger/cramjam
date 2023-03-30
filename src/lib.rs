@@ -208,17 +208,15 @@ macro_rules! generic {
                     let file = &borrowed.inner;
                     $py.allow_threads(|| {
                         $op(file, &mut Cursor::new(&mut output) $(, $level)? )
-                    })?;
+                    })
                 },
                 _ => {
                     let bytes = $input.as_bytes();
                     $py.allow_threads(|| {
                         $op(bytes, &mut Cursor::new(&mut output) $(, $level)? )
-                    })?;
+                    })
                 }
-
-            }
-            Ok(RustyBuffer::from(output))
+            }.map(|_| RustyBuffer::from(output))
         }
     };
     // de/compress_into

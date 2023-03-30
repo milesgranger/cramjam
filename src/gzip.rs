@@ -28,7 +28,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// ```
 #[pyfunction]
 pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(py, internal::decompress[data], output_len = output_len)
+    crate::generic!(py, internal::decompress[data], output_len = output_len).map_err(DecompressionError::from_err)
 }
 
 /// Gzip compression.
@@ -41,6 +41,7 @@ pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyR
 #[pyfunction]
 pub fn compress(py: Python, data: BytesType, level: Option<u32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     crate::generic!(py, internal::compress[data], output_len = output_len, level = level)
+        .map_err(CompressionError::from_err)
 }
 
 /// Compress directly into an output buffer
