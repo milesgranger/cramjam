@@ -236,20 +236,45 @@ macro_rules! generic {
                                 $op(f_in, &mut f_out $(, $level)? )
                             })
                         },
+                        BytesType::RustyBuffer(buffer) => {
+                            let mut borrowed = buffer.borrow_mut();
+                            let mut buf_out = &mut borrowed.inner;
+                            $py.allow_threads(|| {
+                                $op(f_in, &mut buf_out $(, $level)? )
+                            })
+                        }
                         _ => {
                             let bytes_out = $output.as_bytes_mut();
                             $py.allow_threads(|| {
-                                $op(f_in, &mut Cursor::new(bytes_out) $(, $level)?)
+                                $op(f_in, &mut Cursor::new(bytes_out) $(, $level)? )
                             })
                         }
                     }
                 },
                 _ =>  {
                     let bytes_in = $input.as_bytes();
-                    let bytes_out = $output.as_bytes_mut();
-                    $py.allow_threads(|| {
-                        $op(bytes_in, &mut Cursor::new(bytes_out) $(, $level)?)
-                    })
+                    match $output {
+                        BytesType::RustyFile(f) => {
+                            let mut borrowed = f.borrow_mut();
+                            let mut f_out = &mut borrowed.inner;
+                            $py.allow_threads(|| {
+                                $op(bytes_in, &mut f_out $(, $level)? )
+                            })
+                        },
+                        BytesType::RustyBuffer(buffer) => {
+                            let mut borrowed = buffer.borrow_mut();
+                            let mut buf_out = &mut borrowed.inner;
+                            $py.allow_threads(|| {
+                                $op(bytes_in, &mut buf_out $(, $level)? )
+                            })
+                        },
+                        _ => {
+                            let bytes_out = $output.as_bytes_mut();
+                            $py.allow_threads(|| {
+                                $op(bytes_in, &mut Cursor::new(bytes_out) $(, $level)?)
+                            })
+                        }
+                    }
                 }
             }
         }
