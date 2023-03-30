@@ -12,8 +12,7 @@ readme = "README.md"
 crate-type = ["cdylib"]
 
 [features]
-default = ["mimallocator", "extension-module"]
-mimallocator = ["mimalloc"]
+default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
 
 [profile.release]
@@ -30,9 +29,3 @@ lz4 = "^1"
 flate2 = "1.0.25"
 zstd = "0.11.1+zstd.1.5.2"
 numpy = "^0.18"
-
-[dependencies.mimalloc]
-version = "0.1.34"
-default-features = false
-optional = true
- 

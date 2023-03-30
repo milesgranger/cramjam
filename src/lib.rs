@@ -67,10 +67,6 @@ use crate::io::{AsBytes, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArr
 use exceptions::{CompressionError, DecompressionError};
 use std::io::{Read, Seek, SeekFrom, Write};
 
-#[cfg(feature = "mimallocator")]
-#[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
-
 /// Any possible input/output to de/compression algorithms.
 /// Typically, as a Python user, you never have to worry about this object. It's exposed here in
 /// the documentation to see what types are acceptable for de/compression functions.

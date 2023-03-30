@@ -158,7 +158,7 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist --no-default-features --features=extension-module  # disable mimallocator
+        args: -i ${{ matrix.python }} --release --out dist
     - uses: uraimo/run-on-arch-action@v2.3.0
       # skipped cross compiled pypy wheel tests for now
       if: ${{ !startsWith(matrix.python, 'pypy') }}
@@ -207,7 +207,7 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist --no-default-features --features=extension-module  # disable mimallocator
+        args: -i ${{ matrix.python }} --release --out dist
     - name: Python UnitTest
       run: |
         pip install cramjam --no-index --find-links dist
