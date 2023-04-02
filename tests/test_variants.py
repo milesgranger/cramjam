@@ -316,3 +316,24 @@ def test_streams_compressor(mod, first: bytes, second: bytes):
     # compress will raise an error as the stream is completed
     with pytest.raises(cramjam.CompressionError):
         compressor.compress(b"data")
+
+
+@pytest.mark.parametrize("variant_str", VARIANTS)
+def test_variants_stream_decompressors(variant_str):
+    variant = getattr(cramjam, variant_str)
+    Decompressor = getattr(variant, "Decompressor")
+    decompressor = Decompressor()
+
+    compressed = variant.compress(b"bytes")
+    for _ in range(2):
+        n_bytes = decompressor.decompress(bytes(compressed))
+        assert n_bytes == 5
+    assert bytes(decompressor.flush()) == b"bytesbytes"
+    assert bytes(decompressor.flush()) == b""
+
+    decompressor.decompress(bytes(compressed))
+    assert bytes(decompressor.finish()) == b"bytes"
+
+    # Calling .finish renders decompressor unusable after. (API consistency with other libs)
+    with pytest.raises(cramjam.DecompressionError):
+        decompressor.finish()

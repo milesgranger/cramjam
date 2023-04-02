@@ -1,7 +1,7 @@
 //! bzip2 de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::RustyBuffer;
-use crate::{to_py_err, BytesType};
+use crate::{AsBytes, BytesType};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
@@ -15,6 +15,7 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(compress_into, m)?)?;
     m.add_function(wrap_pyfunction!(decompress_into, m)?)?;
     m.add_class::<Compressor>()?;
+    m.add_class::<Decompressor>()?;
     Ok(())
 }
 
@@ -26,8 +27,8 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// >>> cramjam.bzip2.decompress(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
-pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(decompress(data), output_len = output_len)
+pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(py, internal::decompress[data], output_len = output_len).map_err(DecompressionError::from_err)
 }
 
 /// bzip2 compression.
@@ -38,22 +39,21 @@ pub fn decompress(data: BytesType, output_len: Option<usize>) -> PyResult<RustyB
 /// >>> cramjam.bzip2.compress(b'some bytes here', level=6, output_len=Option[int])  # level defaults to 6
 /// ```
 #[pyfunction]
-pub fn compress(data: BytesType, level: Option<u32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(compress(data), output_len = output_len, level = level)
+pub fn compress(py: Python, data: BytesType, level: Option<u32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    crate::generic!(py, internal::compress[data], output_len = output_len, level = level)
+        .map_err(CompressionError::from_err)
 }
 
 /// Compress directly into an output buffer
 #[pyfunction]
-pub fn compress_into(input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
-    let r = internal::compress(input, &mut output, level)?;
-    Ok(r)
+pub fn compress_into(py: Python, input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
+    crate::generic!(py, internal::compress[input, output], level = level).map_err(CompressionError::from_err)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
-pub fn decompress_into(input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    let r = internal::decompress(input, &mut output)?;
-    Ok(r)
+pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
+    crate::generic!(py, internal::decompress[input, output]).map_err(DecompressionError::from_err)
 }
 
 /// bzip2 Compressor object for streaming compression
@@ -90,6 +90,8 @@ impl Compressor {
     }
 }
 
+crate::make_decompressor!();
+
 pub(crate) mod internal {
 
     use super::DEFAULT_COMPRESSION_LEVEL;
@@ -98,6 +100,7 @@ pub(crate) mod internal {
     use std::io::Error;
 
     /// Decompress via bzip2
+    #[inline(always)]
     pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
         let mut decoder = MultiBzDecoder::new(input);
         let n_bytes = std::io::copy(&mut decoder, output)?;
@@ -105,6 +108,7 @@ pub(crate) mod internal {
     }
 
     /// Compress via bzip2
+    #[inline(always)]
     pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Option<u32>) -> Result<usize, Error> {
         let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
         let mut encoder = BzEncoder::new(input, bzip2::Compression::new(level));

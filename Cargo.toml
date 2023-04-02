@@ -1,6 +1,6 @@
 [package]
 name = "cramjam"
-version = "2.6.2"
+version = "2.7.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -12,8 +12,7 @@ readme = "README.md"
 crate-type = ["cdylib"]
 
 [features]
-default = ["mimallocator", "extension-module"]
-mimallocator = ["mimalloc"]
+default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
 
 [profile.release]
@@ -22,16 +21,11 @@ codegen-units = 1
 opt-level = 3
 
 [dependencies]
-pyo3 = { version = "^0.17", default-features = false, features = ["macros"] }
+pyo3 = { version = "^0.18", default-features = false, features = ["macros"] }
 snap = "^1"
 brotli = { version = "^3", default-features = false, features = ["std"] }
 bzip2 = "^0.4"
 lz4 = "^1"
-flate2 = "^1"
+flate2 = "1.0.25"
 zstd = "0.11.1+zstd.1.5.2"
-numpy = "^0.17"
-
-[dependencies.mimalloc]
-version = "0.1.24"
-default-features = false
-optional = true
+numpy = "^0.18"
