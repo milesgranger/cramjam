@@ -63,8 +63,8 @@ pub mod zstd;
 
 use pyo3::prelude::*;
 
-use crate::io::{AsBytes, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
-use exceptions::{CompressionError, DecompressionError};
+pub use crate::exceptions::{CompressionError, DecompressionError};
+pub use crate::io::{AsBytes, RustyBuffer, RustyFile, RustyNumpyArray, RustyPyByteArray, RustyPyBytes};
 use std::io::{Read, Seek, SeekFrom, Write};
 
 /// Any possible input/output to de/compression algorithms.
@@ -169,7 +169,8 @@ impl<'a> Seek for BytesType<'a> {
 }
 
 impl<'a> BytesType<'a> {
-    fn len(&self) -> usize {
+    /// Refers to the length of bytes for the underlying variant.
+    pub fn len(&self) -> usize {
         self.as_bytes().len()
     }
 }
@@ -395,6 +396,9 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> deflate);
     make_submodule!(py -> m -> zstd);
 
+    if let Ok(lzo) = PyModule::import(py, "cramjam_lzo") {
+        m.add("lzo", lzo)?;
+    }
     Ok(())
 }
 

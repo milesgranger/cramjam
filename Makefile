@@ -42,5 +42,10 @@ dev-install:
 	pip uninstall cramjam -y
 	pip install cramjam --no-index --find-links dist/
 
+lzo-install:
+	maturin build --manifest-path cramjam-lzo/Cargo.toml --release --out dist --no-sdist --interpreter $(shell which python)
+	pip uninstall cramjam-lzo -y
+	pip install cramjam-lzo --no-index --find-links dist/
+
 pypy-build:
 	maturin build -i $(shell which pypy) --release --out dist
