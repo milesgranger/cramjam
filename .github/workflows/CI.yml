@@ -122,11 +122,6 @@ jobs:
         pip install cramjam --no-index --find-links dist --force-reinstall
         pip install -r dev-requirements.txt
         make test
-    - name: Test no numpy installed works
-      if: matrix.target == 'x86_64'
-      run: |
-        pip uninstall numpy -y
-        python -m pytest tests/test_no_numpy.py
     - name: Upload wheels
       uses: actions/upload-artifact@v3
       with:

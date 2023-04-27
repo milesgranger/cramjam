@@ -56,10 +56,10 @@ def test_variants_raise_exception(variant_str):
 
 
 @pytest.mark.parametrize(
-    "input_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File)
+    "input_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize(
-    "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File)
+    "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
@@ -113,10 +113,10 @@ def test_variants_compress_into(
 
 
 @pytest.mark.parametrize(
-    "input_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File)
+    "input_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize(
-    "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File)
+    "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())

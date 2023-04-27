@@ -2,194 +2,23 @@
 //! which wrap native Python objects to provide additional functionality
 //! or tighter integration with de/compression algorithms.
 //!
+use std::convert::TryFrom;
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
 use std::os::raw::c_int;
 
 use crate::exceptions::CompressionError;
 use crate::BytesType;
-use numpy::PyArray1;
+use pyo3::buffer::{Element, PyBuffer};
+use pyo3::exceptions::PyBufferError;
 use pyo3::prelude::*;
-use pyo3::types::{PyByteArray, PyBytes};
+use pyo3::types::PyBytes;
 use pyo3::{ffi, AsPyPointer};
 use std::path::PathBuf;
 
 pub(crate) trait AsBytes {
     fn as_bytes(&self) -> &[u8];
     fn as_bytes_mut(&mut self) -> &mut [u8];
-}
-
-/// Internal wrapper for `numpy.array`/`PyArray1`, to provide Read + Write and other traits
-pub struct RustyNumpyArray<'a> {
-    pub(crate) inner: &'a PyArray1<u8>,
-    pub(crate) cursor: Cursor<&'a mut [u8]>,
-}
-impl<'a> AsBytes for RustyNumpyArray<'a> {
-    fn as_bytes(&self) -> &[u8] {
-        self.cursor.get_ref().as_ref()
-    }
-    fn as_bytes_mut(&mut self) -> &mut [u8] {
-        self.cursor.get_mut()
-    }
-}
-impl<'a> RustyNumpyArray<'a> {
-    pub(crate) fn as_bytes(&self) -> &[u8] {
-        unsafe { self.inner.as_slice().unwrap() }
-    }
-}
-impl<'a> From<&'a PyArray1<u8>> for RustyNumpyArray<'a> {
-    fn from(inner: &'a PyArray1<u8>) -> Self {
-        Self {
-            inner,
-            cursor: Cursor::new(unsafe { inner.as_slice_mut().unwrap() }),
-        }
-    }
-}
-impl<'a> FromPyObject<'a> for RustyNumpyArray<'a> {
-    fn extract(ob: &'a PyAny) -> PyResult<Self> {
-        let pybytes: &PyArray1<u8> = ob.extract()?;
-        Ok(Self::from(pybytes))
-    }
-}
-impl<'a> ToPyObject for RustyNumpyArray<'a> {
-    fn to_object(&self, py: Python<'_>) -> PyObject {
-        self.inner.to_object(py)
-    }
-}
-impl<'a> Write for RustyNumpyArray<'a> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.cursor.write(buf)
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.cursor.flush()
-    }
-}
-impl<'a> Read for RustyNumpyArray<'a> {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.cursor.read(buf)
-    }
-}
-
-impl<'a> Seek for RustyNumpyArray<'a> {
-    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        self.cursor.seek(pos)
-    }
-}
-
-/// Internal wrapper for `bytes`/`PyBytes`, to provide Read + Write and other traits
-pub struct RustyPyBytes<'a> {
-    pub(crate) inner: &'a PyBytes,
-    pub(crate) cursor: Cursor<&'a mut [u8]>,
-}
-impl<'a> AsBytes for RustyPyBytes<'a> {
-    fn as_bytes(&self) -> &[u8] {
-        self.inner.as_bytes()
-    }
-    fn as_bytes_mut(&mut self) -> &mut [u8] {
-        self.cursor.get_mut()
-    }
-}
-impl<'a> From<&'a PyBytes> for RustyPyBytes<'a> {
-    fn from(inner: &'a PyBytes) -> Self {
-        let ptr = inner.as_bytes().as_ptr();
-        Self {
-            inner,
-            cursor: Cursor::new(unsafe { std::slice::from_raw_parts_mut(ptr as *mut _, inner.as_bytes().len()) }),
-        }
-    }
-}
-impl<'a> FromPyObject<'a> for RustyPyBytes<'a> {
-    fn extract(ob: &'a PyAny) -> PyResult<Self> {
-        let pybytes: &PyBytes = ob.extract()?;
-        Ok(Self::from(pybytes))
-    }
-}
-impl<'a> ToPyObject for RustyPyBytes<'a> {
-    fn to_object(&self, py: Python<'_>) -> PyObject {
-        self.inner.to_object(py)
-    }
-}
-impl<'a> Read for RustyPyBytes<'a> {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.cursor.read(buf)
-    }
-}
-impl<'a> Write for RustyPyBytes<'a> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.cursor.write(buf)
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        self.cursor.flush()
-    }
-}
-impl<'a> Seek for RustyPyBytes<'a> {
-    fn seek(&mut self, style: SeekFrom) -> std::io::Result<u64> {
-        self.cursor.seek(style)
-    }
-}
-
-/// Internal wrapper for `bytearray`/`PyByteArray`, to provide Read + Write and other traits
-pub struct RustyPyByteArray<'a> {
-    pub(crate) inner: &'a PyByteArray,
-    pub(crate) cursor: Cursor<&'a mut [u8]>,
-}
-impl<'a> AsBytes for RustyPyByteArray<'a> {
-    fn as_bytes(&self) -> &[u8] {
-        self.cursor.get_ref()
-    }
-    fn as_bytes_mut(&mut self) -> &mut [u8] {
-        self.cursor.get_mut()
-    }
-}
-impl<'a> From<&'a PyByteArray> for RustyPyByteArray<'a> {
-    fn from(inner: &'a PyByteArray) -> Self {
-        Self {
-            inner,
-            cursor: Cursor::new(unsafe { inner.as_bytes_mut() }),
-        }
-    }
-}
-impl<'a> FromPyObject<'a> for RustyPyByteArray<'a> {
-    fn extract(ob: &'a PyAny) -> PyResult<Self> {
-        let pybytes: &PyByteArray = ob.extract()?;
-        Ok(Self::from(pybytes))
-    }
-}
-impl<'a> ToPyObject for RustyPyByteArray<'a> {
-    fn to_object(&self, py: Python<'_>) -> PyObject {
-        self.inner.to_object(py)
-    }
-}
-impl<'a> Write for RustyPyByteArray<'a> {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        if (self.cursor.position() as usize + buf.len()) > self.inner.len() {
-            let previous_pos = self.cursor.position();
-            self.inner.resize(self.cursor.position() as usize + buf.len()).unwrap();
-            self.cursor = Cursor::new(unsafe { self.inner.as_bytes_mut() });
-            self.cursor.set_position(previous_pos);
-        }
-        self.cursor.write(buf)
-    }
-    fn flush(&mut self) -> std::io::Result<()> {
-        if self.inner.len() != self.cursor.position() as usize {
-            let prev_pos = self.cursor.position();
-            self.inner.resize(self.cursor.position() as usize).unwrap();
-            self.cursor = Cursor::new(unsafe { self.inner.as_bytes_mut() });
-            self.cursor.set_position(prev_pos);
-        }
-        Ok(())
-    }
-}
-impl<'a> Read for RustyPyByteArray<'a> {
-    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.cursor.read(buf)
-    }
-}
-
-impl<'a> Seek for RustyPyByteArray<'a> {
-    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        self.cursor.seek(pos)
-    }
 }
 
 /// A native Rust file-like object. Reading and writing takes place
@@ -327,7 +156,7 @@ impl RustyFile {
             Some(path) => path.to_string(),
             None => self.path.to_string_lossy().to_string(),
         };
-        let repr = format!("cramjam.File(path={}, len={:?})", path, self.len()?);
+        let repr = format!("cramjam.File<path={}, len={:?}>", path, self.len()?);
         Ok(repr)
     }
     fn __bool__(&self) -> PyResult<bool> {
@@ -335,6 +164,97 @@ impl RustyFile {
     }
     fn __len__(&self) -> PyResult<usize> {
         self.len()
+    }
+}
+
+/// Internal wrapper to PyBuffer, not exposed thru API
+/// used only for impl of Read/Write
+pub struct PythonBuffer<T: Element> {
+    pub(crate) inner: PyBuffer<T>,
+    pub(crate) pos: usize,
+}
+impl<T: Element> PythonBuffer<T> {
+    /// Reset the read/write position of cursor
+    pub fn reset_position(&mut self) {
+        self.pos = 0;
+    }
+    /// Explicitly set the position of the cursor
+    pub fn set_position(&mut self, pos: usize) {
+        self.pos = pos;
+    }
+    /// Get the current position of the cursor
+    pub fn position(&self) -> usize {
+        self.pos
+    }
+    /// Is the Python buffer readonly
+    pub fn readonly(&self) -> bool {
+        self.inner.readonly()
+    }
+    /// Get the underlying buffer as a slice of bytes
+    pub fn as_slice(&self) -> &[u8] {
+        unsafe { std::slice::from_raw_parts(self.inner.buf_ptr() as *const u8, self.inner.len_bytes()) }
+    }
+    /// Get the underlying buffer as a mutable slice of bytes
+    pub fn as_slice_mut(&mut self) -> PyResult<&mut [u8]> {
+        // TODO: For v3 release, add self.readonly check; bytes is readonly but
+        // v1 and v2 releases have not treated it as such.
+        Ok(unsafe { std::slice::from_raw_parts_mut(self.inner.buf_ptr() as *mut u8, self.inner.len_bytes()) })
+    }
+}
+
+impl<'py, T: Element> FromPyObject<'py> for PythonBuffer<T> {
+    fn extract(obj: &'py PyAny) -> PyResult<Self> {
+        let buf = PyBuffer::get(obj)?;
+        PythonBuffer::try_from(buf)
+    }
+}
+
+impl<T: Element> TryFrom<PyBuffer<T>> for PythonBuffer<T> {
+    type Error = PyErr;
+    fn try_from(buf: PyBuffer<T>) -> Result<Self, Self::Error> {
+        if !buf.is_c_contiguous() {
+            Err(PyBufferError::new_err("Buffer is not C contiguous"))
+        } else if buf.dimensions() != 1 {
+            Err(PyBufferError::new_err("Buffer is not 1 dimensional"))
+        } else {
+            Ok(Self { inner: buf, pos: 0 })
+        }
+    }
+}
+
+impl<T: Element> Read for PythonBuffer<T> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let slice = self.as_slice();
+        if self.pos < slice.len() {
+            let nbytes = (&slice[self.pos..]).read(buf)?;
+            self.pos += nbytes;
+            Ok(nbytes)
+        } else {
+            Ok(0)
+        }
+    }
+}
+
+impl<T: Element> Write for PythonBuffer<T> {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let pos = self.position();
+        let slice = self
+            .as_slice_mut()
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        let len = slice.len();
+
+        if pos < slice.len() {
+            let nbytes = std::cmp::min(len - pos, buf.len());
+            slice[pos..pos + nbytes].copy_from_slice(&buf[..nbytes]);
+            self.pos += nbytes;
+            Ok(nbytes)
+        } else {
+            Ok(0)
+        }
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }
 
@@ -462,7 +382,7 @@ impl RustyBuffer {
         py.allow_threads(|| self.inner.get_ref().windows(bytes.len()).any(|w| w == bytes))
     }
     fn __repr__(&self) -> String {
-        format!("cramjam.Buffer(len={:?})", self.len())
+        format!("cramjam.Buffer<len={:?}>", self.len())
     }
     fn __bool__(&self) -> bool {
         self.len() > 0
@@ -483,7 +403,7 @@ impl RustyBuffer {
 
         (*view).buf = bytes.as_ptr() as *mut std::os::raw::c_void;
         (*view).len = bytes.len() as isize;
-        (*view).readonly = 1;
+        (*view).readonly = 0;
         (*view).itemsize = 1;
 
         (*view).format = std::ptr::null_mut();
@@ -512,14 +432,9 @@ impl RustyBuffer {
 
 fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64> {
     let result = match input {
+        BytesType::RustyBuffer(buf) => copy(&mut buf.borrow_mut().inner, output)?,
         BytesType::RustyFile(data) => copy(&mut data.borrow_mut().inner, output)?,
-        BytesType::RustyBuffer(data) => copy(&mut data.borrow_mut().inner, output)?,
-        BytesType::ByteArray(data) => copy(data, output)?,
-        BytesType::NumpyArray(array) => copy(array, output)?,
-        BytesType::Bytes(data) => {
-            let buffer = data.as_bytes();
-            copy(&mut Cursor::new(buffer), output)?
-        }
+        BytesType::PyBuffer(buf) => copy(buf, output)?,
     };
     Ok(result)
 }
@@ -546,6 +461,18 @@ impl Seek for RustyBuffer {
 impl Seek for RustyFile {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         self.inner.seek(pos)
+    }
+}
+impl<T: Element> Seek for PythonBuffer<T> {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        let len = self.inner.len_bytes();
+        let current = self.position();
+        match pos {
+            SeekFrom::Start(n) => self.set_position(n as usize),
+            SeekFrom::End(n) => self.set_position((len as i64 - n) as usize),
+            SeekFrom::Current(n) => self.set_position((current as i64 + n) as usize),
+        }
+        Ok(self.position() as _)
     }
 }
 impl Write for RustyBuffer {
