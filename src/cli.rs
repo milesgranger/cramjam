@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::fs::File;
 use std::time::{Duration, Instant};
 
@@ -24,29 +25,47 @@ struct Cli {
     codec: String,
     #[arg(help = "Either 'compress' or 'decompress'")]
     action: String,
-    #[arg(help = "Input file")]
-    input: String,
-    #[arg(help = "Output file")]
-    output: String,
+    #[arg(short, long, help = "Input file, if empty then read from stdin")]
+    input: Option<String>,
+    #[arg(short, long, help = "Output file, if empty then write to stdout")]
+    output: Option<String>,
     #[arg(short, long, help = "Compression level, if relevant to the algorithm")]
     level: Option<isize>,
     #[arg(short, long, help = "Remove all informational output", action = clap::ArgAction::SetTrue)]
     quiet: bool,
 }
 
+trait ReadableDowncast: Read + Any {
+    fn as_any(&self) -> &dyn Any;
+}
+impl<T: Read + Any> ReadableDowncast for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
 #[pyfunction]
 pub fn main() -> PyResult<()> {
     let m = Cli::parse();
 
-    let input = File::open(m.input)?;
-    let mut output = File::create(m.output)?;
-    let len_result = input.metadata().map(|m| m.len());
+    let input: Box<dyn ReadableDowncast> = match m.input {
+        Some(path) => Box::new(File::open(path)?),
+        None => Box::new(std::io::stdin().lock()),
+    };
+    let mut output: Box<dyn Write> = match m.output {
+        Some(path) => Box::new(File::create(path)?),
+        None => Box::new(std::io::stdout().lock()),
+    };
+    let maybe_len = input
+        .as_any()
+        .downcast_ref::<&File>()
+        .map(|file| file.metadata().ok().map(|m| m.len()).unwrap_or_default());
 
     let start = Instant::now();
     let nbytes = match m.action.as_str() {
         "compress" => match m.codec.as_str() {
             "snappy" => snappy::internal::compress(input, &mut output),
-            "lz4" => lz4::internal::compress(input, &mut output, m.level.map(|v| v as _)),
+            // "lz4" => lz4::internal::compress(input, &mut output, m.level.map(|v| v as _)),
             "bzip2" => bzip2::internal::compress(input, &mut output, m.level.map(|v| v as _)),
             "gzip" => gzip::internal::compress(input, &mut output, m.level.map(|v| v as _)),
             "zstd" => zstd::internal::compress(input, &mut output, m.level.map(|v| v as _)),
@@ -73,7 +92,7 @@ pub fn main() -> PyResult<()> {
     let duration = start.elapsed();
 
     if !m.quiet {
-        if let Ok(len) = len_result {
+        if let Some(len) = maybe_len {
             println!("Input:      {}", ByteSize(len as _));
             println!("Output:     {}", ByteSize(nbytes as _));
             println!("Change:     {:.2}%", ((nbytes as f32 - len as f32) / len as f32) * 100.,);
