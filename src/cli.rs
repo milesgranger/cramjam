@@ -46,7 +46,7 @@ impl<T: Read + Any> ReadableDowncast for T {
 
 #[pyfunction]
 pub fn main() -> PyResult<()> {
-    let m = Cli::parse();
+    let mut m = Cli::parse();
 
     let input: Box<dyn ReadableDowncast> = match m.input {
         Some(path) => Box::new(File::open(path)?),
@@ -54,8 +54,15 @@ pub fn main() -> PyResult<()> {
     };
     let mut output: Box<dyn Write> = match m.output {
         Some(path) => Box::new(File::create(path)?),
-        None => Box::new(std::io::stdout().lock()),
+        None => {
+            // Don't echo anything into stdout;
+            // only de/compressed data goes there if that's the output
+            m.quiet = true;
+            Box::new(std::io::stdout().lock())
+        }
     };
+
+    // if input is a file, then we can probably get the input length for stats
     let maybe_len = input
         .as_any()
         .downcast_ref::<&File>()
