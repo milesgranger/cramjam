@@ -28,6 +28,8 @@ struct Cli {
     input: String,
     #[arg(help = "Output file")]
     output: String,
+    #[arg(short, long, help = "Compression level, if relevant to the algorithm")]
+    level: Option<isize>,
     #[arg(short, long, help = "Remove all informational output", action = clap::ArgAction::SetTrue)]
     quiet: bool,
 }
@@ -41,15 +43,40 @@ pub fn main() -> PyResult<()> {
     let len_result = input.metadata().map(|m| m.len());
 
     let start = Instant::now();
-
-    let nbytes = snappy::internal::compress(input, &mut output)?;
+    let nbytes = match m.action.as_str() {
+        "compress" => match m.codec.as_str() {
+            "snappy" => snappy::internal::compress(input, &mut output),
+            "lz4" => lz4::internal::compress(input, &mut output, m.level.map(|v| v as _)),
+            "bzip2" => bzip2::internal::compress(input, &mut output, m.level.map(|v| v as _)),
+            "gzip" => gzip::internal::compress(input, &mut output, m.level.map(|v| v as _)),
+            "zstd" => zstd::internal::compress(input, &mut output, m.level.map(|v| v as _)),
+            "deflate" => deflate::internal::compress(input, &mut output, m.level.map(|v| v as _)),
+            "brotli" => deflate::internal::compress(input, &mut output, m.level.map(|v| v as _)),
+            _ => return Err(pyo3::exceptions::PyValueError::new_err("codec not recognized")),
+        },
+        "decompress" => match m.codec.as_str() {
+            "snappy" => snappy::internal::decompress(input, &mut output),
+            "lz4" => lz4::internal::decompress(input, &mut output),
+            "bzip2" => lz4::internal::decompress(input, &mut output),
+            "gzip" => gzip::internal::decompress(input, &mut output),
+            "zstd" => zstd::internal::decompress(input, &mut output),
+            "deflate" => deflate::internal::decompress(input, &mut output),
+            "brotli" => deflate::internal::decompress(input, &mut output),
+            _ => return Err(pyo3::exceptions::PyValueError::new_err("codec not recognized")),
+        },
+        _ => {
+            return Err(pyo3::exceptions::PyValueError::new_err(
+                "'action' must be either 'compress' or 'decompress'",
+            ))
+        }
+    }?;
     let duration = start.elapsed();
 
     if !m.quiet {
         if let Ok(len) = len_result {
             println!("Input:      {}", ByteSize(len as _));
             println!("Output:     {}", ByteSize(nbytes as _));
-            println!("Reduction:  {:.2}%", (1. - (nbytes as f32 / len as f32)) * 100.,);
+            println!("Change:     {:.2}%", ((nbytes as f32 - len as f32) / len as f32) * 100.,);
             println!("Ratio:      {:.2}", (len as f32 / nbytes as f32));
             println!("Throughput: {}/sec", calc_throughput_sec(duration, len as _));
         }
