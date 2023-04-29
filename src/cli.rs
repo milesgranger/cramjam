@@ -46,12 +46,13 @@ pub fn main() -> PyResult<()> {
     let duration = start.elapsed();
 
     if !m.quiet {
-        let len = len_result?;
-        println!("Input:      {}", ByteSize(len as _));
-        println!("Output:     {}", ByteSize(nbytes as _));
-        println!("Reduction:  {:.2}%", (1. - (nbytes as f32 / len as f32)) * 100.,);
-        println!("Ratio:      {:.2}", (len as f32 / nbytes as f32));
-        println!("Throughput: {}/sec", calc_throughput_sec(duration, len as _));
+        if let Ok(len) = len_result {
+            println!("Input:      {}", ByteSize(len as _));
+            println!("Output:     {}", ByteSize(nbytes as _));
+            println!("Reduction:  {:.2}%", (1. - (nbytes as f32 / len as f32)) * 100.,);
+            println!("Ratio:      {:.2}", (len as f32 / nbytes as f32));
+            println!("Throughput: {}/sec", calc_throughput_sec(duration, len as _));
+        }
     }
     Ok(())
 }
