@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use bytesize::ByteSize;
@@ -36,26 +35,22 @@ struct Cli {
 #[pyfunction]
 pub fn main() -> PyResult<()> {
     let m = Cli::parse();
-    let input = PathBuf::from(m.input);
-    let output = PathBuf::from(m.output);
 
-    // if !input.is_file() {
-    //     panic!("Input is not a file");
-    // }
-
-    let input = File::open(input)?;
-    let mut output = File::create(output)?;
+    let input = File::open(m.input)?;
+    let mut output = File::create(m.output)?;
     let len_result = input.metadata().map(|m| m.len());
 
     let start = Instant::now();
+
     let nbytes = snappy::internal::compress(input, &mut output)?;
     let duration = start.elapsed();
+
     if !m.quiet {
         let len = len_result?;
         println!("Input:      {}", ByteSize(len as _));
         println!("Output:     {}", ByteSize(nbytes as _));
-        println!("Reduction:  {}%", (1. - (nbytes as f32 / len as f32)) * 100.,);
-        println!("Ratio:      {}", (len as f32 / nbytes as f32));
+        println!("Reduction:  {:.2}%", (1. - (nbytes as f32 / len as f32)) * 100.,);
+        println!("Ratio:      {:.2}", (len as f32 / nbytes as f32));
         println!("Throughput: {}/sec", calc_throughput_sec(duration, len as _));
     }
     Ok(())
