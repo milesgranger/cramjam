@@ -106,6 +106,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bytesize"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "38fcc2979eff34a4b84e1cf9a1e3da42a7d44b3b690a40cdcb23e3d556cfb2e5"
+
+[[package]]
 name = "bzip2"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -194,6 +200,7 @@ name = "cramjam"
 version = "2.7.0-rc2"
 dependencies = [
  "brotli",
+ "bytesize",
  "bzip2",
  "clap",
  "flate2",
