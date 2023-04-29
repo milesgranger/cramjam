@@ -21,6 +21,7 @@ codegen-units = 1
 opt-level = 3
 
 [dependencies]
+clap = { version = "^4.2", features = ["derive"] }
 pyo3 = { version = "^0.18", default-features = false, features = ["macros"] }
 snap = "^1"
 brotli = { version = "^3", default-features = false, features = ["std"] }

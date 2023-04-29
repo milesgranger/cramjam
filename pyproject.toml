@@ -11,3 +11,6 @@ repository = "https://github.com/milesgranger/pyrus-cramjam"
 [build-system]
 requires = ["maturin>=0.14"]
 build-backend = "maturin"
+
+[project.scripts]
+cramjam = "cramjam:cli.main"
