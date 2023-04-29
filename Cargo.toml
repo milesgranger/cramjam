@@ -1,6 +1,6 @@
 [package]
 name = "cramjam"
-version = "2.7.0-rc1"
+version = "2.7.0-rc2"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2018"
 license = "MIT"
@@ -28,4 +28,3 @@ bzip2 = "^0.4"
 lz4 = "^1"
 flate2 = "1.0.25"
 zstd = "0.11.1+zstd.1.5.2"
-numpy = "^0.18"
