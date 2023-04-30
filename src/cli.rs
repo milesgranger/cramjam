@@ -18,7 +18,6 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 #[command(author = "Miles Granger, miles59923@gmail.com")]
 #[command(about = "CLI interface to many different de/compression algorithms")]
 #[command(after_long_help = "Example: cramjam snappy compress myfile.txt out.txt.snappy")]
-#[command(arg_required_else_help = true)]
 struct Cli {
     #[arg()]
     _python: String,
@@ -59,7 +58,7 @@ impl<T: Write + Any> WritableDowncast for T {
 
 #[pyfunction]
 pub fn main() -> PyResult<()> {
-    let m = Cli::parse();
+    let mut m = Cli::parse();
 
     let input: Box<dyn ReadableDowncast> = match m.input {
         Some(path) => Box::new(File::open(path)?),
@@ -67,7 +66,10 @@ pub fn main() -> PyResult<()> {
     };
     let mut output: Box<dyn WritableDowncast> = match m.output {
         Some(path) => Box::new(File::create(path)?),
-        None => Box::new(std::io::stdout().lock()),
+        None => {
+            m.quiet = true; // Don't echo anything in stdout that isn't actual data output
+            Box::new(std::io::stdout().lock())
+        }
     };
 
     // if input is a file, then we can probably get the input length for stats
