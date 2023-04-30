@@ -1,5 +1,6 @@
 use std::any::Any;
 use std::fs::File;
+use std::io::{Cursor, StdoutLock};
 use std::time::{Duration, Instant};
 
 use bytesize::ByteSize;
@@ -40,26 +41,33 @@ trait ReadableDowncast: Read + Any {
 }
 impl<T: Read + Any> ReadableDowncast for T {
     fn as_any(&self) -> &dyn Any {
-        self
+        &*self
+    }
+}
+trait WritableDowncast: Write + Any {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
+impl<T: Write + Any> WritableDowncast for T {
+    fn as_any(&self) -> &dyn Any {
+        &*self
+    }
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        &mut *self
     }
 }
 
 #[pyfunction]
 pub fn main() -> PyResult<()> {
-    let mut m = Cli::parse();
+    let m = Cli::parse();
 
     let input: Box<dyn ReadableDowncast> = match m.input {
         Some(path) => Box::new(File::open(path)?),
         None => Box::new(std::io::stdin().lock()),
     };
-    let mut output: Box<dyn Write> = match m.output {
+    let mut output: Box<dyn WritableDowncast> = match m.output {
         Some(path) => Box::new(File::create(path)?),
-        None => {
-            // Don't echo anything into stdout;
-            // only de/compressed data goes there if that's the output
-            m.quiet = true;
-            Box::new(std::io::stdout().lock())
-        }
+        None => Box::new(std::io::stdout().lock()),
     };
 
     // if input is a file, then we can probably get the input length for stats
@@ -72,7 +80,24 @@ pub fn main() -> PyResult<()> {
     let nbytes = match m.action.as_str() {
         "compress" => match m.codec.as_str() {
             "snappy" => snappy::internal::compress(input, &mut output),
-            // "lz4" => lz4::internal::compress(input, &mut output, m.level.map(|v| v as _)),
+            "lz4" => {
+                // TODO: lz4 doesn't impl Read for their Encoder, so cannot determine
+                // number of bytes compressed without using Seek, which stdout doesn't have,
+                // as it's streaming. So here, we'll go ahead and read everything in then
+                // send it in as a cursor, file can remain as is.
+                // When lz4 implements Reader for the Encoder, then all this can go away.
+                // along with the `Seek` trait bound on the internal::compress function
+                if let Some(stdout) = ((&mut *output).as_any_mut()).downcast_mut::<StdoutLock>() {
+                    let mut data = vec![];
+                    lz4::internal::compress(input, &mut Cursor::new(&mut data), m.level.map(|v| v as _))?;
+                    std::io::copy(&mut Cursor::new(data), stdout).map(|v| v as usize)
+                } else {
+                    match ((&mut *output).as_any_mut()).downcast_mut::<File>() {
+                        Some(file) => lz4::internal::compress(input, file, m.level.map(|v| v as _)),
+                        None => unreachable!("Did we implement something other than Stdout and File for output?"),
+                    }
+                }
+            }
             "bzip2" => bzip2::internal::compress(input, &mut output, m.level.map(|v| v as _)),
             "gzip" => gzip::internal::compress(input, &mut output, m.level.map(|v| v as _)),
             "zstd" => zstd::internal::compress(input, &mut output, m.level.map(|v| v as _)),
