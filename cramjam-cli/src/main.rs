@@ -1,26 +1,17 @@
 use std::any::Any;
 use std::fs::File;
-use std::io::{Cursor, StdoutLock};
+use std::io;
+use std::io::{Cursor, Read, StdoutLock, Write};
 use std::time::{Duration, Instant};
 
 use bytesize::ByteSize;
 use clap::Parser;
-use pyo3::prelude::*;
-
-use crate::*;
-
-pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(main, m)?)?;
-    Ok(())
-}
 
 #[derive(Parser)]
 #[command(author = "Miles Granger, miles59923@gmail.com")]
 #[command(about = "CLI interface to many different de/compression algorithms")]
 #[command(after_long_help = "Example: cramjam snappy compress myfile.txt out.txt.snappy")]
 struct Cli {
-    #[arg()]
-    _python: String,
     #[arg(help = "The de/compression algorithm name")]
     codec: String,
     #[arg(help = "Either 'compress' or 'decompress'")]
@@ -56,8 +47,36 @@ impl<T: Write + Any> WritableDowncast for T {
     }
 }
 
-#[pyfunction]
-pub fn main() -> PyResult<()> {
+#[derive(Debug)]
+enum Error {
+    Other(String),
+}
+
+impl From<String> for Error {
+    fn from(err: String) -> Self {
+        Error::Other(err)
+    }
+}
+impl<'a> From<&'a str> for Error {
+    fn from(err: &'a str) -> Self {
+        Error::Other(err.to_string())
+    }
+}
+
+impl From<Error> for io::Error {
+    fn from(err: Error) -> io::Error {
+        io::Error::new(io::ErrorKind::Other, err.to_string())
+    }
+}
+impl std::error::Error for Error {}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+pub fn main() -> io::Result<()> {
     let mut m = Cli::parse();
 
     let input: Box<dyn ReadableDowncast> = match m.input {
@@ -81,7 +100,7 @@ pub fn main() -> PyResult<()> {
     let start = Instant::now();
     let nbytes = match m.action.as_str() {
         "compress" => match m.codec.as_str() {
-            "snappy" => snappy::internal::compress(input, &mut output),
+            "snappy" => libcramjam::snappy::compress(input, &mut output),
             "lz4" => {
                 // TODO: lz4 doesn't impl Read for their Encoder, so cannot determine
                 // number of bytes compressed without using Seek, which stdout doesn't have,
@@ -91,37 +110,33 @@ pub fn main() -> PyResult<()> {
                 // along with the `Seek` trait bound on the internal::compress function
                 if let Some(stdout) = ((&mut *output).as_any_mut()).downcast_mut::<StdoutLock>() {
                     let mut data = vec![];
-                    lz4::internal::compress(input, &mut Cursor::new(&mut data), m.level.map(|v| v as _))?;
+                    libcramjam::lz4::compress(input, &mut Cursor::new(&mut data), m.level.map(|v| v as _))?;
                     std::io::copy(&mut Cursor::new(data), stdout).map(|v| v as usize)
                 } else {
                     match ((&mut *output).as_any_mut()).downcast_mut::<File>() {
-                        Some(file) => lz4::internal::compress(input, file, m.level.map(|v| v as _)),
+                        Some(file) => libcramjam::lz4::compress(input, file, m.level.map(|v| v as _)),
                         None => unreachable!("Did we implement something other than Stdout and File for output?"),
                     }
                 }
             }
-            "bzip2" => bzip2::internal::compress(input, &mut output, m.level.map(|v| v as _)),
-            "gzip" => gzip::internal::compress(input, &mut output, m.level.map(|v| v as _)),
-            "zstd" => zstd::internal::compress(input, &mut output, m.level.map(|v| v as _)),
-            "deflate" => deflate::internal::compress(input, &mut output, m.level.map(|v| v as _)),
-            "brotli" => brotli::internal::compress(input, &mut output, m.level.map(|v| v as _)),
-            _ => return Err(pyo3::exceptions::PyValueError::new_err("codec not recognized")),
+            "bzip2" => libcramjam::bzip2::compress(input, &mut output, m.level.map(|v| v as _)),
+            "gzip" => libcramjam::gzip::compress(input, &mut output, m.level.map(|v| v as _)),
+            "zstd" => libcramjam::zstd::compress(input, &mut output, m.level.map(|v| v as _)),
+            "deflate" => libcramjam::deflate::compress(input, &mut output, m.level.map(|v| v as _)),
+            "brotli" => libcramjam::brotli::compress(input, &mut output, m.level.map(|v| v as _)),
+            _ => Err(Error::from("codec not recognized").into()),
         },
         "decompress" => match m.codec.as_str() {
-            "snappy" => snappy::internal::decompress(input, &mut output),
-            "lz4" => lz4::internal::decompress(input, &mut output),
-            "bzip2" => bzip2::internal::decompress(input, &mut output),
-            "gzip" => gzip::internal::decompress(input, &mut output),
-            "zstd" => zstd::internal::decompress(input, &mut output),
-            "deflate" => deflate::internal::decompress(input, &mut output),
-            "brotli" => brotli::internal::decompress(input, &mut output),
-            _ => return Err(pyo3::exceptions::PyValueError::new_err("codec not recognized")),
+            "snappy" => libcramjam::snappy::decompress(input, &mut output),
+            "lz4" => libcramjam::lz4::decompress(input, &mut output),
+            "bzip2" => libcramjam::bzip2::decompress(input, &mut output),
+            "gzip" => libcramjam::gzip::decompress(input, &mut output),
+            "zstd" => libcramjam::zstd::decompress(input, &mut output),
+            "deflate" => libcramjam::deflate::decompress(input, &mut output),
+            "brotli" => libcramjam::brotli::decompress(input, &mut output),
+            _ => return Err(Error::from("codec not recognized").into()),
         },
-        _ => {
-            return Err(pyo3::exceptions::PyValueError::new_err(
-                "'action' must be either 'compress' or 'decompress'",
-            ))
-        }
+        _ => return Err(Error::from("'action' must be either 'compress' or 'decompress'").into()),
     }?;
     let duration = start.elapsed();
 

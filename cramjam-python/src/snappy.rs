@@ -33,7 +33,8 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
 /// ```
 #[pyfunction]
 pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(py, internal::decompress[data], output_len = output_len).map_err(DecompressionError::from_err)
+    crate::generic!(py, libcramjam::snappy::decompress[data], output_len = output_len)
+        .map_err(DecompressionError::from_err)
 }
 
 /// Snappy compression.
@@ -46,7 +47,7 @@ pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyR
 /// ```
 #[pyfunction]
 pub fn compress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(py, internal::compress[data], output_len = output_len).map_err(CompressionError::from_err)
+    crate::generic!(py, libcramjam::snappy::compress[data], output_len = output_len).map_err(CompressionError::from_err)
 }
 
 /// Snappy decompression, raw
@@ -61,7 +62,7 @@ pub fn compress(py: Python, data: BytesType, output_len: Option<usize>) -> PyRes
 #[allow(unused_variables)]
 pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let bytes = data.as_bytes();
-    py.allow_threads(|| snap::raw::Decoder::new().decompress_vec(bytes))
+    py.allow_threads(|| libcramjam::snappy::snap::raw::Decoder::new().decompress_vec(bytes))
         .map_err(DecompressionError::from_err)
         .map(From::from)
 }
@@ -78,7 +79,7 @@ pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) ->
 #[allow(unused_variables)]
 pub fn compress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let bytes = data.as_bytes();
-    py.allow_threads(|| snap::raw::Encoder::new().compress_vec(bytes))
+    py.allow_threads(|| libcramjam::snappy::snap::raw::Encoder::new().compress_vec(bytes))
         .map_err(CompressionError::from_err)
         .map(From::from)
 }
@@ -86,13 +87,13 @@ pub fn compress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> P
 /// Compress directly into an output buffer
 #[pyfunction]
 pub fn compress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    crate::generic!(py, internal::compress[input, output]).map_err(CompressionError::from_err)
+    crate::generic!(py, libcramjam::snappy::compress[input, output]).map_err(CompressionError::from_err)
 }
 
 /// Decompress directly into an output buffer
 #[pyfunction]
 pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
-    crate::generic!(py, internal::decompress[input, output]).map_err(DecompressionError::from_err)
+    crate::generic!(py, libcramjam::snappy::decompress[input, output]).map_err(DecompressionError::from_err)
 }
 
 /// Compress raw format directly into an output buffer
@@ -100,7 +101,7 @@ pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> P
 pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes_in = input.as_bytes();
     let bytes_out = output.as_bytes_mut();
-    py.allow_threads(|| snap::raw::Encoder::new().compress(bytes_in, bytes_out))
+    py.allow_threads(|| libcramjam::snappy::snap::raw::Encoder::new().compress(bytes_in, bytes_out))
         .map_err(CompressionError::from_err)
 }
 
@@ -109,7 +110,7 @@ pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) ->
 pub fn decompress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes_in = input.as_bytes();
     let bytes_out = output.as_bytes_mut();
-    py.allow_threads(|| snap::raw::Decoder::new().decompress(bytes_in, bytes_out))
+    py.allow_threads(|| libcramjam::snappy::snap::raw::Decoder::new().decompress(bytes_in, bytes_out))
         .map_err(DecompressionError::from_err)
 }
 
@@ -117,20 +118,20 @@ pub fn decompress_raw_into(py: Python, input: BytesType, mut output: BytesType) 
 /// of buffer that should be passed to `compress_raw_into`
 #[pyfunction]
 pub fn compress_raw_max_len(data: BytesType) -> usize {
-    snap::raw::max_compress_len(data.len())
+    libcramjam::snappy::snap::raw::max_compress_len(data.len())
 }
 
 /// Get the decompressed length for the given data. This is the size of buffer
 /// that should be passed to `decompress_raw_into`
 #[pyfunction]
 pub fn decompress_raw_len(data: BytesType) -> PyResult<usize> {
-    snap::raw::decompress_len(data.as_bytes()).map_err(DecompressionError::from_err)
+    libcramjam::snappy::snap::raw::decompress_len(data.as_bytes()).map_err(DecompressionError::from_err)
 }
 
 /// Snappy Compressor object for streaming compression
 #[pyclass]
 pub struct Compressor {
-    inner: Option<snap::write::FrameEncoder<Cursor<Vec<u8>>>>,
+    inner: Option<libcramjam::snappy::snap::write::FrameEncoder<Cursor<Vec<u8>>>>,
 }
 
 #[pymethods]
@@ -138,7 +139,7 @@ impl Compressor {
     /// Initialize a new `Compressor` instance.
     #[new]
     pub fn __init__() -> PyResult<Self> {
-        let inner = snap::write::FrameEncoder::new(Cursor::new(vec![]));
+        let inner = libcramjam::snappy::snap::write::FrameEncoder::new(Cursor::new(vec![]));
         Ok(Self { inner: Some(inner) })
     }
 
@@ -159,25 +160,4 @@ impl Compressor {
     }
 }
 
-crate::make_decompressor!();
-
-pub(crate) mod internal {
-    use snap::read::{FrameDecoder, FrameEncoder};
-    use std::io::{Error, Read, Write};
-
-    /// Decompress snappy data framed
-    #[inline(always)]
-    pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {
-        let mut decoder = FrameDecoder::new(input);
-        let n_bytes = std::io::copy(&mut decoder, output)?;
-        Ok(n_bytes as usize)
-    }
-
-    /// Decompress snappy data framed
-    #[inline(always)]
-    pub fn compress<W: Write + ?Sized, R: Read>(data: R, output: &mut W) -> Result<usize, Error> {
-        let mut encoder = FrameEncoder::new(data);
-        let n_bytes = std::io::copy(&mut encoder, output)?;
-        Ok(n_bytes as usize)
-    }
-}
+crate::make_decompressor!(snappy);

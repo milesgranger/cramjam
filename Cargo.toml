@@ -1,10 +1,15 @@
 [workspace]
 members = [
   "libcramjam",
-  "cli",
-  "python"
+  "cramjam-cli",
+  "cramjam-python"
 ]
 
 [workspace.package]
 edition = "2021"
 homepage = "https://github.com/milesgranger/pyrus-cramjam"
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3

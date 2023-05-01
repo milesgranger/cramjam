@@ -31,9 +31,9 @@ mod tests {
                 let compressed_size = if stringify!($decompress_output) == "Slice" {
                         compressed = (0..data.len()).map(|_| 0).collect::<Vec<u8>>();
                         let mut cursor = Cursor::new(compressed.as_mut_slice());
-                        crate::$variant::internal::compress(&mut Cursor::new(data.as_slice()), &mut cursor $(, $level)?).unwrap()
+                        crate::$variant::compress(&mut Cursor::new(data.as_slice()), &mut cursor $(, $level)?).unwrap()
                     } else {
-                        crate::$variant::internal::compress(&mut Cursor::new(data.as_slice()), &mut Cursor::new(&mut compressed) $(, $level)?).unwrap()
+                        crate::$variant::compress(&mut Cursor::new(data.as_slice()), &mut Cursor::new(&mut compressed) $(, $level)?).unwrap()
                     };
 
                 assert_eq!(compressed_size, $compressed_len);
@@ -44,9 +44,9 @@ mod tests {
                 let decompressed_size = if stringify!($decompress_output) == "Slice" {
                         decompressed = (0..data.len()).map(|_| 0).collect::<Vec<u8>>();
                         let mut cursor = Cursor::new(decompressed.as_mut_slice());
-                        crate::$variant::internal::decompress(&mut Cursor::new(&compressed), &mut cursor).unwrap()
+                        crate::$variant::decompress(&mut Cursor::new(&compressed), &mut cursor).unwrap()
                     } else {
-                        crate::$variant::internal::decompress(&mut Cursor::new(&compressed), &mut decompressed).unwrap()
+                        crate::$variant::decompress(&mut Cursor::new(&compressed), &mut decompressed).unwrap()
                     };
                 assert_eq!(decompressed_size, data.len());
                 if &decompressed[..decompressed_size] != &data {
