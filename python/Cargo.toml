@@ -1,0 +1,27 @@
+[package]
+name = "cramjam"
+version = "2.7.0-rc2"
+authors = ["Miles Granger <miles59923@gmail.com>"]
+edition = "2018"
+license = "MIT"
+description = "Thin Python bindings to de/compression algorithms in Rust"
+readme = "README.md"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+
+[profile.release]
+lto = "fat"
+codegen-units = 1
+opt-level = 3
+
+[dependencies]
+clap = { version = "^4.2", features = ["derive"] }
+bytesize = "^1"
+pyo3 = { version = "^0.18", default-features = false, features = ["macros"] }
+libcramjam = { path = "../libcramjam" }
