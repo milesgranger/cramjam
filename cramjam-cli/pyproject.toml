@@ -15,3 +15,9 @@ build-backend = "maturin"
 [tool.maturin]
 bindings = "bin"
 strip = true
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=5.30",
+  "hypothesis"
+]

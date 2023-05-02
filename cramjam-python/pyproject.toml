@@ -14,3 +14,12 @@ build-backend = "maturin"
 
 [tool.maturin]
 strip = true
+
+[project.optional-dependencies]
+dev = [
+  "black==22.3.0",
+  "numpy",
+  "pytest>=5.30",
+  "pytest-xdist",
+  "hypothesis"
+]

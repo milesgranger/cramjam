@@ -1,6 +1,0 @@
-black==22.3.0
-maturin
-numpy
-pytest>=5.3.0
-pytest-xdist
-hypothesis
