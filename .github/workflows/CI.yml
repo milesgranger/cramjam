@@ -38,7 +38,6 @@ jobs:
           args: -i python --release --out dist --sdist --manifest-path ${{ matrix.package.member }}/Cargo.toml
       - name: Install built wheel - x86_64
         run: |
-          maturin develop --release --manifest-path ${{ matrix.package.member }}/Cargo.toml --extras dev
           pip install ${{ matrix.package.name }} --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
         if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11"]'), matrix.python-version) }}
@@ -48,10 +47,11 @@ jobs:
       - name: Install built wheel - universal2
         if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11"]'), matrix.python-version) }}
         run: |
-          maturin develop --release --manifest-path ${{ matrix.package.member }}/Cargo.toml --extras dev
           pip install ${{ matrix.package.name }} --no-index --find-links dist --force-reinstall
       - name: Python UnitTest
-        run: python -m pytest ${{ matrix.package.member }} -vs
+        run: |
+          pip install pytest numpy hypothesis -y
+          python -m pytest ${{ matrix.package.member }} -vs
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
@@ -90,10 +90,10 @@ jobs:
           args: -i python --release --out dist --manifest-path ${{ matrix.package.member }}/Cargo.toml
       - name: Install built wheel
         run: |
-          maturin develop --release --manifest-path ${{ matrix.package.member }}/Cargo.toml --extras dev
           pip install ${{ matrix.package.name }} --no-index --find-links dist --force-reinstall
       - name: Python UnitTest
         run: |
+          pip install pytest numpy hypothesis -y
           python -m pytest ${{ matrix.package.member }} -vs
       - name: Upload wheels
         uses: actions/upload-artifact@v3
@@ -134,7 +134,7 @@ jobs:
     - name: Python UnitTest
       if: matrix.target == 'x86_64'
       run: |
-        maturin develop --release --manifest-path ${{ matrix.package.member }}/Cargo.toml --extras dev
+        pip install pytest numpy hypothesis -y
         pip install ${{ matrix.package.name }} --no-index --find-links dist --force-reinstall
         python -m pytest ${{ matrix.package.member }} -vs
     - name: Upload wheels
