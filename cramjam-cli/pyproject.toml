@@ -1,0 +1,23 @@
+[project]
+name = "cramjam-cli"
+keywords = ["compression", "decompression", "snappy", "zstd", "bz2", "gzip", "lz4", "brotli", "deflate"]
+requires-python = ">=3.7"
+
+[project.urls]
+homepage = "https://github.com/milesgranger/pyrus-cramjam"
+documentation = "https://docs.rs/cramjam/latest/cramjam"
+repository = "https://github.com/milesgranger/pyrus-cramjam"
+
+[build-system]
+requires = ["maturin>=0.14"]
+build-backend = "maturin"
+
+[tool.maturin]
+bindings = "bin"
+strip = true
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=5.30",
+  "hypothesis"
+]
