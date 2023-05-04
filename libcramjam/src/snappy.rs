@@ -18,3 +18,10 @@ pub fn compress<W: Write + ?Sized, R: Read>(data: R, output: &mut W) -> Result<u
     let n_bytes = std::io::copy(&mut encoder, output)?;
     Ok(n_bytes as usize)
 }
+
+pub mod raw {
+    #[inline(always)]
+    pub fn compress(input: &[u8]) -> Vec<u8> {
+        snap::raw::Encoder::new().compress_vec(input).unwrap()
+    }
+}
