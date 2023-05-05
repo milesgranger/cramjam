@@ -13,6 +13,10 @@
 pip install --upgrade cramjam  # Requires no Python or system dependencies!
 ```
 
+### CLI
+
+A CLI interface is available as [`cramjam-cli`](./../cramjam-cli)
+
 ---
 
 Extremely thin Python bindings to de/compression algorithms in Rust.
