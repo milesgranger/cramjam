@@ -14,11 +14,11 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 struct Cli {
     #[command(subcommand)]
     codec: Codec,
-    #[arg(short, long, help = "Input file, if not set will read from stdin")]
+    #[arg(short, long, global = true, help = "Input file, if not set will read from stdin")]
     input: Option<String>,
-    #[arg(short, long, help = "Output file, if not set will write to stdout")]
+    #[arg(short, long, global = true, help = "Output file, if not set will write to stdout")]
     output: Option<String>,
-    #[arg(short, long, help = "Remove all informational output", action = clap::ArgAction::SetTrue)]
+    #[arg(short, long, global = true, help = "Remove all informational output", action = clap::ArgAction::SetTrue)]
     quiet: bool,
 }
 
@@ -26,13 +26,6 @@ struct Cli {
 enum Action {
     Compress,
     Decompress,
-}
-#[derive(Clone, ValueEnum)]
-enum SnappyAction {
-    Compress,
-    CompressRaw,
-    Decompress,
-    DecompressRaw,
 }
 
 // TODO: Config per algorithm, matching it's specific possible parameters (level, speed, block, etc)
@@ -44,20 +37,10 @@ struct Config {
     level: Option<isize>,
 }
 
-#[derive(Args, Clone)]
-struct SnappyConfig {
-    #[arg(value_enum)]
-    action: SnappyAction,
-    #[arg(short, long, help = "Input file, if not set will read from stdin")]
-    input: Option<String>,
-    #[arg(short, long, help = "Output file, if not set will write to stdout")]
-    output: Option<String>,
-}
-
 #[derive(Clone, Subcommand)]
 enum Codec {
     Lz4(Config),
-    Snappy(SnappyConfig),
+    Snappy(Config),
     ZSTD(Config),
     Brotli(Config),
     Gzip(Config),
@@ -118,7 +101,7 @@ impl std::fmt::Display for Error {
 pub fn main() -> io::Result<()> {
     let mut m = Cli::parse();
 
-    let mut input: Box<dyn ReadableDowncast> = match m.input {
+    let input: Box<dyn ReadableDowncast> = match m.input {
         Some(path) => Box::new(File::open(path)?),
         None => Box::new(std::io::stdin().lock()),
     };
@@ -131,27 +114,16 @@ pub fn main() -> io::Result<()> {
     };
 
     // if input is a file, then we can probably get the input length for stats
-    // let maybe_len = (&*input)
-    //     .as_any()
-    //     .downcast_ref::<File>()
-    //     .map(|file| file.metadata().ok().map(|m| m.len()).unwrap_or_default());
-    let maybe_len: Option<usize> = None;
+    let maybe_len = (&*input)
+        .as_any()
+        .downcast_ref::<File>()
+        .map(|file| file.metadata().ok().map(|m| m.len()).unwrap_or_default());
 
     let start = Instant::now();
     let nbytes = match m.codec {
         Codec::Snappy(conf) => match conf.action {
-            SnappyAction::Compress => libcramjam::snappy::compress(input, &mut output),
-            SnappyAction::Decompress => libcramjam::snappy::decompress(input, &mut output),
-            SnappyAction::CompressRaw => {
-                let mut bytes = vec![];
-                println!("Reading to end");
-                io::copy(&mut input, &mut bytes)?;
-                println!("compressing");
-                let compressed = libcramjam::snappy::raw::compress(&bytes);
-                output.write_all(&compressed)?;
-                Ok(compressed.len())
-            }
-            _ => unimplemented!(),
+            Action::Compress => libcramjam::snappy::compress(input, &mut output),
+            Action::Decompress => libcramjam::snappy::decompress(input, &mut output),
         },
         Codec::Lz4(conf) => {
             // TODO: lz4 doesn't impl Read for their Encoder, so cannot determine
@@ -163,7 +135,7 @@ pub fn main() -> io::Result<()> {
             if let Some(stdout) = ((&mut *output).as_any_mut()).downcast_mut::<StdoutLock>() {
                 let mut data = vec![];
                 libcramjam::lz4::compress(input, &mut Cursor::new(&mut data), conf.level.map(|v| v as _))?;
-                std::io::copy(&mut Cursor::new(data), stdout).map(|v| v as usize)
+                io::copy(&mut Cursor::new(data), stdout).map(|v| v as usize)
             } else {
                 match ((&mut *output).as_any_mut()).downcast_mut::<File>() {
                     Some(file) => libcramjam::lz4::compress(input, file, conf.level.map(|v| v as _)),
@@ -177,16 +149,6 @@ pub fn main() -> io::Result<()> {
         Codec::Deflate(conf) => libcramjam::deflate::compress(input, &mut output, conf.level.map(|v| v as _)),
         Codec::Brotli(conf) => libcramjam::brotli::compress(input, &mut output, conf.level.map(|v| v as _)),
     }?;
-    //     Action::Decompress => match m.codec.clone() {
-    //         Codec::Snappy(_) => ,
-    //         Codec::Lz4(_) => libcramjam::lz4::decompress(input, &mut output),
-    //         Codec::Bzip2(_) => libcramjam::bzip2::decompress(input, &mut output),
-    //         Codec::Gzip(_) => libcramjam::gzip::decompress(input, &mut output),
-    //         Codec::ZSTD(_) => libcramjam::zstd::decompress(input, &mut output),
-    //         Codec::Deflate(_) => libcramjam::deflate::decompress(input, &mut output),
-    //         Codec::Brotli(_) => libcramjam::brotli::decompress(input, &mut output),
-    //     },
-    // }?;
     let duration = start.elapsed();
 
     if !m.quiet {
