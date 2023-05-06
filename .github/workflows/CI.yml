@@ -342,22 +342,49 @@ jobs:
         name: wheels
         path: dist
 
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    if: "startsWith(github.ref, 'refs/tags/')"
-    needs: [ macos, windows, linux, linux-cross, pypy-linux, pypy-macos ]
-    steps:
+  pypi-publish-cramjam-python:
+      name: Upload cramjam release to PyPI
+      runs-on: ubuntu-latest
+      if: "startsWith(github.ref, 'refs/tags/')"
+      needs: [ macos, windows, linux, linux-cross, pypy-linux, pypy-macos ]
+      environment:
+        name: pypi
+        url: https://pypi.org/p/cramjam
+      permissions:
+        id-token: write
+      steps:
       - uses: actions/download-artifact@v3
         with:
           name: wheels
-      - uses: actions/setup-python@v4
+      - name: Only cramjam-python stuff
+        run: rm cramjam_cli*
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          python-version: '3.10'
-      - name: Publish to PyPI
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+          skip-existing: true
+          packages-dir: ./
+
+  pypi-publish-cramjam-cli:
+      name: Upload cramjam-cli release to PyPI
+      runs-on: ubuntu-latest
+      if: "startsWith(github.ref, 'refs/tags/')"
+      needs: [ macos, windows, linux, linux-cross, pypy-linux, pypy-macos ]
+      environment:
+        name: pypi
+        url: https://pypi.org/p/cramjam-cli
+      permissions:
+        id-token: write
+      steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: wheels
+      - name: Only cramjam-cli stuff
         run: |
-          pip install --upgrade twine
-          twine upload --skip-existing *
+          ls -l
+          mkdir cramjam-cli
+          mv cramjam_cli* cramjam-cli/
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          packages-dir: cramjam-cli/
