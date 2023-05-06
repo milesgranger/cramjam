@@ -8,9 +8,8 @@ use bytesize::ByteSize;
 use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Clone, Parser)]
-#[command(author = "Miles Granger, miles59923@gmail.com")]
-#[command(about = "CLI interface to many different de/compression algorithms")]
-#[command(after_long_help = "Example: cramjam snappy compress myfile.txt out.txt.snappy")]
+#[command(author, version, about)]
+#[command(after_long_help = "Example: cramjam snappy compress --input myfile.txt --output out.txt.snappy")]
 struct Cli {
     #[command(subcommand)]
     codec: Codec,
