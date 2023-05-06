@@ -266,7 +266,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.python }}-${{ matrix.package.member }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
