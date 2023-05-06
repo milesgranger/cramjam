@@ -5,25 +5,46 @@ use std::io::{Cursor, Read, StdoutLock, Write};
 use std::time::{Duration, Instant};
 
 use bytesize::ByteSize;
-use clap::Parser;
+use clap::{Args, Parser, Subcommand, ValueEnum};
 
-#[derive(Parser)]
-#[command(author = "Miles Granger, miles59923@gmail.com")]
-#[command(about = "CLI interface to many different de/compression algorithms")]
-#[command(after_long_help = "Example: cramjam snappy compress myfile.txt out.txt.snappy")]
+#[derive(Clone, Parser)]
+#[command(author, version, about)]
+#[command(after_long_help = "Example: cramjam snappy compress --input myfile.txt --output out.txt.snappy")]
 struct Cli {
-    #[arg(help = "The de/compression algorithm name")]
-    codec: String,
-    #[arg(help = "Either 'compress' or 'decompress'")]
-    action: String,
-    #[arg(short, long, help = "Input file, if empty then read from stdin")]
+    #[command(subcommand)]
+    codec: Codec,
+    #[arg(short, long, global = true, help = "Input file, if not set will read from stdin")]
     input: Option<String>,
-    #[arg(short, long, help = "Output file, if empty then write to stdout")]
+    #[arg(short, long, global = true, help = "Output file, if not set will write to stdout")]
     output: Option<String>,
-    #[arg(short, long, help = "Compression level, if relevant to the algorithm")]
-    level: Option<isize>,
-    #[arg(short, long, help = "Remove all informational output", action = clap::ArgAction::SetTrue)]
+    #[arg(short, long, global = true, help = "Remove all informational output", action = clap::ArgAction::SetTrue)]
     quiet: bool,
+}
+
+#[derive(Clone, Copy, ValueEnum)]
+enum Action {
+    Compress,
+    Decompress,
+}
+
+// TODO: Config per algorithm, matching it's specific possible parameters (level, speed, block, etc)
+#[derive(Args, Clone)]
+struct Config {
+    #[arg(value_enum)]
+    action: Action,
+    #[arg(short, long, help = "Level, if relevant to the algorithm")]
+    level: Option<isize>,
+}
+
+#[derive(Clone, Subcommand)]
+enum Codec {
+    Lz4(Config),
+    Snappy(Config),
+    ZSTD(Config),
+    Brotli(Config),
+    Gzip(Config),
+    Deflate(Config),
+    Bzip2(Config),
 }
 
 trait ReadableDowncast: Read + Any {
@@ -92,51 +113,40 @@ pub fn main() -> io::Result<()> {
     };
 
     // if input is a file, then we can probably get the input length for stats
-    let maybe_len = input
+    let maybe_len = (&*input)
         .as_any()
-        .downcast_ref::<&File>()
+        .downcast_ref::<File>()
         .map(|file| file.metadata().ok().map(|m| m.len()).unwrap_or_default());
 
     let start = Instant::now();
-    let nbytes = match m.action.as_str() {
-        "compress" => match m.codec.as_str() {
-            "snappy" => libcramjam::snappy::compress(input, &mut output),
-            "lz4" => {
-                // TODO: lz4 doesn't impl Read for their Encoder, so cannot determine
-                // number of bytes compressed without using Seek, which stdout doesn't have,
-                // as it's streaming. So here, we'll go ahead and read everything in then
-                // send it in as a cursor, file can remain as is.
-                // When lz4 implements Reader for the Encoder, then all this can go away.
-                // along with the `Seek` trait bound on the internal::compress function
-                if let Some(stdout) = ((&mut *output).as_any_mut()).downcast_mut::<StdoutLock>() {
-                    let mut data = vec![];
-                    libcramjam::lz4::compress(input, &mut Cursor::new(&mut data), m.level.map(|v| v as _))?;
-                    std::io::copy(&mut Cursor::new(data), stdout).map(|v| v as usize)
-                } else {
-                    match ((&mut *output).as_any_mut()).downcast_mut::<File>() {
-                        Some(file) => libcramjam::lz4::compress(input, file, m.level.map(|v| v as _)),
-                        None => unreachable!("Did we implement something other than Stdout and File for output?"),
-                    }
+    let nbytes = match m.codec {
+        Codec::Snappy(conf) => match conf.action {
+            Action::Compress => libcramjam::snappy::compress(input, &mut output),
+            Action::Decompress => libcramjam::snappy::decompress(input, &mut output),
+        },
+        Codec::Lz4(conf) => {
+            // TODO: lz4 doesn't impl Read for their Encoder, so cannot determine
+            // number of bytes compressed without using Seek, which stdout doesn't have,
+            // as it's streaming. So here, we'll go ahead and read everything in then
+            // send it in as a cursor, file can remain as is.
+            // When lz4 implements Reader for the Encoder, then all this can go away.
+            // along with the `Seek` trait bound on the internal::compress function
+            if let Some(stdout) = ((&mut *output).as_any_mut()).downcast_mut::<StdoutLock>() {
+                let mut data = vec![];
+                libcramjam::lz4::compress(input, &mut Cursor::new(&mut data), conf.level.map(|v| v as _))?;
+                io::copy(&mut Cursor::new(data), stdout).map(|v| v as usize)
+            } else {
+                match ((&mut *output).as_any_mut()).downcast_mut::<File>() {
+                    Some(file) => libcramjam::lz4::compress(input, file, conf.level.map(|v| v as _)),
+                    None => unreachable!("Did we implement something other than Stdout and File for output?"),
                 }
             }
-            "bzip2" => libcramjam::bzip2::compress(input, &mut output, m.level.map(|v| v as _)),
-            "gzip" => libcramjam::gzip::compress(input, &mut output, m.level.map(|v| v as _)),
-            "zstd" => libcramjam::zstd::compress(input, &mut output, m.level.map(|v| v as _)),
-            "deflate" => libcramjam::deflate::compress(input, &mut output, m.level.map(|v| v as _)),
-            "brotli" => libcramjam::brotli::compress(input, &mut output, m.level.map(|v| v as _)),
-            _ => Err(Error::from("codec not recognized").into()),
-        },
-        "decompress" => match m.codec.as_str() {
-            "snappy" => libcramjam::snappy::decompress(input, &mut output),
-            "lz4" => libcramjam::lz4::decompress(input, &mut output),
-            "bzip2" => libcramjam::bzip2::decompress(input, &mut output),
-            "gzip" => libcramjam::gzip::decompress(input, &mut output),
-            "zstd" => libcramjam::zstd::decompress(input, &mut output),
-            "deflate" => libcramjam::deflate::decompress(input, &mut output),
-            "brotli" => libcramjam::brotli::decompress(input, &mut output),
-            _ => return Err(Error::from("codec not recognized").into()),
-        },
-        _ => return Err(Error::from("'action' must be either 'compress' or 'decompress'").into()),
+        }
+        Codec::Bzip2(conf) => libcramjam::bzip2::compress(input, &mut output, conf.level.map(|v| v as _)),
+        Codec::Gzip(conf) => libcramjam::gzip::compress(input, &mut output, conf.level.map(|v| v as _)),
+        Codec::ZSTD(conf) => libcramjam::zstd::compress(input, &mut output, conf.level.map(|v| v as _)),
+        Codec::Deflate(conf) => libcramjam::deflate::compress(input, &mut output, conf.level.map(|v| v as _)),
+        Codec::Brotli(conf) => libcramjam::brotli::compress(input, &mut output, conf.level.map(|v| v as _)),
     }?;
     let duration = start.elapsed();
 

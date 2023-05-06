@@ -1,4 +1,4 @@
-# pyrus-cramjam
+# cramjam-python
 
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 [![CI](https://github.com/milesgranger/pyrus-cramjam/workflows/CI/badge.svg?branch=master)](https://github.com/milesgranger/pyrus-cramjam/actions?query=branch=master)
@@ -12,6 +12,10 @@
 ```commandline
 pip install --upgrade cramjam  # Requires no Python or system dependencies!
 ```
+
+### CLI
+
+A CLI interface is available as [`cramjam-cli`](./../cramjam-cli)
 
 ---
 

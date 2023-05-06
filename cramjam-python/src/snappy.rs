@@ -62,7 +62,7 @@ pub fn compress(py: Python, data: BytesType, output_len: Option<usize>) -> PyRes
 #[allow(unused_variables)]
 pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let bytes = data.as_bytes();
-    py.allow_threads(|| libcramjam::snappy::snap::raw::Decoder::new().decompress_vec(bytes))
+    py.allow_threads(|| libcramjam::snappy::raw::decompress_vec(bytes))
         .map_err(DecompressionError::from_err)
         .map(From::from)
 }
@@ -79,7 +79,7 @@ pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) ->
 #[allow(unused_variables)]
 pub fn compress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let bytes = data.as_bytes();
-    py.allow_threads(|| libcramjam::snappy::snap::raw::Encoder::new().compress_vec(bytes))
+    py.allow_threads(|| libcramjam::snappy::raw::compress_vec(bytes))
         .map_err(CompressionError::from_err)
         .map(From::from)
 }
@@ -101,7 +101,7 @@ pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> P
 pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes_in = input.as_bytes();
     let bytes_out = output.as_bytes_mut();
-    py.allow_threads(|| libcramjam::snappy::snap::raw::Encoder::new().compress(bytes_in, bytes_out))
+    py.allow_threads(|| libcramjam::snappy::raw::compress(bytes_in, bytes_out))
         .map_err(CompressionError::from_err)
 }
 
@@ -110,7 +110,7 @@ pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) ->
 pub fn decompress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes_in = input.as_bytes();
     let bytes_out = output.as_bytes_mut();
-    py.allow_threads(|| libcramjam::snappy::snap::raw::Decoder::new().decompress(bytes_in, bytes_out))
+    py.allow_threads(|| libcramjam::snappy::raw::decompress(bytes_in, bytes_out))
         .map_err(DecompressionError::from_err)
 }
 
