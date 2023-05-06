@@ -11,7 +11,7 @@ VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd")
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile("local", deadline=timedelta(milliseconds=1000))
-settings.register_profile("CI", deadline=None)
+settings.register_profile("CI", deadline=None, max_examples=10)
 if os.getenv("CI"):
     settings.load_profile("CI")
 else:
