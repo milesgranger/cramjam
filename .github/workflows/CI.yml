@@ -28,7 +28,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.package.member }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
@@ -88,7 +88,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.target }}-${{ matrix.package.member }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
@@ -140,7 +140,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.target }}-${{ matrix.package.member }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
     - name: Build
@@ -198,7 +198,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.target }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Build Wheels cramjam-python
       uses: PyO3/maturin-action@v1
       with:
@@ -266,7 +266,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-${{ matrix.python }}-${{ matrix.package.member }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{matrix.python}}-${{ matrix.package.member }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
@@ -312,7 +312,7 @@ jobs:
           ~/.cargo/registry/cache/
           ~/.cargo/git/db/
           target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-${{ matrix.package.member }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
     - uses: actions/setup-python@v4
