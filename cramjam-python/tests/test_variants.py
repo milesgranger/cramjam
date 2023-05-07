@@ -8,7 +8,7 @@ from datetime import timedelta
 from hypothesis import strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
 
-VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd")
+VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "blosc2")
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile(

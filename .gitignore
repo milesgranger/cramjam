@@ -8,6 +8,7 @@ __pycache__/
 
 .idea/
 benchenv/
+cramjam-python/_build
 
 
 # Distribution / packaging

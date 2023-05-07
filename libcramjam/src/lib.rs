@@ -1,3 +1,4 @@
+pub mod blosc2;
 pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
@@ -13,7 +14,7 @@ mod tests {
 
     // Default testing data
     fn gen_data() -> Vec<u8> {
-        (0..1000000)
+        (0..1_000_000)
             .map(|_| b"oh what a beautiful morning, oh what a beautiful day!!".to_vec())
             .flat_map(|v| v)
             .collect()
@@ -70,11 +71,12 @@ mod tests {
         }
     }
 
-    test_variant!(snappy, compressed_len = 2572398,);
-    test_variant!(gzip, compressed_len = 157192, level = None);
+    test_variant!(snappy, compressed_len = 2_572_398,);
+    test_variant!(gzip, compressed_len = 157_192, level = None);
     test_variant!(brotli, compressed_len = 128, level = None);
-    test_variant!(bzip2, compressed_len = 14207, level = None);
-    test_variant!(deflate, compressed_len = 157174, level = None);
-    test_variant!(zstd, compressed_len = 4990, level = None);
-    test_variant!(lz4, compressed_len = 303278, level = None);
+    test_variant!(bzip2, compressed_len = 14_207, level = None);
+    test_variant!(deflate, compressed_len = 157_174, level = None);
+    test_variant!(zstd, compressed_len = 4_990, level = None);
+    test_variant!(lz4, compressed_len = 303_278, level = None);
+    test_variant!(blosc2, compressed_len = 2_403_572,);
 }
