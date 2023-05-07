@@ -5,12 +5,12 @@
 use std::convert::TryFrom;
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
+use std::mem;
 use std::os::raw::c_int;
 
 use crate::exceptions::CompressionError;
 use crate::BytesType;
-use pyo3::buffer::{Element, PyBuffer};
-use pyo3::exceptions::PyBufferError;
+use pyo3::exceptions::{self, PyBufferError};
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 use pyo3::{ffi, AsPyPointer};
@@ -169,11 +169,17 @@ impl RustyFile {
 
 /// Internal wrapper to PyBuffer, not exposed thru API
 /// used only for impl of Read/Write
-pub struct PythonBuffer<T: Element> {
-    pub(crate) inner: PyBuffer<T>,
+// Inspired from pyo3 PyBuffer<T>, but here we don't want or care about T
+pub struct PythonBuffer {
+    pub(crate) inner: std::pin::Pin<Box<ffi::Py_buffer>>,
     pub(crate) pos: usize,
 }
-impl<T: Element> PythonBuffer<T> {
+// PyBuffer is thread-safe: the shape of the buffer is immutable while a Py_buffer exists.
+// Accessing the buffer contents is protected using the GIL.
+unsafe impl Send for PythonBuffer {}
+unsafe impl Sync for PythonBuffer {}
+
+impl PythonBuffer {
     /// Reset the read/write position of cursor
     pub fn reset_position(&mut self) {
         self.pos = 0;
@@ -188,41 +194,83 @@ impl<T: Element> PythonBuffer<T> {
     }
     /// Is the Python buffer readonly
     pub fn readonly(&self) -> bool {
-        self.inner.readonly()
+        self.inner.readonly != 0
     }
     /// Get the underlying buffer as a slice of bytes
     pub fn as_slice(&self) -> &[u8] {
-        unsafe { std::slice::from_raw_parts(self.inner.buf_ptr() as *const u8, self.inner.len_bytes()) }
+        unsafe { std::slice::from_raw_parts(self.buf_ptr() as *const u8, self.len_bytes()) }
     }
     /// Get the underlying buffer as a mutable slice of bytes
     pub fn as_slice_mut(&mut self) -> PyResult<&mut [u8]> {
         // TODO: For v3 release, add self.readonly check; bytes is readonly but
         // v1 and v2 releases have not treated it as such.
-        Ok(unsafe { std::slice::from_raw_parts_mut(self.inner.buf_ptr() as *mut u8, self.inner.len_bytes()) })
+        Ok(unsafe { std::slice::from_raw_parts_mut(self.buf_ptr() as *mut u8, self.len_bytes()) })
+    }
+    /// If underlying buffer is c_contiguous
+    pub fn is_c_contiguous(&self) -> bool {
+        unsafe { ffi::PyBuffer_IsContiguous(&*self.inner as *const ffi::Py_buffer, b'C' as std::os::raw::c_char) != 0 }
+    }
+    /// Dimensions for buffer
+    pub fn dimensions(&self) -> usize {
+        self.inner.ndim as usize
+    }
+    /// raw pointer to buffer
+    pub fn buf_ptr(&self) -> *mut std::os::raw::c_void {
+        self.inner.buf
+    }
+    /// length of buffer in bytes
+    pub fn len_bytes(&self) -> usize {
+        self.inner.len as usize
+    }
+    /// the buffer item size
+    pub fn item_size(&self) -> usize {
+        self.inner.itemsize as usize
+    }
+    /// number of items in buffer
+    pub fn item_count(&self) -> usize {
+        (self.inner.len as usize) / (self.inner.itemsize as usize)
     }
 }
 
-impl<'py, T: Element> FromPyObject<'py> for PythonBuffer<T> {
+impl Drop for PythonBuffer {
+    fn drop(&mut self) {
+        Python::with_gil(|_| unsafe { ffi::PyBuffer_Release(&mut *self.inner) })
+    }
+}
+
+impl<'py> FromPyObject<'py> for PythonBuffer {
     fn extract(obj: &'py PyAny) -> PyResult<Self> {
-        let buf = PyBuffer::get(obj)?;
-        PythonBuffer::try_from(buf)
+        Self::try_from(obj)
     }
 }
 
-impl<T: Element> TryFrom<PyBuffer<T>> for PythonBuffer<T> {
+impl<'py> TryFrom<&'py PyAny> for PythonBuffer {
     type Error = PyErr;
-    fn try_from(buf: PyBuffer<T>) -> Result<Self, Self::Error> {
-        if !buf.is_c_contiguous() {
+    fn try_from(obj: &'py PyAny) -> Result<Self, Self::Error> {
+        let mut buf = Box::new(mem::MaybeUninit::uninit());
+        let rc = unsafe { ffi::PyObject_GetBuffer(obj.as_ptr(), buf.as_mut_ptr(), ffi::PyBUF_CONTIG_RO) };
+        if rc != 0 {
+            return Err(exceptions::PyBufferError::new_err(
+                "Failed to get buffer, is it C contiguous, and shape is not null?",
+            ));
+        }
+        let buf = Box::new(unsafe { mem::MaybeUninit::<ffi::Py_buffer>::assume_init(*buf) });
+        let buf = Self {
+            inner: std::pin::Pin::from(buf),
+            pos: 0,
+        };
+        // sanity checks
+        if buf.inner.shape.is_null() {
+            Err(exceptions::PyBufferError::new_err("shape is null"))
+        } else if !buf.is_c_contiguous() {
             Err(PyBufferError::new_err("Buffer is not C contiguous"))
-        } else if buf.dimensions() != 1 {
-            Err(PyBufferError::new_err("Buffer is not 1 dimensional"))
         } else {
-            Ok(Self { inner: buf, pos: 0 })
+            Ok(buf)
         }
     }
 }
 
-impl<T: Element> Read for PythonBuffer<T> {
+impl Read for PythonBuffer {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         let slice = self.as_slice();
         if self.pos < slice.len() {
@@ -235,7 +283,7 @@ impl<T: Element> Read for PythonBuffer<T> {
     }
 }
 
-impl<T: Element> Write for PythonBuffer<T> {
+impl Write for PythonBuffer {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let pos = self.position();
         let slice = self
@@ -463,9 +511,9 @@ impl Seek for RustyFile {
         self.inner.seek(pos)
     }
 }
-impl<T: Element> Seek for PythonBuffer<T> {
+impl Seek for PythonBuffer {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
-        let len = self.inner.len_bytes();
+        let len = self.len_bytes();
         let current = self.position();
         match pos {
             SeekFrom::Start(n) => self.set_position(n as usize),

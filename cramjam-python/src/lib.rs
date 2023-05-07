@@ -81,7 +81,7 @@ pub enum BytesType<'a> {
     RustyFile(&'a PyCell<RustyFile>),
     /// `object` implementing the Buffer Protocol
     #[pyo3(transparent, annotation = "pybuffer")]
-    PyBuffer(PythonBuffer<u8>),
+    PyBuffer(PythonBuffer),
 }
 
 impl<'a> AsBytes for BytesType<'a> {

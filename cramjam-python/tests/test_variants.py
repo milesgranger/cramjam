@@ -6,12 +6,15 @@ import cramjam
 import hashlib
 from datetime import timedelta
 from hypothesis import strategies as st, given, settings
+from hypothesis.extra import numpy as st_np
 
 VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd")
 
 # Some OS can be slow or have higher variability in their runtimes on CI
-settings.register_profile("local", deadline=timedelta(milliseconds=1000))
-settings.register_profile("CI", deadline=None, max_examples=10)
+settings.register_profile(
+    "local", deadline=timedelta(milliseconds=1000), max_examples=100
+)
+settings.register_profile("CI", deadline=None, max_examples=25)
 if os.getenv("CI"):
     settings.load_profile("CI")
 else:
@@ -26,6 +29,23 @@ def test_has_version():
     from cramjam import __version__
 
     assert isinstance(__version__, str)
+
+
+@pytest.mark.parametrize("variant_str", VARIANTS)
+@given(arr=st_np.arrays(st_np.scalar_dtypes(), shape=st.integers(0, int(1e5))))
+def test_variants_different_dtypes(variant_str, arr):
+    variant = getattr(cramjam, variant_str)
+    compressed = variant.compress(arr)
+    decompressed = variant.decompress(compressed)
+    assert same_same(bytes(decompressed), arr.tobytes())
+
+    # And compress n dims > 1
+    if arr.shape[0] % 2 == 0:
+        arr = arr.reshape((2, -1))
+        compressed = variant.compress(arr)
+        decompressed = variant.decompress(compressed)
+        assert same_same(bytes(decompressed), arr.tobytes())
+        
 
 
 @pytest.mark.parametrize("is_bytearray", (True, False))
@@ -44,7 +64,7 @@ def test_variants_simple(variant_str, is_bytearray, uncompressed: bytes):
     assert isinstance(compressed, cramjam.Buffer)
 
     decompressed = variant.decompress(compressed, output_len=len(uncompressed))
-    assert decompressed.read() == uncompressed
+    assert same_same(decompressed.read(), uncompressed)
     assert isinstance(decompressed, cramjam.Buffer)
 
 
@@ -262,7 +282,7 @@ def test_lz4_block(compress_kwargs):
         lz4.compress_block(data, **compress_kwargs),
         output_len=len(data) if not compress_kwargs["store_size"] else None,
     )
-    assert bytes(out) == data
+    assert same_same(bytes(out), data)
 
 
 @given(first=st.binary(), second=st.binary())
@@ -280,7 +300,7 @@ def test_gzip_multiple_streams(first: bytes, second: bytes):
     o1 = bytes(cramjam.gzip.compress(first))
     o2 = bytes(cramjam.gzip.compress(second))
     out = bytes(cramjam.gzip.decompress(o1 + o2))
-    assert out == first + second
+    assert same_same(out, first + second)
 
 
 @pytest.mark.parametrize(
@@ -307,7 +327,7 @@ def test_streams_compressor(mod, first: bytes, second: bytes):
 
     out += bytes(compressor.finish())
     decompressed = mod.decompress(out)
-    assert bytes(decompressed) == first + second
+    assert same_same(bytes(decompressed), first + second)
 
     # just empty bytes after the first .finish()
     # same behavior as brotli.Compressor()
