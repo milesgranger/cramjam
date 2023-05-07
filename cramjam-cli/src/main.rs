@@ -125,28 +125,48 @@ pub fn main() -> io::Result<()> {
             Action::Decompress => libcramjam::snappy::decompress(input, &mut output),
         },
         Codec::Lz4(conf) => {
-            // TODO: lz4 doesn't impl Read for their Encoder, so cannot determine
-            // number of bytes compressed without using Seek, which stdout doesn't have,
-            // as it's streaming. So here, we'll go ahead and read everything in then
-            // send it in as a cursor, file can remain as is.
-            // When lz4 implements Reader for the Encoder, then all this can go away.
-            // along with the `Seek` trait bound on the internal::compress function
-            if let Some(stdout) = ((&mut *output).as_any_mut()).downcast_mut::<StdoutLock>() {
-                let mut data = vec![];
-                libcramjam::lz4::compress(input, &mut Cursor::new(&mut data), conf.level.map(|v| v as _))?;
-                io::copy(&mut Cursor::new(data), stdout).map(|v| v as usize)
-            } else {
-                match ((&mut *output).as_any_mut()).downcast_mut::<File>() {
-                    Some(file) => libcramjam::lz4::compress(input, file, conf.level.map(|v| v as _)),
-                    None => unreachable!("Did we implement something other than Stdout and File for output?"),
+            match conf.action {
+                Action::Compress => {
+                    // TODO: lz4 doesn't impl Read for their Encoder, so cannot determine
+                    // number of bytes compressed without using Seek, which stdout doesn't have,
+                    // as it's streaming. So here, we'll go ahead and read everything in then
+                    // send it in as a cursor, file can remain as is.
+                    // When lz4 implements Reader for the Encoder, then all this can go away.
+                    // along with the `Seek` trait bound on the internal::compress function
+                    if let Some(stdout) = ((&mut *output).as_any_mut()).downcast_mut::<StdoutLock>() {
+                        let mut data = vec![];
+                        libcramjam::lz4::compress(input, &mut Cursor::new(&mut data), conf.level.map(|v| v as _))?;
+                        io::copy(&mut Cursor::new(data), stdout).map(|v| v as usize)
+                    } else {
+                        match ((&mut *output).as_any_mut()).downcast_mut::<File>() {
+                            Some(file) => libcramjam::lz4::compress(input, file, conf.level.map(|v| v as _)),
+                            None => unreachable!("Did we implement something other than Stdout and File for output?"),
+                        }
+                    }
                 }
+                Action::Decompress => libcramjam::lz4::decompress(input, &mut output),
             }
         }
-        Codec::Bzip2(conf) => libcramjam::bzip2::compress(input, &mut output, conf.level.map(|v| v as _)),
-        Codec::Gzip(conf) => libcramjam::gzip::compress(input, &mut output, conf.level.map(|v| v as _)),
-        Codec::ZSTD(conf) => libcramjam::zstd::compress(input, &mut output, conf.level.map(|v| v as _)),
-        Codec::Deflate(conf) => libcramjam::deflate::compress(input, &mut output, conf.level.map(|v| v as _)),
-        Codec::Brotli(conf) => libcramjam::brotli::compress(input, &mut output, conf.level.map(|v| v as _)),
+        Codec::Bzip2(conf) => match conf.action {
+            Action::Compress => libcramjam::bzip2::compress(input, &mut output, conf.level.map(|v| v as _)),
+            Action::Decompress => libcramjam::bzip2::decompress(input, &mut output),
+        },
+        Codec::Gzip(conf) => match conf.action {
+            Action::Compress => libcramjam::gzip::compress(input, &mut output, conf.level.map(|v| v as _)),
+            Action::Decompress => libcramjam::gzip::decompress(input, &mut output),
+        },
+        Codec::ZSTD(conf) => match conf.action {
+            Action::Compress => libcramjam::zstd::compress(input, &mut output, conf.level.map(|v| v as _)),
+            Action::Decompress => libcramjam::zstd::decompress(input, &mut output),
+        },
+        Codec::Deflate(conf) => match conf.action {
+            Action::Compress => libcramjam::deflate::compress(input, &mut output, conf.level.map(|v| v as _)),
+            Action::Decompress => libcramjam::deflate::decompress(input, &mut output),
+        },
+        Codec::Brotli(conf) => match conf.action {
+            Action::Compress => libcramjam::brotli::compress(input, &mut output, conf.level.map(|v| v as _)),
+            Action::Decompress => libcramjam::brotli::decompress(input, &mut output),
+        },
     }?;
     let duration = start.elapsed();
 
