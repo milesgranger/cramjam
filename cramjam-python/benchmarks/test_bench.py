@@ -5,8 +5,26 @@ import pathlib
 import numpy as np
 from memory_profiler import profile
 
+
+class Bzip2CompressedFile:
+    """
+    Too bad can't just inherit pathlib.Path
+
+    Simple wrapper to decompress benchmark file on read_bytes()
+    """
+    def __init__(self, path: pathlib.Path ):
+        self.path = path
+
+    @property
+    def name(self):
+        return self.path.name.replace('.bz2', '')
+
+    def read_bytes(self):
+        return cramjam.bzip2.decompress(self.path.read_bytes()).read()
+
+
 FILES = [
-    f
+    Bzip2CompressedFile(f)
     for f in pathlib.Path("benchmarks/data").iterdir()
     if f.is_file() and f.name != "COPYING"
 ]
