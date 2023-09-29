@@ -211,7 +211,7 @@ def test_lz4_block(benchmark, file, use_cramjam: bool):
     [
         f
         for f in FILES
-        if not (isinstance(f, FiftyFourMbRandom) or isinstance(f, FiftyFourMbRepeating))
+        if not (isinstance(f, (FiftyFourMbRandom, FiftyFourMbRepeating))
     ],
     ids=lambda val: val.name,
 )

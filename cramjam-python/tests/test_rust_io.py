@@ -35,7 +35,7 @@ def test_obj_api(tmpdir, Obj):
         buf.readinto(out)
 
         # Will update the output buffer
-        if isinstance(out, File) or isinstance(out, Buffer):
+        if isinstance(out, (File, Buffer)):
             out.seek(0)
             assert out.read() == expected
         elif isinstance(out, bytearray):
