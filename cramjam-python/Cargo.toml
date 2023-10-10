@@ -18,5 +18,6 @@ extension-module = ["pyo3/extension-module"]
 
 
 [dependencies]
-pyo3 = { version = "^0.18", default-features = false, features = ["macros"] }
+# Python 3.12 support not officially released yet
+pyo3 = { git = "https://github.com/PyO3/pyo3.git", rev="90cc69b", default-features = false, features = ["macros"] }
 libcramjam = { path = "../libcramjam" }

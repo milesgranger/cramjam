@@ -11,9 +11,9 @@ use std::os::raw::c_int;
 use crate::exceptions::CompressionError;
 use crate::BytesType;
 use pyo3::exceptions::{self, PyBufferError};
+use pyo3::ffi;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
-use pyo3::{ffi, AsPyPointer};
 use std::path::PathBuf;
 
 pub(crate) trait AsBytes {

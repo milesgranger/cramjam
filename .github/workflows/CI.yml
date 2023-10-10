@@ -12,7 +12,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
@@ -50,17 +50,17 @@ jobs:
           pip install cramjam --no-index --find-links dist --force-reinstall
           pip install cramjam-cli --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
-        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11"]'), matrix.python-version) }}
+        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         uses: PyO3/maturin-action@v1
         with:
           args: -i python --release --target universal2-apple-darwin --out dist --manifest-path cramjam-cli/Cargo.toml
       - name: Build wheels - universal2
-        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11"]'), matrix.python-version) }}
+        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         uses: PyO3/maturin-action@v1
         with:
           args: -i python --release --target universal2-apple-darwin --out dist --manifest-path cramjam-python/Cargo.toml
       - name: Install built wheels - universal2
-        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11"]'), matrix.python-version) }}
+        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         run: |
           pip install cramjam --no-index --find-links dist --force-reinstall
           pip install cramjam-cli --no-index --find-links dist --force-reinstall
@@ -81,7 +81,7 @@ jobs:
     runs-on: windows-latest
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
         target: [x64, x86]
     steps:
       - uses: actions/checkout@v3
@@ -137,7 +137,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11']
+        python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
         target: [x86_64, i686]
     steps:
     - uses: actions/checkout@v3
@@ -200,6 +200,7 @@ jobs:
           - '3.9'
           - '3.10'
           - '3.11'
+          - '3.12'
         target: [aarch64, armv7, s390x, ppc64le]
         include:
           - python: pypy3.7
@@ -247,7 +248,7 @@ jobs:
           apt-get install -y --no-install-recommends python3 python3-venv software-properties-common
           add-apt-repository ppa:deadsnakes/ppa
           apt-get update
-          apt-get install -y curl python3.7-venv python3.9-venv python3.10-venv python3.11-venv
+          apt-get install -y curl python3.7-venv python3.9-venv python3.10-venv python3.11-venv python3.12-venv
         run: |
           ls -lrth /artifacts
           PYTHON=python${{ matrix.python }}
