@@ -1,4 +1,4 @@
-//! lz4 de/compression interface
+//! LZ4 de/compression interface
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::{AsBytes, RustyBuffer};
 use crate::BytesType;
@@ -41,7 +41,7 @@ pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyR
     crate::generic!(py, libcramjam::lz4::decompress[data], output_len = output_len).map_err(DecompressionError::from_err)
 }
 
-/// lZ4 compression.
+/// LZ4 compression.
 ///
 /// Python Example
 /// --------------
@@ -91,7 +91,7 @@ pub fn decompress_block(py: Python, data: BytesType, output_len: Option<usize>) 
         .map(RustyBuffer::from)
 }
 
-/// lZ4 _block_ compression.
+/// LZ4 _block_ compression.
 ///
 /// The kwargs mostly follow the same definition found in [python-lz4 block.compress](https://python-lz4.readthedocs.io/en/stable/lz4.block.html#module-lz4.block)
 ///
@@ -144,7 +144,7 @@ pub fn decompress_block_into(py: Python, input: BytesType, mut output: BytesType
         .map(|v| v as _)
 }
 
-/// lZ4 _block_ compression into pre-allocated buffer.
+/// LZ4 _block_ compression into pre-allocated buffer.
 ///
 /// The kwargs mostly follow the same definition found in [python-lz4 block.compress](https://python-lz4.readthedocs.io/en/stable/lz4.block.html#module-lz4.block)
 ///
@@ -200,21 +200,13 @@ fn compression_mode(
     Ok(m)
 }
 
-///
 /// Determine the size of a buffer which is guaranteed to hold the result of block compression, will error if
-/// data is too long to be compressed by lz4.
+/// data is too long to be compressed by LZ4.
 ///
 /// Python Example
 /// --------------
 /// ```python
-/// >>> cramjam.lz4.compress_block_into(
-/// ...     b'some bytes here',
-/// ...     output=output_buffer,
-/// ...     mode=Option[str],
-/// ...     acceleration=Option[int],
-/// ...     compression=Option[int],
-/// ...     store_size=Option[bool]
-/// ... )
+/// >>> cramjam.lz4.compress_block_bound(b'some bytes here')
 /// ```
 #[pyfunction]
 pub fn compress_block_bound(src: BytesType) -> PyResult<usize> {
