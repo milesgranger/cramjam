@@ -6,6 +6,9 @@ pub mod lz4;
 pub mod snappy;
 pub mod zstd;
 
+#[cfg(feature = "capi")]
+mod capi;
+
 #[cfg(test)]
 mod tests {
 

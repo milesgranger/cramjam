@@ -2,10 +2,17 @@
 pub use flate2;
 use flate2::read::{DeflateDecoder, DeflateEncoder};
 use flate2::Compression;
+use libdeflater;
 use std::io::prelude::*;
 use std::io::Error;
 
 const DEFAULT_COMPRESSION_LEVEL: u32 = 6;
+
+pub fn compress_bound(input_len: usize, level: Option<i32>) -> usize {
+    let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL as _);
+    let mut c = libdeflater::Compressor::new(libdeflater::CompressionLvl::new(level).unwrap());
+    c.deflate_compress_bound(input_len)
+}
 
 /// Decompress gzip data
 #[inline(always)]

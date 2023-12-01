@@ -155,7 +155,7 @@ jobs:
     - name: Build
       run: cargo build --release
     - name: Tests
-      run: cargo test --no-default-features --release
+      run: cargo test --no-default-features --release --features capi
     - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
