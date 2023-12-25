@@ -1,6 +1,6 @@
 [package]
 name = "libcramjam"
-version = "0.1.3"
+version = "0.1.5"
 edition = "2021"
 license = "MIT"
 description = "Compression library combining a plethera of algorithms in a similar as possible API"
