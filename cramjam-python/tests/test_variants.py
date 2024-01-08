@@ -45,14 +45,12 @@ def test_variants_different_dtypes(variant_str, arr):
         compressed = variant.compress(arr)
         decompressed = variant.decompress(compressed)
         assert same_same(bytes(decompressed), arr.tobytes())
-        
 
 
 @pytest.mark.parametrize("is_bytearray", (True, False))
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(uncompressed=st.binary(min_size=1))
 def test_variants_simple(variant_str, is_bytearray, uncompressed: bytes):
-
     variant = getattr(cramjam, variant_str)
 
     if is_bytearray:
@@ -264,7 +262,6 @@ def test_dunders(Obj, tmp_path_factory, data):
     ),
 )
 def test_lz4_block(compress_kwargs):
-
     from cramjam import lz4
 
     data = b"howdy neighbor"
@@ -287,7 +284,6 @@ def test_lz4_block(compress_kwargs):
 
 @given(first=st.binary(), second=st.binary())
 def test_gzip_multiple_streams(first: bytes, second: bytes):
-
     out1 = gzip.compress(first)
     out2 = gzip.compress(second)
     assert gzip.decompress(out1 + out2) == first + second

@@ -211,7 +211,7 @@ def test_lz4_block(benchmark, file, use_cramjam: bool):
     [
         f
         for f in FILES
-        if not (isinstance(f, (FiftyFourMbRandom, FiftyFourMbRepeating))
+        if not (isinstance(f, (FiftyFourMbRandom, FiftyFourMbRepeating)))
     ],
     ids=lambda val: val.name,
 )
@@ -285,7 +285,6 @@ def test_bzip2(benchmark, file, use_cramjam: bool):
 
 @profile
 def memory_profile():
-
     import snappy
 
     data = bytearray(FILES[-1].read_bytes())

@@ -2,7 +2,6 @@
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::{AsBytes, RustyBuffer};
 use crate::BytesType;
-use libcramjam::lz4::lz4::{block, block::CompressionMode};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
@@ -76,7 +75,7 @@ pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> P
 ///
 /// `output_len` is optional, it's the upper bound length of decompressed data; if it's not provided,
 /// then it's assumed `store_size=True` was used during compression and length will then be taken
-/// from the header.
+/// from the header, otherwise it's assumed `store_size=False` was used and no prepended size exists in input
 ///
 /// Python Example
 /// --------------
@@ -84,11 +83,21 @@ pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> P
 /// >>> cramjam.lz4.decompress_block(compressed_bytes, output_len=Optional[int])
 /// ```
 #[pyfunction]
+#[allow(unused_variables)]
 pub fn decompress_block(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
     let bytes = data.as_bytes();
-    py.allow_threads(|| block::decompress(bytes, output_len.map(|v| v as i32)))
+
+    py.allow_threads(|| {
+        match output_len {
+            Some(n) => {
+                let mut buf = vec![0u8; n];
+                libcramjam::lz4::block::decompress_into(bytes, &mut buf, Some(false)).map(|_| buf)
+            }
+            None => libcramjam::lz4::block::decompress_vec(bytes),
+        }
         .map_err(DecompressionError::from_err)
         .map(RustyBuffer::from)
+    })
 }
 
 /// LZ4 _block_ compression.
@@ -120,9 +129,7 @@ pub fn compress_block(
 ) -> PyResult<RustyBuffer> {
     let bytes = data.as_bytes();
     py.allow_threads(|| {
-        let store_size = store_size.unwrap_or(true);
-        let mode = compression_mode(mode, compression, acceleration)?;
-        block::compress(bytes, Some(mode), store_size)
+        libcramjam::lz4::block::compress_vec(bytes, compression.map(|v| v as _), acceleration, store_size)
     })
     .map_err(CompressionError::from_err)
     .map(RustyBuffer::from)
@@ -139,7 +146,7 @@ pub fn compress_block(
 pub fn decompress_block_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes = input.as_bytes();
     let out_bytes = output.as_bytes_mut();
-    py.allow_threads(|| block::decompress_to_buffer(bytes, None, out_bytes))
+    py.allow_threads(|| libcramjam::lz4::block::decompress_into(bytes, out_bytes, Some(true)))
         .map_err(DecompressionError::from_err)
         .map(|v| v as _)
 }
@@ -174,30 +181,10 @@ pub fn compress_block_into(
     let bytes = data.as_bytes();
     let out_bytes = output.as_bytes_mut();
     py.allow_threads(|| {
-        let store_size = store_size.unwrap_or(true);
-        let mode = compression_mode(mode, compression, acceleration)?;
-        block::compress_to_buffer(bytes, Some(mode), store_size, out_bytes)
+        libcramjam::lz4::block::compress_into(bytes, out_bytes, compression.map(|v| v as _), acceleration, store_size)
     })
     .map_err(CompressionError::from_err)
     .map(|v| v as _)
-}
-
-#[inline]
-fn compression_mode(
-    mode: Option<&str>,
-    compression: Option<i32>,
-    acceleration: Option<i32>,
-) -> PyResult<CompressionMode> {
-    let m = match mode {
-        Some(m) => match m {
-            "default" => CompressionMode::DEFAULT,
-            "fast" => CompressionMode::FAST(acceleration.unwrap_or(1)),
-            "high_compression" => CompressionMode::HIGHCOMPRESSION(compression.unwrap_or(9)),
-            _ => return Err(DecompressionError::new_err(format!("Unrecognized mode '{}'", m))),
-        },
-        None => CompressionMode::DEFAULT,
-    };
-    Ok(m)
 }
 
 /// Determine the size of a buffer which is guaranteed to hold the result of block compression, will error if
@@ -210,7 +197,7 @@ fn compression_mode(
 /// ```
 #[pyfunction]
 pub fn compress_block_bound(src: BytesType) -> PyResult<usize> {
-    block::compress_bound(src.len()).map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))
+    Ok(libcramjam::lz4::block::compress_bound(src.len(), Some(true)))
 }
 
 /// lz4 Compressor object for streaming compression
