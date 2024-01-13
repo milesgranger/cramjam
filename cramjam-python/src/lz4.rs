@@ -2,6 +2,7 @@
 use crate::exceptions::{CompressionError, DecompressionError};
 use crate::io::{AsBytes, RustyBuffer};
 use crate::BytesType;
+use libcramjam::lz4::lz4::{BlockMode, ContentChecksum};
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
 use pyo3::PyResult;
@@ -210,15 +211,18 @@ pub struct Compressor {
 impl Compressor {
     /// Initialize a new `Compressor` instance.
     #[new]
-    pub fn __init__(level: Option<u32>, block_linked: Option<bool>) -> PyResult<Self> {
-        let block_mode = match block_linked {
-            Some(false) => libcramjam::lz4::lz4::BlockMode::Independent,
-            _ => libcramjam::lz4::lz4::BlockMode::Linked,
-        };
+    pub fn __init__(level: Option<u32>, content_checksum: Option<bool>, block_linked: Option<bool>) -> PyResult<Self> {
         let inner = libcramjam::lz4::lz4::EncoderBuilder::new()
             .auto_flush(true)
-            .level(level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL))
-            .block_mode(block_mode)
+            .level(level.unwrap_or(DEFAULT_COMPRESSION_LEVEL))
+            .checksum(match content_checksum {
+                Some(false) => ContentChecksum::NoChecksum,
+                _ => ContentChecksum::ChecksumEnabled,
+            })
+            .block_mode(match block_linked {
+                Some(false) => BlockMode::Independent,
+                _ => BlockMode::Linked,
+            })
             .build(Cursor::new(vec![]))?;
         Ok(Self { inner: Some(inner) })
     }
