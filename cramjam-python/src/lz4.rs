@@ -210,10 +210,15 @@ pub struct Compressor {
 impl Compressor {
     /// Initialize a new `Compressor` instance.
     #[new]
-    pub fn __init__(level: Option<u32>) -> PyResult<Self> {
+    pub fn __init__(level: Option<u32>, block_linked: Option<bool>) -> PyResult<Self> {
+        let block_mode = match block_linked {
+            Some(false) => libcramjam::lz4::lz4::BlockMode::Independent,
+            _ => libcramjam::lz4::lz4::BlockMode::Linked,
+        };
         let inner = libcramjam::lz4::lz4::EncoderBuilder::new()
             .auto_flush(true)
             .level(level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL))
+            .block_mode(block_mode)
             .build(Cursor::new(vec![]))?;
         Ok(Self { inner: Some(inner) })
     }
