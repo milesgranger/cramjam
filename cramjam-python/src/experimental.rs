@@ -1,5 +1,5 @@
 //! Experimental and unstable implementations.
-//! This module's use makes no effort to maintain SemVer between
+//! This module makes no effort to maintain SemVer between
 //! releases.
 use pyo3::prelude::*;
 use pyo3::PyResult;
@@ -12,7 +12,6 @@ fn add_experimental_modules(py: Python, m: &PyModule) -> PyResult<()> {
     let lzma_module = PyModule::new(py, "lzma")?;
     lzma::init_py_module(lzma_module)?;
     m.add_submodule(lzma_module)?;
-
     Ok(())
 }
 
@@ -38,8 +37,6 @@ pub mod lzma {
     }
     /// LZMA decompression.
     ///
-    /// This supports reading both the legacy LZMA format and XZ formats.
-    ///
     /// Python Example
     /// --------------
     /// ```python
@@ -53,8 +50,6 @@ pub mod lzma {
     }
 
     /// LZMA compression.
-    ///
-    /// This only supports writing the newer XZ format, not the legacy LZMA format.
     ///
     /// Python Example
     /// --------------
@@ -92,7 +87,7 @@ pub mod lzma {
     /// Snappy Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Option<libcramjam::lzma::lzma::writer::LzmaWriter<Cursor<Vec<u8>>>>,
+        inner: Option<libcramjam::lzma::xz2::write::XzEncoder<Cursor<Vec<u8>>>>,
     }
 
     #[pymethods]
@@ -101,8 +96,7 @@ pub mod lzma {
         #[new]
         pub fn __init__(preset: Option<u32>) -> PyResult<Self> {
             let preset = preset.unwrap_or(5);
-            let inner = libcramjam::lzma::lzma::writer::LzmaWriter::new_compressor(Cursor::new(vec![]), preset)
-                .map_err(|e| CompressionError::new_err(e.to_string()))?;
+            let inner = libcramjam::lzma::xz2::write::XzEncoder::new(Cursor::new(vec![]), preset);
             Ok(Self { inner: Some(inner) })
         }
 

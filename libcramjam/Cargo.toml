@@ -21,7 +21,7 @@ libdeflater = "^1"
 zstd = "0.11.1+zstd.1.5.2"
 zstd-safe = "7.0.0"  # NOTE: This is the same dep version as zstd, as they don't re-export
 libc = { version = "0.2", optional = true }
-rust-lzma = { version = "0.6.0" }
+xz2 = { version = "0.1.7", features = ["static"] }
 
 [build-dependencies]
 cbindgen = "^0.24"
