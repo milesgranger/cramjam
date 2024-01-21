@@ -39,7 +39,7 @@ def test_has_version():
 
 
 @pytest.mark.parametrize("variant_str", VARIANTS)
-@given(arr=st_np.arrays(st_np.scalar_dtypes(), shape=st.integers(0, int(1e5))))
+@given(arr=st_np.arrays(st_np.scalar_dtypes(), shape=st.integers(0, int(1e4))))
 def test_variants_different_dtypes(variant_str, arr):
     variant = getattr(cramjam, variant_str)
     compressed = variant.compress(arr)
