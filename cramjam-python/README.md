@@ -42,6 +42,7 @@ Available algorithms:
 - [X] Gzip
 - [X] Deflate
 - [X] ZSTD
+- [X] LZMA / XZ (cramjam.experimental.lzma)  # experimental support!
 
 All available for use as:
 

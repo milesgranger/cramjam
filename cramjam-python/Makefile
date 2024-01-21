@@ -36,6 +36,9 @@ bench-bzip2:
 bench-zstd:
 	$(BASE_BENCH_CMD) zstd
 
+bench-lzma:
+	$(BASE_BENCH_CMD) lzma
+
 dev-install:
 	rm -rf ./dist
 	maturin build --release --out dist --interpreter $(shell which python)

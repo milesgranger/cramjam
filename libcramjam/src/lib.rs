@@ -3,6 +3,7 @@ pub mod bzip2;
 pub mod deflate;
 pub mod gzip;
 pub mod lz4;
+pub mod lzma;
 pub mod snappy;
 pub mod zstd;
 
@@ -80,4 +81,5 @@ mod tests {
     test_variant!(deflate, compressed_len = 157174, level = None);
     test_variant!(zstd, compressed_len = 4990, level = None);
     test_variant!(lz4, compressed_len = 303278, level = None);
+    test_variant!(lzma, compressed_len = 8020, level = None);
 }
