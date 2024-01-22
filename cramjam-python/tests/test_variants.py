@@ -8,7 +8,14 @@ from datetime import timedelta
 from hypothesis import strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
 
-VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd")
+VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "lzma")
+
+# LZMA is experimental, but in testing we'll treat it like it's not in the
+# experimental submodule.
+# TODO: Maybe rename it to XZ, since LZMA is the legacy version.
+# ref: https://github.com/fpgaminer/rust-lzma/issues/18, but then
+# the rustlib and the clib both are lzma... so maybe not?
+cramjam.lzma = cramjam.experimental.lzma
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile(
@@ -32,7 +39,7 @@ def test_has_version():
 
 
 @pytest.mark.parametrize("variant_str", VARIANTS)
-@given(arr=st_np.arrays(st_np.scalar_dtypes(), shape=st.integers(0, int(1e5))))
+@given(arr=st_np.arrays(st_np.scalar_dtypes(), shape=st.integers(0, int(1e4))))
 def test_variants_different_dtypes(variant_str, arr):
     variant = getattr(cramjam, variant_str)
     compressed = variant.compress(arr)

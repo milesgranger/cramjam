@@ -55,6 +55,7 @@ pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
 pub mod exceptions;
+pub mod experimental;
 pub mod gzip;
 pub mod io;
 pub mod lz4;
@@ -369,6 +370,7 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> gzip);
     make_submodule!(py -> m -> deflate);
     make_submodule!(py -> m -> zstd);
+    make_submodule!(py -> m -> experimental);
 
     Ok(())
 }
