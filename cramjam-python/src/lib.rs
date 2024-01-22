@@ -164,7 +164,7 @@ impl<'a> BytesType<'a> {
 #[macro_export]
 macro_rules! generic {
     // de/compress
-    ($py:ident, $op:path[$input:expr], output_len=$output_len:ident $(, level=$level:ident)?) => {
+    ($py:ident, $op:path[$input:expr], output_len = $output_len:ident $(, $args:ident)*) => {
         {
             use crate::io::RustyBuffer;
 
@@ -177,20 +177,20 @@ macro_rules! generic {
                     let borrowed = f.borrow();
                     let file = &borrowed.inner;
                     $py.allow_threads(|| {
-                        $op(file, &mut Cursor::new(&mut output) $(, $level)? )
+                        $op(file, &mut Cursor::new(&mut output) $(, $args)* )
                     })
                 },
                 _ => {
                     let bytes = $input.as_bytes();
                     $py.allow_threads(|| {
-                        $op(bytes, &mut Cursor::new(&mut output) $(, $level)? )
+                        $op(bytes, &mut Cursor::new(&mut output) $(, $args)* )
                     })
                 }
             }.map(|_| RustyBuffer::from(output))
         }
     };
     // de/compress_into
-    ($py:ident, $op:path[$input:ident, $output:ident] $(, level=$level:ident)?) => {
+    ($py:ident, $op:path[$input:ident, $output:ident] $(, $args:ident)*) => {
         {
             match $input {
                 BytesType::RustyFile(f) => {
@@ -201,20 +201,20 @@ macro_rules! generic {
                             let mut borrowed = f.borrow_mut();
                             let mut f_out = &mut borrowed.inner;
                             $py.allow_threads(|| {
-                                $op(f_in, &mut f_out $(, $level)? )
+                                $op(f_in, &mut f_out $(, $args)* )
                             })
                         },
                         BytesType::RustyBuffer(buffer) => {
                             let mut borrowed = buffer.borrow_mut();
                             let mut buf_out = &mut borrowed.inner;
                             $py.allow_threads(|| {
-                                $op(f_in, &mut buf_out $(, $level)? )
+                                $op(f_in, &mut buf_out $(, $args)* )
                             })
                         },
                         _ => {
                             let bytes_out = $output.as_bytes_mut();
                             $py.allow_threads(|| {
-                                $op(f_in, &mut Cursor::new(bytes_out) $(, $level)? )
+                                $op(f_in, &mut Cursor::new(bytes_out) $(, $args)* )
                             })
                         }
                     }
@@ -226,20 +226,20 @@ macro_rules! generic {
                             let mut borrowed = f.borrow_mut();
                             let mut f_out = &mut borrowed.inner;
                             $py.allow_threads(|| {
-                                $op(bytes_in, &mut f_out $(, $level)? )
+                                $op(bytes_in, &mut f_out $(, $args)* )
                             })
                         },
                         BytesType::RustyBuffer(buffer) => {
                             let mut borrowed = buffer.borrow_mut();
                             let mut buf_out = &mut borrowed.inner;
                             $py.allow_threads(|| {
-                                $op(bytes_in, &mut buf_out $(, $level)? )
+                                $op(bytes_in, &mut buf_out $(, $args)* )
                             })
                         },
                         _ => {
                             let bytes_out = $output.as_bytes_mut();
                             $py.allow_threads(|| {
-                                $op(bytes_in, &mut Cursor::new(bytes_out) $(, $level)?)
+                                $op(bytes_in, &mut Cursor::new(bytes_out) $(, $args)*)
                             })
                         }
                     }
