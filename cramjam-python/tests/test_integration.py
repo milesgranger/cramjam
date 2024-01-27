@@ -9,6 +9,9 @@ from collections import namedtuple
 import pytest
 import cramjam
 
+if not hasattr(cramjam, 'lzma'):
+    cramjam.lzma = cramjam.experimental.lzma
+
 
 @pytest.fixture
 def integration_dir():
@@ -35,6 +38,7 @@ Variant = namedtuple("Variant", ("name", "suffix"))
         Variant("brotli", "br"),
         Variant("lz4", "lz4"),
         Variant("snappy", "snappy"),
+        Variant("lzma", "lzma")
     ),
 )
 def test_variant(variant: Variant, integration_dir: pathlib.Path, plaintext: bytes):
