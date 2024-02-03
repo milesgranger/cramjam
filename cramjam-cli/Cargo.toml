@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 clap = { version = "^4.2", features = ["derive"] }
 bytesize = "^1"
-libcramjam = { path = "../libcramjam" }
+libcramjam = "0.2.0"

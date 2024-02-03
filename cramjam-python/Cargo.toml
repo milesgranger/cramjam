@@ -19,4 +19,4 @@ extension-module = ["pyo3/extension-module"]
 
 [dependencies]
 pyo3 = { version = "^0.20", default-features = false, features = ["macros"] }
-libcramjam = { path = "../libcramjam" }
+libcramjam = "0.2.0"
