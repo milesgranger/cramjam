@@ -3,13 +3,19 @@ Test decompressing files which have been compressed from
 main stream third party implementations, separate from this project.
 """
 import sys
+import lzma
 import pathlib
 from collections import namedtuple
 
 import pytest
-import cramjam
+from hypothesis import strategies as st, given, settings
+from hypothesis.extra import numpy as st_np
 
-if not hasattr(cramjam, 'lzma'):
+import cramjam
+from .test_variants import same_same
+
+
+if not hasattr(cramjam, "lzma"):
     cramjam.lzma = cramjam.experimental.lzma
 
 
@@ -38,10 +44,30 @@ Variant = namedtuple("Variant", ("name", "suffix"))
         Variant("brotli", "br"),
         Variant("lz4", "lz4"),
         Variant("snappy", "snappy"),
-        Variant("lzma", "lzma")
+        Variant("lzma", "lzma"),
     ),
 )
 def test_variant(variant: Variant, integration_dir: pathlib.Path, plaintext: bytes):
     file = integration_dir.joinpath(f"plaintext.txt.{variant.suffix}")
     decompress = getattr(cramjam, variant.name).decompress
     assert bytes(decompress(file.read_bytes())) == plaintext
+
+
+@given(data=st.binary(min_size=1, max_size=int(1e6)))
+@pytest.mark.parametrize("format", (lzma.FORMAT_ALONE, lzma.FORMAT_XZ))
+def test_lzma_compat(data, format):
+
+    # Decompress from std lzma lib
+    compressed = lzma.compress(data, format=format)
+    uncompressed = cramjam.lzma.decompress(compressed)
+    assert same_same(bytes(uncompressed), data)
+
+    # std lzma lib can decompress us
+    cjformat = (
+        cramjam.lzma.Format.ALONE
+        if format == lzma.FORMAT_ALONE
+        else cramjam.lzma.Format.XZ
+    )
+    compressed = cramjam.lzma.compress(data, format=cjformat)
+    uncompressed = lzma.decompress(bytes(compressed), format=format)
+    assert same_same(uncompressed, data)

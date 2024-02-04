@@ -1,5 +1,5 @@
 //! snappy de/compression interface
-use std::io;
+use std::io::{self, BufRead, BufReader};
 use std::io::{Read, Result, Write};
 pub use xz2;
 use xz2::read::{XzDecoder, XzEncoder};
@@ -49,7 +49,16 @@ impl Into<xz2Check> for Check {
 /// Decompress snappy data framed
 #[inline(always)]
 pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize> {
-    let stream = Stream::new_auto_decoder(u64::MAX, TELL_ANY_CHECK)?;
+    let xz_magicbytes = b"\xfd7zXZ\x00\x00";
+    let mut input = BufReader::new(input);
+    let stream = {
+        let innerbuf = input.fill_buf()?;
+        if &innerbuf[..xz_magicbytes.len()] == xz_magicbytes {
+            Stream::new_auto_decoder(u64::MAX, TELL_ANY_CHECK)?
+        } else {
+            Stream::new_lzma_decoder(u64::MAX)?
+        }
+    };
     let mut decoder = XzDecoder::new_stream(input, stream);
     let n_bytes = io::copy(&mut decoder, output)?;
     Ok(n_bytes as usize)
