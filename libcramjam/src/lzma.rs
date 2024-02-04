@@ -1,4 +1,4 @@
-//! snappy de/compression interface
+//! LZMA / XZ de/compression interface
 use std::io::{self, BufRead, BufReader};
 use std::io::{Read, Result, Write};
 pub use xz2;
