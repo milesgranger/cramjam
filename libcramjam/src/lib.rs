@@ -3,8 +3,8 @@ pub mod bzip2;
 pub mod deflate;
 pub mod gzip;
 pub mod lz4;
-pub mod lzma;
 pub mod snappy;
+pub mod xz;
 pub mod zstd;
 
 #[cfg(feature = "capi")]
@@ -84,12 +84,12 @@ mod tests {
     test_variant!(lz4, compressed_len = 303278, None);
 
     #[allow(non_upper_case_globals)]
-    const format: Option<crate::lzma::Format> = None;
+    const format: Option<crate::xz::Format> = None;
     #[allow(non_upper_case_globals)]
-    const check: Option<crate::lzma::Check> = None;
+    const check: Option<crate::xz::Check> = None;
     #[allow(non_upper_case_globals)]
-    const filters: Option<crate::lzma::Filters> = None;
+    const filters: Option<crate::xz::Filters> = None;
     #[allow(non_upper_case_globals)]
-    const opts: Option<crate::lzma::LzmaOptions> = None;
-    test_variant!(lzma, compressed_len = 8020, None, format, check, filters, opts);
+    const opts: Option<crate::xz::LzmaOptions> = None;
+    test_variant!(xz, compressed_len = 8020, None, format, check, filters, opts);
 }

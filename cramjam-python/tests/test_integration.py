@@ -15,10 +15,6 @@ import cramjam
 from .test_variants import same_same
 
 
-if not hasattr(cramjam, "lzma"):
-    cramjam.lzma = cramjam.experimental.lzma
-
-
 @pytest.fixture
 def integration_dir():
     return pathlib.Path(__file__).parent.joinpath("data/integration")
@@ -44,7 +40,7 @@ Variant = namedtuple("Variant", ("name", "suffix"))
         Variant("brotli", "br"),
         Variant("lz4", "lz4"),
         Variant("snappy", "snappy"),
-        Variant("lzma", "lzma"),
+        Variant("xz", "lzma"),
     ),
 )
 def test_variant(variant: Variant, integration_dir: pathlib.Path, plaintext: bytes):
@@ -59,15 +55,15 @@ def test_lzma_compat(data, format):
 
     # Decompress from std lzma lib
     compressed = lzma.compress(data, format=format)
-    uncompressed = cramjam.lzma.decompress(compressed)
+    uncompressed = cramjam.xz.decompress(compressed)
     assert same_same(bytes(uncompressed), data)
 
     # std lzma lib can decompress us
     cjformat = (
-        cramjam.lzma.Format.ALONE
+        cramjam.xz.Format.ALONE
         if format == lzma.FORMAT_ALONE
-        else cramjam.lzma.Format.XZ
+        else cramjam.xz.Format.XZ
     )
-    compressed = cramjam.lzma.compress(data, format=cjformat)
+    compressed = cramjam.xz.compress(data, format=cjformat)
     uncompressed = lzma.decompress(bytes(compressed), format=format)
     assert same_same(uncompressed, data)

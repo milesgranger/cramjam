@@ -60,6 +60,7 @@ pub mod gzip;
 pub mod io;
 pub mod lz4;
 pub mod snappy;
+pub mod xz;
 pub mod zstd;
 
 use io::{PythonBuffer, RustyBuffer};
@@ -369,6 +370,7 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> lz4);
     make_submodule!(py -> m -> gzip);
     make_submodule!(py -> m -> deflate);
+    make_submodule!(py -> m -> xz);
     make_submodule!(py -> m -> zstd);
     make_submodule!(py -> m -> experimental);
 

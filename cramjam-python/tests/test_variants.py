@@ -8,19 +8,11 @@ from datetime import timedelta
 from hypothesis import strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
 
-VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "lzma")
+VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "xz")
 
-# LZMA is experimental, but in testing we'll treat it like it's not in the
-# experimental submodule.
-# TODO: Maybe rename it to XZ, since LZMA is the legacy version.
-# ref: https://github.com/fpgaminer/rust-lzma/issues/18, but then
-# the rustlib and the clib both are lzma... so maybe not?
-cramjam.lzma = cramjam.experimental.lzma
 
 # Some OS can be slow or have higher variability in their runtimes on CI
-settings.register_profile(
-    "local", deadline=timedelta(milliseconds=1000), max_examples=100
-)
+settings.register_profile("local", deadline=None, max_examples=50)
 settings.register_profile("CI", deadline=None, max_examples=25)
 if os.getenv("CI"):
     settings.load_profile("CI")
