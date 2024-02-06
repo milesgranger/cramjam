@@ -360,3 +360,9 @@ def test_variants_stream_decompressors(variant_str):
     # Calling .finish renders decompressor unusable after. (API consistency with other libs)
     with pytest.raises(cramjam.DecompressionError):
         decompressor.finish()
+
+
+def test_buffer_cmp():
+    assert cramjam.Buffer() == cramjam.Buffer()
+    assert cramjam.Buffer(b"some bytes") == cramjam.Buffer(b"some bytes")
+    assert cramjam.Buffer(b"some bytes") != cramjam.Buffer(b"other bytes")

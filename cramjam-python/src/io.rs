@@ -432,6 +432,9 @@ impl RustyBuffer {
     fn __repr__(&self) -> String {
         format!("cramjam.Buffer<len={:?}>", self.len())
     }
+    fn __eq__(&self, other: &Self) -> bool {
+        self.inner == other.inner
+    }
     fn __bool__(&self) -> bool {
         self.len() > 0
     }

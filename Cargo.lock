@@ -295,14 +295,14 @@ version = "0.1.1"
 dependencies = [
  "bytesize",
  "clap 4.2.7",
- "libcramjam",
+ "libcramjam 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "cramjam-python"
 version = "2.8.1"
 dependencies = [
- "libcramjam",
+ "libcramjam 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pyo3",
 ]
 
@@ -524,6 +524,24 @@ dependencies = [
  "snap",
  "xz2",
  "zstd",
+]
+
+[[package]]
+name = "libcramjam"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1122d475df7c0461d2ed3af60e609512e4ec0c1c98156be1f320513b84fd9510"
+dependencies = [
+ "brotli",
+ "bzip2",
+ "cbindgen",
+ "flate2",
+ "libdeflater",
+ "lz4",
+ "snap",
+ "xz2",
+ "zstd",
+ "zstd-safe",
 ]
 
 [[package]]
