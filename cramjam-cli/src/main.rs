@@ -9,7 +9,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 
 #[derive(Clone, Parser)]
 #[command(author, version, about)]
-#[command(after_long_help = "Example: cramjam snappy compress --input myfile.txt --output out.txt.snappy")]
+#[command(after_long_help = "Example: cramjam-cli snappy compress --input myfile.txt --output out.txt.snappy")]
 struct Cli {
     #[command(subcommand)]
     codec: Codec,
