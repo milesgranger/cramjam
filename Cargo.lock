@@ -304,6 +304,7 @@ version = "2.8.1"
 dependencies = [
  "libcramjam 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pyo3",
+ "pyo3-build-config",
 ]
 
 [[package]]
