@@ -244,19 +244,48 @@ impl<'py> FromPyObject<'py> for PythonBuffer {
     }
 }
 
+#[cfg(not(PyPy))]
+fn make_py_buffer(obj: &PyAny) -> PyResult<ffi::Py_buffer> {
+    let mut buf = mem::MaybeUninit::uninit();
+    let rc = unsafe { ffi::PyObject_GetBuffer(obj.as_ptr(), buf.as_mut_ptr(), ffi::PyBUF_CONTIG_RO) };
+    if rc != 0 {
+        return Err(exceptions::PyBufferError::new_err(
+            "Failed to get buffer, is it C contiguous, and shape is not null?",
+        ));
+    }
+    let buf = unsafe { mem::MaybeUninit::<ffi::Py_buffer>::assume_init(buf) };
+    Ok(buf)
+}
+
+#[cfg(PyPy)]
+fn make_py_buffer(obj: &PyAny) -> PyResult<ffi::Py_buffer> {
+    let is_memview = unsafe { ffi::PyMemoryView_Check(obj.as_ptr()) } == 1;
+
+    let mut object = Python::with_gil(|py| obj.to_object(py));
+
+    if !is_memview {
+        let ptr = unsafe { ffi::PyMemoryView_FromObject(obj.as_ptr()) };
+        Python::with_gil(|py| {
+            object = unsafe { PyObject::from_owned_ptr(py, ptr) };
+        })
+    }
+    let mut buf = mem::MaybeUninit::uninit();
+    let rc = unsafe { ffi::PyObject_GetBuffer(object.as_ptr(), buf.as_mut_ptr(), ffi::PyBUF_CONTIG_RO) };
+    if rc != 0 {
+        return Err(exceptions::PyBufferError::new_err(
+            "Failed to get buffer, is it C contiguous, and shape is not null?",
+        ));
+    }
+    let buf = unsafe { mem::MaybeUninit::<ffi::Py_buffer>::assume_init(buf) };
+    Ok(buf)
+}
+
 impl<'py> TryFrom<&'py PyAny> for PythonBuffer {
     type Error = PyErr;
     fn try_from(obj: &'py PyAny) -> Result<Self, Self::Error> {
-        let mut buf = Box::new(mem::MaybeUninit::uninit());
-        let rc = unsafe { ffi::PyObject_GetBuffer(obj.as_ptr(), buf.as_mut_ptr(), ffi::PyBUF_CONTIG_RO) };
-        if rc != 0 {
-            return Err(exceptions::PyBufferError::new_err(
-                "Failed to get buffer, is it C contiguous, and shape is not null?",
-            ));
-        }
-        let buf = Box::new(unsafe { mem::MaybeUninit::<ffi::Py_buffer>::assume_init(*buf) });
+        let py_buffer = make_py_buffer(obj)?;
         let buf = Self {
-            inner: std::pin::Pin::from(buf),
+            inner: std::pin::Pin::from(Box::new(py_buffer)),
             pos: 0,
         };
         // sanity checks
