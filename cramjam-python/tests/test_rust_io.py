@@ -4,7 +4,7 @@ from cramjam import File, Buffer
 
 
 @pytest.mark.parametrize("Obj", (File, Buffer))
-def test_obj_api(tmpdir, Obj):
+def test_obj_api(tmpdir, Obj, is_pypy):
     if isinstance(Obj, File):
         buf = File(str(tmpdir.join("file.txt")))
     else:
@@ -29,6 +29,11 @@ def test_obj_api(tmpdir, Obj):
         Buffer(),
     ):
         buf.seek(0)
+
+        if isinstance(out, bytes) and is_pypy:
+            with pytest.raises(OSError):
+                buf.readinto(out)
+            continue
 
         expected = b"bytes"
 

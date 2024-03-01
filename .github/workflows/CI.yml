@@ -203,11 +203,9 @@ jobs:
           - '3.12'
         target: [aarch64, armv7, s390x, ppc64le]
         include:
-          - python: pypy3.7
-            target: aarch64
-          - python: pypy3.8
-            target: aarch64
           - python: pypy3.9
+            target: aarch64
+          - python: pypy3.10
             target: aarch64
     steps:
     - uses: actions/checkout@v3
@@ -269,9 +267,8 @@ jobs:
     strategy:
       matrix:
         python:
-          - pypy-3.7
-          - pypy-3.8
           - pypy-3.9
+          - pypy-3.10
     steps:
     - uses: actions/checkout@v3
     - uses: actions/cache@v3
@@ -301,7 +298,8 @@ jobs:
     - name: Python UnitTest - cramjam-python
       run: |
         pip install cramjam --no-index --find-links dist
-        pypy -c "import cramjam"
+        pip install .[dev]
+        python -m pytest tests -v
     - name: Python cramjam-cli test
       run: |
         pip install cramjam-cli --no-index --find-links dist
@@ -316,7 +314,7 @@ jobs:
     runs-on: macos-latest
     strategy:
       matrix:
-        python-version: [ pypy-3.7, pypy-3.8, pypy-3.9 ]
+        python-version: [ pypy-3.9, pypy-3.10 ]
     steps:
     - uses: actions/checkout@v3
     - uses: actions/cache@v3
@@ -352,7 +350,10 @@ jobs:
         pip install cramjam --no-index --find-links dist
         pip install cramjam-cli --no-index --find-links dist
     - name: Python Import test
-      run: pypy -c "import cramjam"
+      run: |
+        pip install cramjam --no-index --find-links dist
+        pip install .[dev]
+        python -m pytest tests -v
     - name: Python cramjam-cli test
       run: cramjam-cli --help
     - name: Upload wheels
