@@ -101,18 +101,18 @@ impl<'a> AsBytes for BytesType<'a> {
             }
         }
     }
-    fn as_bytes_mut(&mut self) -> &mut [u8] {
+    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]> {
         match self {
             BytesType::RustyBuffer(b) => {
                 let mut py_ref = b.borrow_mut();
-                let bytes = py_ref.as_bytes_mut();
-                unsafe { std::slice::from_raw_parts_mut(bytes.as_mut_ptr(), bytes.len()) }
+                let bytes = py_ref.as_bytes_mut()?;
+                Ok(unsafe { std::slice::from_raw_parts_mut(bytes.as_mut_ptr(), bytes.len()) })
             }
-            BytesType::PyBuffer(b) => b.as_slice_mut().unwrap(),
+            BytesType::PyBuffer(b) => b.as_slice_mut(),
             BytesType::RustyFile(b) => {
                 let mut py_ref = b.borrow_mut();
-                let bytes = py_ref.as_bytes_mut();
-                unsafe { std::slice::from_raw_parts_mut(bytes.as_mut_ptr(), bytes.len()) }
+                let bytes = py_ref.as_bytes_mut()?;
+                Ok(unsafe { std::slice::from_raw_parts_mut(bytes.as_mut_ptr(), bytes.len()) })
             }
         }
     }
@@ -212,7 +212,7 @@ macro_rules! generic {
                             })
                         },
                         _ => {
-                            let bytes_out = $output.as_bytes_mut();
+                            let bytes_out = $output.as_bytes_mut()?;
                             $py.allow_threads(|| {
                                 $op(f_in, &mut Cursor::new(bytes_out) $(, $level)? )
                             })
@@ -237,7 +237,7 @@ macro_rules! generic {
                             })
                         },
                         _ => {
-                            let bytes_out = $output.as_bytes_mut();
+                            let bytes_out = $output.as_bytes_mut()?;
                             $py.allow_threads(|| {
                                 $op(bytes_in, &mut Cursor::new(bytes_out) $(, $level)?)
                             })
