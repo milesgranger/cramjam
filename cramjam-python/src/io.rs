@@ -18,7 +18,7 @@ use std::path::PathBuf;
 
 pub(crate) trait AsBytes {
     fn as_bytes(&self) -> &[u8];
-    fn as_bytes_mut(&mut self) -> &mut [u8];
+    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]>;
 }
 
 /// A native Rust file-like object. Reading and writing takes place
@@ -49,7 +49,7 @@ impl AsBytes for RustyFile {
         entire file into memory; consider using cramjam.Buffer"
         )
     }
-    fn as_bytes_mut(&mut self) -> &mut [u8] {
+    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]> {
         unimplemented!(
             "Converting a File to bytes is not supported, as it'd require reading the \
         entire file into memory; consider using cramjam.Buffer"
@@ -194,7 +194,7 @@ impl PythonBuffer {
     }
     /// Is the Python buffer readonly
     pub fn readonly(&self) -> bool {
-        self.inner.readonly != 0
+        self.inner.readonly == 1
     }
     /// Get the underlying buffer as a slice of bytes
     pub fn as_slice(&self) -> &[u8] {
@@ -202,13 +202,16 @@ impl PythonBuffer {
     }
     /// Get the underlying buffer as a mutable slice of bytes
     pub fn as_slice_mut(&mut self) -> PyResult<&mut [u8]> {
-        // TODO: For v3 release, add self.readonly check; bytes is readonly but
-        // v1 and v2 releases have not treated it as such.
+        if self.readonly() {
+            let repr = Python::with_gil(|py| unsafe { PyObject::from_borrowed_ptr(py, self.inner.obj) }.to_string());
+            let msg = format!("The output buffer '{}' is readonly, refusing to overwrite.", repr);
+            return Err(pyo3::exceptions::PyTypeError::new_err(msg));
+        }
         Ok(unsafe { std::slice::from_raw_parts_mut(self.buf_ptr() as *mut u8, self.len_bytes()) })
     }
     /// If underlying buffer is c_contiguous
     pub fn is_c_contiguous(&self) -> bool {
-        unsafe { ffi::PyBuffer_IsContiguous(&*self.inner as *const ffi::Py_buffer, b'C' as std::os::raw::c_char) != 0 }
+        unsafe { ffi::PyBuffer_IsContiguous(&*self.inner as *const ffi::Py_buffer, b'C' as std::os::raw::c_char) == 1 }
     }
     /// Dimensions for buffer
     pub fn dimensions(&self) -> usize {
@@ -247,16 +250,16 @@ impl<'py> FromPyObject<'py> for PythonBuffer {
 impl<'py> TryFrom<&'py PyAny> for PythonBuffer {
     type Error = PyErr;
     fn try_from(obj: &'py PyAny) -> Result<Self, Self::Error> {
-        let mut buf = Box::new(mem::MaybeUninit::uninit());
+        let mut buf = mem::MaybeUninit::uninit();
         let rc = unsafe { ffi::PyObject_GetBuffer(obj.as_ptr(), buf.as_mut_ptr(), ffi::PyBUF_CONTIG_RO) };
         if rc != 0 {
             return Err(exceptions::PyBufferError::new_err(
                 "Failed to get buffer, is it C contiguous, and shape is not null?",
             ));
         }
-        let buf = Box::new(unsafe { mem::MaybeUninit::<ffi::Py_buffer>::assume_init(*buf) });
+        let py_buffer = unsafe { mem::MaybeUninit::<ffi::Py_buffer>::assume_init(buf) };
         let buf = Self {
-            inner: std::pin::Pin::from(buf),
+            inner: std::pin::Pin::from(Box::new(py_buffer)),
             pos: 0,
         };
         // sanity checks
@@ -328,8 +331,9 @@ impl AsBytes for RustyBuffer {
     fn as_bytes(&self) -> &[u8] {
         self.inner.get_ref().as_slice()
     }
-    fn as_bytes_mut(&mut self) -> &mut [u8] {
-        self.inner.get_mut().as_mut_slice()
+    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]> {
+        let slice = self.inner.get_mut().as_mut_slice();
+        Ok(slice)
     }
 }
 
