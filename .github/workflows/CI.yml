@@ -270,7 +270,7 @@ jobs:
         os:
           - ubuntu-latest
           - macos-latest
-          - windows-latest
+          # - windows-latest  # TODO: fails w/ LINK : fatal error LNK1181: cannot open input file 'python39.lib'
         python:
           - pypy-3.9
           - pypy-3.10
