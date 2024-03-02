@@ -146,7 +146,7 @@ pub fn compress_block(
 #[pyfunction]
 pub fn decompress_block_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes = input.as_bytes();
-    let out_bytes = output.as_bytes_mut();
+    let out_bytes = output.as_bytes_mut()?;
     py.allow_threads(|| libcramjam::lz4::block::decompress_into(bytes, out_bytes, Some(true)))
         .map_err(DecompressionError::from_err)
         .map(|v| v as _)
@@ -180,7 +180,7 @@ pub fn compress_block_into(
     store_size: Option<bool>,
 ) -> PyResult<usize> {
     let bytes = data.as_bytes();
-    let out_bytes = output.as_bytes_mut();
+    let out_bytes = output.as_bytes_mut()?;
     py.allow_threads(|| {
         libcramjam::lz4::block::compress_into(bytes, out_bytes, compression.map(|v| v as _), acceleration, store_size)
     })

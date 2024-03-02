@@ -40,7 +40,7 @@ def test_has_version():
 
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(arr=st_np.arrays(st_np.scalar_dtypes(), shape=st.integers(0, int(1e4))))
-def test_variants_different_dtypes(variant_str, arr):
+def test_variants_different_dtypes(variant_str, arr, is_pypy):
     variant = getattr(cramjam, variant_str)
     compressed = variant.compress(arr)
     decompressed = variant.decompress(compressed)
@@ -49,7 +49,14 @@ def test_variants_different_dtypes(variant_str, arr):
     # And compress n dims > 1
     if arr.shape[0] % 2 == 0:
         arr = arr.reshape((2, -1))
-        compressed = variant.compress(arr)
+
+        if is_pypy:
+            try:
+                compressed = variant.compress(arr)
+            except:
+                pytest.xfail(reason="PyPy struggles w/ multidim buffer views depending on dtype ie datetime[64]")
+        else:
+            compressed = variant.compress(arr)
         decompressed = variant.decompress(compressed)
         assert same_same(bytes(decompressed), arr.tobytes())
 
@@ -89,7 +96,7 @@ def test_variants_raise_exception(variant_str):
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_compress_into(
-    variant_str, input_type, output_type, raw_data, tmp_path_factory
+    variant_str, input_type, output_type, raw_data, tmp_path_factory, is_pypy
 ):
     variant = getattr(cramjam, variant_str)
 
@@ -124,6 +131,11 @@ def test_variants_compress_into(
     else:
         output = output_type(b"0" * compressed_len)
 
+    if is_pypy and isinstance(output, (bytes, memoryview)):
+        with pytest.raises(TypeError):
+            variant.compress_into(input, output)
+        return
+
     n_bytes = variant.compress_into(input, output)
     assert n_bytes == compressed_len
 
@@ -146,7 +158,7 @@ def test_variants_compress_into(
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_decompress_into(
-    variant_str, input_type, output_type, tmp_path_factory, raw_data
+    variant_str, input_type, output_type, tmp_path_factory, raw_data, is_pypy
 ):
     variant = getattr(cramjam, variant_str)
 
@@ -179,6 +191,11 @@ def test_variants_decompress_into(
         output = cramjam.Buffer()
     else:
         output = output_type(b"0" * len(raw_data))
+
+    if is_pypy and isinstance(output, (bytes, memoryview)):
+        with pytest.raises(TypeError):
+            variant.decompress_into(input, output)
+        return
 
     n_bytes = variant.decompress_into(input, output)
     assert n_bytes == len(raw_data)
