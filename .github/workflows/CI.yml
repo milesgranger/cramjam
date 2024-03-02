@@ -262,10 +262,15 @@ jobs:
         name: wheels
         path: dist
 
-  pypy-linux:
-    runs-on: ubuntu-latest
+  pypy:
+    runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
         python:
           - pypy-3.9
           - pypy-3.10
@@ -311,63 +316,11 @@ jobs:
         name: wheels
         path: dist
 
-  pypy-macos:
-    runs-on: macos-latest
-    strategy:
-      matrix:
-        python-version: [ pypy-3.9, pypy-3.10 ]
-    steps:
-    - uses: actions/checkout@v3
-    - uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/bin/
-          ~/.cargo/registry/index/
-          ~/.cargo/registry/cache/
-          ~/.cargo/git/db/
-          target/
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-    - uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-    - name: Install maturin
-      run: pip install maturin
-    - name: Build Wheels - cramjam-python
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-python/Cargo.toml
-    - name: Build Wheels - cramjam-cli
-      uses: PyO3/maturin-action@v1
-      with:
-        target: ${{ matrix.target }}
-        manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-cli/Cargo.toml
-    - name: Install wheel
-      run: |
-        pip install cramjam --no-index --find-links dist
-        pip install cramjam-cli --no-index --find-links dist
-    - name: cramjam test
-      run: |
-        cd cramjam-python
-        pip install .[dev]
-        python -m pytest tests -v
-    - name: cramjam-cli test
-      run: cramjam-cli --help
-    - name: Upload wheels
-      uses: actions/upload-artifact@v3
-      with:
-        name: wheels
-        path: dist
-
   pypi-publish-cramjam-python:
       name: Upload cramjam release to PyPI
       runs-on: ubuntu-latest
       if: "startsWith(github.ref, 'refs/tags/')"
-      needs: [ macos, windows, linux, linux-cross, pypy-linux, pypy-macos ]
+      needs: [ macos, windows, linux, linux-cross, pypy ]
       environment:
         name: pypi
         url: https://pypi.org/p/cramjam
@@ -389,7 +342,7 @@ jobs:
       name: Upload cramjam-cli release to PyPI
       runs-on: ubuntu-latest
       if: "startsWith(github.ref, 'refs/tags/')"
-      needs: [ macos, windows, linux, linux-cross, pypy-linux, pypy-macos ]
+      needs: [ macos, windows, linux, linux-cross, pypy ]
       environment:
         name: pypi
         url: https://pypi.org/p/cramjam-cli
