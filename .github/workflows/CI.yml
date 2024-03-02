@@ -352,7 +352,6 @@ jobs:
         pip install cramjam-cli --no-index --find-links dist
     - name: cramjam test
       run: |
-        pip install cramjam --no-index --find-links dist
         cd cramjam-python
         pip install .[dev]
         python -m pytest tests -v
