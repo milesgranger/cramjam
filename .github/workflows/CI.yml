@@ -295,12 +295,13 @@ jobs:
         target: ${{ matrix.target }}
         manylinux: auto
         args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-cli/Cargo.toml
-    - name: Python UnitTest - cramjam-python
+    - name: cramjam test
       run: |
         pip install cramjam --no-index --find-links dist
+        cd cramjam-python
         pip install .[dev]
         python -m pytest tests -v
-    - name: Python cramjam-cli test
+    - name: cramjam-cli test
       run: |
         pip install cramjam-cli --no-index --find-links dist
         cramjam-cli --help
@@ -349,12 +350,13 @@ jobs:
       run: |
         pip install cramjam --no-index --find-links dist
         pip install cramjam-cli --no-index --find-links dist
-    - name: Python Import test
+    - name: cramjam test
       run: |
         pip install cramjam --no-index --find-links dist
+        cd cramjam-python
         pip install .[dev]
         python -m pytest tests -v
-    - name: Python cramjam-cli test
+    - name: cramjam-cli test
       run: cramjam-cli --help
     - name: Upload wheels
       uses: actions/upload-artifact@v3
