@@ -15,7 +15,7 @@ crate-type = ["cdylib"]
 [features]
 default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
-generate-import-lib = ["pyo3/generate-import-lib"]
+generate-import-lib = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
 
 
 [dependencies]
