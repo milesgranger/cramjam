@@ -133,7 +133,7 @@ jobs:
           path: dist
 
   linux:
-    runs-on: ubuntu-latest
+    runs-on: ubicloud
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
@@ -189,7 +189,7 @@ jobs:
         path: dist
 
   linux-cross:
-    runs-on: ubuntu-latest
+    runs-on: ubicloud
     strategy:
       matrix:
         python:
@@ -266,7 +266,7 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - os: ubuntu-latest
+          - os: ubicloud
             flags: ''
           - os: macos-latest
             flags: ''
