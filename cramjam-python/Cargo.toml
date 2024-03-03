@@ -13,9 +13,9 @@ name = "cramjam"
 crate-type = ["cdylib"]
 
 [features]
-default = ["extension-module", "python3-dll"]
+default = ["extension-module", "generate-import-lib"]
 extension-module = ["pyo3/extension-module"]
-python3-dll = ["pyo3/python3-dll-a"]
+generate-import-lib = ["pyo3/generate-import-lib"]
 
 
 [dependencies]
