@@ -293,7 +293,7 @@ jobs:
       if: ${{ matrix.os == 'windows-latest' }}
       with:
         python-version: ${{ matrix.python }}
-        architecture: x64
+        architecture: x86
     - name: Build Wheels - cramjam-python
       uses: PyO3/maturin-action@v1
       with:
