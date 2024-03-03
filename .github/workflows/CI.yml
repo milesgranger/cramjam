@@ -288,7 +288,7 @@ jobs:
           ~/.cargo/git/db/
           target/
         key: ${{ runner.os }}-${{matrix.python}}-cargo-${{ hashFiles('**/Cargo.lock') }}
-    - uses: actions/setup-python@v5
+    - uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python }}
     - name: Build Wheels - cramjam-python
@@ -305,14 +305,14 @@ jobs:
     - name: cramjam test
       run: |
         cd cramjam-python
-        pip install maturin
+        python -m pip install maturin
         maturin develop --release ${{ matrix.platform.flags }} --extras dev
         python -m pytest tests -v
     - name: cramjam-cli test
       if: ${{ matrix.platform.os != 'windows-latest' }}
       run: |
         cd cramjam-cli
-        pip install maturin
+        python -m pip install maturin
         maturin develop --release ${{ matrix.platform.flags }} --extras dev
         cramjam-cli --help
     - name: Upload wheels
