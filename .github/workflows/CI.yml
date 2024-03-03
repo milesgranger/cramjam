@@ -268,8 +268,8 @@ jobs:
       fail-fast: false
       matrix:
         os:
-          # - ubuntu-latest
-          # - macos-latest
+          - ubuntu-latest
+          - macos-latest
           - windows-latest
         python:
           - pypy-3.9
@@ -286,35 +286,29 @@ jobs:
           target/
         key: ${{ runner.os }}-${{matrix.python}}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - uses: actions/setup-python@v4
-      if: ${{ matrix.os != 'windows-latest' }}
       with:
         python-version: ${{ matrix.python }}
-    - uses: actions/setup-python@v4
-      if: ${{ matrix.os == 'windows-latest' }}
-      with:
-        python-version: ${{ matrix.python }}
-        architecture: x86
     - name: Build Wheels - cramjam-python
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-python/Cargo.toml
+        args: -i ${{ matrix.python }} --release --features generate-import-lib --out dist --manifest-path cramjam-python/Cargo.toml
     - name: Build Wheels - cramjam-cli
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-cli/Cargo.toml
+        args: -i ${{ matrix.python }} --release --features generate-import-lib --out dist --manifest-path cramjam-cli/Cargo.toml
     - name: cramjam test
       run: |
-        pip install cramjam --no-index --find-links dist
         cd cramjam-python
-        pip install .[dev]
+        maturin develop --release --features generate-import-lib --extras dev
         python -m pytest tests -v
     - name: cramjam-cli test
       run: |
-        pip install cramjam-cli --no-index --find-links dist
+        cd cramjam-cli
+        maturin develop --release --features generate-import-lib --extras dev
         cramjam-cli --help
     - name: Upload wheels
       uses: actions/upload-artifact@v3
