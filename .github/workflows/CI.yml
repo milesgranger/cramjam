@@ -163,7 +163,7 @@ jobs:
         path: dist
 
   linux-cross:
-    runs-on: ubicloud-standard-2
+    runs-on: ubuntu-latest
     strategy:
       matrix:
         python:
