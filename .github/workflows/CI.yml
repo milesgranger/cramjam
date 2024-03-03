@@ -39,13 +39,11 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: x86_64
-          sccache: true
           args: -i python --release --out dist --sdist --manifest-path cramjam-cli/Cargo.toml
       - name: Build wheels - x86_64 - cramjam-python
         uses: PyO3/maturin-action@v1
         with:
           target: x86_64
-          sccache: true
           args: -i python --release --out dist --sdist --manifest-path cramjam-python/Cargo.toml
       - name: Install built wheels - x86_64
         run: |
@@ -55,13 +53,11 @@ jobs:
         if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         uses: PyO3/maturin-action@v1
         with:
-          sccache: true
           args: -i python --release --target universal2-apple-darwin --out dist --manifest-path cramjam-cli/Cargo.toml
       - name: Build wheels - universal2
         if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         uses: PyO3/maturin-action@v1
         with:
-          sccache: true
           args: -i python --release --target universal2-apple-darwin --out dist --manifest-path cramjam-python/Cargo.toml
       - name: Install built wheels - universal2
         if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
@@ -114,13 +110,11 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          sccache: true
           args: -i python --release --out dist --manifest-path cramjam-python/Cargo.toml
       - name: Build wheels - cramjam-cli
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          sccache: true
           args: -i python --release --out dist --manifest-path cramjam-cli/Cargo.toml
       - name: Install built wheel
         run: |
@@ -171,14 +165,12 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        sccache: true
         args: -i ${{ matrix.python-version }} --release --out dist --manifest-path cramjam-python/Cargo.toml
     - name: Build Wheels - cramjam-cli
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        sccache: true
         args: -i ${{ matrix.python-version }} --release --out dist --manifest-path cramjam-cli/Cargo.toml
     - name: Python UnitTest - cramjam-python
       if: matrix.target == 'x86_64'
@@ -229,14 +221,12 @@ jobs:
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        sccache: true
         args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-python/Cargo.toml
     - name: Build Wheels cramjam-cli
       uses: PyO3/maturin-action@v1
       with:
         target: ${{ matrix.target }}
         manylinux: auto
-        sccache: true
         args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-cli/Cargo.toml
     - uses: uraimo/run-on-arch-action@v2.3.0
       # skipped cross compiled pypy wheel tests for now
@@ -303,14 +293,12 @@ jobs:
       uses: PyO3/maturin-action@v1
       with:
         manylinux: auto
-        sccache: true
         args: -i ${{ matrix.python }} --release ${{ matrix.platform.flags }} --out dist --manifest-path cramjam-python/Cargo.toml
     - name: Build Wheels - cramjam-cli
       if: ${{ matrix.platform.os != 'windows-latest' }}
       uses: PyO3/maturin-action@v1
       with:
         manylinux: auto
-        sccache: true
         args: -i ${{ matrix.python }} --release ${{ matrix.platform.flags }} --out dist --manifest-path cramjam-cli/Cargo.toml
     - name: cramjam test
       # TODO: I'm not sure but the actual collection of tests on windows using pypy3.10 takes forever and/or fails
