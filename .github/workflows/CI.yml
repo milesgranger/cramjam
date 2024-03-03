@@ -304,16 +304,14 @@ jobs:
         args: -i ${{ matrix.python }} --release ${{ matrix.platform.flags }} --out dist --manifest-path cramjam-cli/Cargo.toml
     - name: cramjam test
       run: |
+        pip install cramjam[dev] --find-links dist
         cd cramjam-python
-        python -m pip install maturin
-        maturin develop --release ${{ matrix.platform.flags }} --extras dev
         python -m pytest tests -v
     - name: cramjam-cli test
       if: ${{ matrix.platform.os != 'windows-latest' }}
       run: |
+        pip install cramjam-cli --no-index --find-links dist
         cd cramjam-cli
-        python -m pip install maturin
-        maturin develop --release ${{ matrix.platform.flags }} --extras dev
         cramjam-cli --help
     - name: Upload wheels
       uses: actions/upload-artifact@v3
