@@ -31,8 +31,6 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin
-      - name: Build
-        run: cargo build --release
       - name: Tests
         run: cargo test --no-default-features --release
       - name: Build wheels - x86_64 - cramjam-cli
@@ -100,9 +98,6 @@ jobs:
           architecture: ${{ matrix.target }}
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-      - name: Build
-        if: matrix.target == 'x64'
-        run: cargo build --release
       - name: Tests
         if: matrix.target == 'x64'
         run: cargo test --no-default-features --release
@@ -151,8 +146,6 @@ jobs:
         key: ${{ runner.os }}-${{ matrix.target }}-${{ matrix.python-version }}-cargo-${{ hashFiles('**/Cargo.lock') }}
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
-    - name: Build
-      run: cargo build --release
     - name: Tests
       run: cargo test --no-default-features --release --features capi
     - uses: actions/setup-python@v5
