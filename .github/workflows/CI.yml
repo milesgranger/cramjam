@@ -57,7 +57,7 @@ jobs:
         run: |
           pip install cramjam --pre --no-index --find-links dist --force-reinstall
           pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
-          pip install black numpy hypothesis
+          pip install pytest black numpy hypothesis
       - name: Python UnitTest - cramjam-cli
         run: python -m pytest cramjam-cli -vs --ignore **/benchmarks
       - name: Python UnitTest - cramjam-python
