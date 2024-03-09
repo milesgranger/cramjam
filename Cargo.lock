@@ -203,10 +203,11 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.88"
+version = "1.0.90"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02f341c093d19155a6e41631ce5971aac4e9a868262212153124c15fa22d1cdc"
+checksum = "8cd6604a82acf3039f1144f54b8eb34e91ffba622051189e71b781822d5ee1f5"
 dependencies = [
+ "jobserver",
  "libc",
 ]
 
@@ -233,9 +234,9 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.1"
+version = "4.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c918d541ef2913577a0f9566e9ce27cb35b6df072075769e0b26cb5a554520da"
+checksum = "b230ab84b0ffdf890d5a10abdbc8b83ae1c4918275daea1ab8801f71536b2651"
 dependencies = [
  "clap_builder",
  "clap_derive",
@@ -243,9 +244,9 @@ dependencies = [
 
 [[package]]
 name = "clap_builder"
-version = "4.5.1"
+version = "4.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9f3e7391dad68afb0c2ede1bf619f579a3dc9c2ec67f089baa397123a2f3d1eb"
+checksum = "ae129e2e766ae0ec03484e609954119f123cc1fe650337e155d03b022f24f7b4"
 dependencies = [
  "anstream",
  "anstyle",
@@ -291,15 +292,15 @@ name = "cramjam-cli"
 version = "0.1.1"
 dependencies = [
  "bytesize",
- "clap 4.5.1",
- "libcramjam 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "clap 4.5.2",
+ "libcramjam 0.2.0",
 ]
 
 [[package]]
 name = "cramjam-python"
-version = "2.8.3"
+version = "2.8.3-rc1"
 dependencies = [
- "libcramjam 0.2.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libcramjam 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pyo3",
  "pyo3-build-config",
 ]
@@ -447,6 +448,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b1a46d1a171d865aa5f83f92695765caa047a9b4cbae2cbf37dbd613a793fd4c"
 
 [[package]]
+name = "jobserver"
+version = "0.1.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab46a6e9526ddef3ae7f787c06f0f2600639ba80ea3eade3d8e670a2230f51d6"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -457,23 +467,6 @@ name = "libc"
 version = "0.2.153"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
-
-[[package]]
-name = "libcramjam"
-version = "0.2.0"
-dependencies = [
- "brotli",
- "bzip2",
- "cbindgen",
- "flate2",
- "inline-c",
- "libc",
- "libdeflater",
- "lz4",
- "snap",
- "xz2",
- "zstd",
-]
 
 [[package]]
 name = "libcramjam"
@@ -491,6 +484,40 @@ dependencies = [
  "xz2",
  "zstd",
  "zstd-safe",
+]
+
+[[package]]
+name = "libcramjam"
+version = "0.3.0"
+dependencies = [
+ "brotli",
+ "bzip2",
+ "cbindgen",
+ "flate2",
+ "inline-c",
+ "libc",
+ "libdeflater",
+ "lz4",
+ "snap",
+ "xz2",
+ "zstd",
+]
+
+[[package]]
+name = "libcramjam"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45a1a8afbfdfd38e028da85e377178c3dcce4af6ea8fc8a0db0af6e20f36f643"
+dependencies = [
+ "brotli",
+ "bzip2",
+ "cbindgen",
+ "flate2",
+ "libdeflater",
+ "lz4",
+ "snap",
+ "xz2",
+ "zstd",
 ]
 
 [[package]]
@@ -799,7 +826,7 @@ checksum = "b62dbe01f0b06f9d8dc7d49e05a0785f153b00b2c227856282f671e0318c9b15"
 dependencies = [
  "aho-corasick",
  "memchr",
- "regex-automata 0.4.5",
+ "regex-automata 0.4.6",
  "regex-syntax",
 ]
 
@@ -811,9 +838,9 @@ checksum = "6c230d73fb8d8c1b9c0b3135c5142a8acee3a0558fb8db5cf1cb65f8d7862132"
 
 [[package]]
 name = "regex-automata"
-version = "0.4.5"
+version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5bb987efffd3c6d0d8f5f89510bb458559eab11e4f869acb20bf845e016259cd"
+checksum = "86b83b8b9847f9bf95ef68afb0b8e6cdb80f498442f5179a29fad448fcc1eaea"
 dependencies = [
  "aho-corasick",
  "memchr",

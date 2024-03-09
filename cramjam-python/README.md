@@ -35,14 +35,14 @@ Some basic benchmarks are available [in the benchmarks directory](./benchmarks/R
 
 Available algorithms:
 
-- [X] Snappy
-- [X] Brotli
-- [X] Bzip2
-- [X] Lz4
-- [X] Gzip
-- [X] Deflate
-- [X] ZSTD
-- [X] LZMA / XZ (cramjam.experimental.lzma)  # experimental support!
+- [X] Snappy    (cramjam.snappy)
+- [X] Brotli    (cramjam.brotli)
+- [X] Bzip2     (cramjam.bzip2)
+- [X] Lz4       (cramjam.lz4)
+- [X] Gzip      (cramjam.gzip)
+- [X] Deflate   (cramjam.deflate)
+- [X] ZSTD      (cramjam.zstd)
+- [X] XZ / LZMA (cramjam.xz)
 
 All available for use as:
 

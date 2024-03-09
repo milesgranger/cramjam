@@ -41,19 +41,14 @@ pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyR
 /// ```
 #[pyfunction]
 pub fn compress(py: Python, data: BytesType, level: Option<i32>, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-    crate::generic!(
-        py,
-        libcramjam::zstd::compress[data],
-        output_len = output_len,
-        level = level
-    )
-    .map_err(CompressionError::from_err)
+    crate::generic!(py, libcramjam::zstd::compress[data], output_len = output_len, level)
+        .map_err(CompressionError::from_err)
 }
 
 /// Compress directly into an output buffer
 #[pyfunction]
 pub fn compress_into(py: Python, input: BytesType, mut output: BytesType, level: Option<i32>) -> PyResult<usize> {
-    crate::generic!(py, libcramjam::zstd::compress[input, output], level = level).map_err(CompressionError::from_err)
+    crate::generic!(py, libcramjam::zstd::compress[input, output], level).map_err(CompressionError::from_err)
 }
 
 /// Decompress directly into an output buffer
