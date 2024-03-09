@@ -38,8 +38,8 @@ jobs:
           args: -i python --release --out dist --sdist --manifest-path cramjam-python/Cargo.toml
       - name: Install built wheels - x86_64
         run: |
-          pip install cramjam[dev] --pre --no-index --find-links dist --force-reinstall
-          pip install cramjam-cli --no-index --find-links dist --force-reinstall
+          pip install cramjam --pre --no-index --find-links dist --force-reinstall
+          pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
         if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         uses: PyO3/maturin-action@v1
@@ -55,8 +55,9 @@ jobs:
       - name: Install built wheels - universal2
         if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         run: |
-          pip install cramjam[dev] --pre --no-index --find-links dist --force-reinstall
-          pip install cramjam-cli --no-index --find-links dist --force-reinstall
+          pip install cramjam --pre --no-index --find-links dist --force-reinstall
+          pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
+          pip install black numpy hypothesis
       - name: Python UnitTest - cramjam-cli
         run: python -m pytest cramjam-cli -vs --ignore **/benchmarks
       - name: Python UnitTest - cramjam-python
@@ -98,7 +99,7 @@ jobs:
           args: -i python --release --out dist --manifest-path cramjam-cli/Cargo.toml
       - name: Install built wheel
         run: |
-          pip install cramjam-cli --no-index --find-links dist --force-reinstall
+          pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
           pip install cramjam[dev] --pre --find-links dist --force-reinstall
       - name: Python UnitTest - cramjam-python
         run: |
@@ -151,7 +152,7 @@ jobs:
     - name: Python UnitTest - cramjam-cli
       if: matrix.target == 'x86_64'
       run: |
-        pip install cramjam-cli --no-index --find-links dist --force-reinstall
+        pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
         python -m pytest cramjam-cli -vs --ignore **/benchmarks
     - name: Upload wheels
       uses: actions/upload-artifact@v3
@@ -214,8 +215,8 @@ jobs:
           PYTHON=python${{ matrix.python }}
           $PYTHON -m venv venv
           venv/bin/pip install -U pip
-          venv/bin/pip install cramjam --no-index --find-links /artifacts --force-reinstall
-          venv/bin/pip install cramjam-cli --no-index --find-links /artifacts --force-reinstall
+          venv/bin/pip install cramjam --pre --no-index --find-links /artifacts --force-reinstall
+          venv/bin/pip install cramjam-cli --pre --no-index --find-links /artifacts --force-reinstall
           venv/bin/python -c 'import cramjam'
           venv/bin/cramjam-cli --help
     - name: Upload wheels
@@ -266,7 +267,7 @@ jobs:
     - name: cramjam-cli test
       if: ${{ matrix.platform.os != 'windows-latest' }}
       run: |
-        pip install cramjam-cli --no-index --find-links dist --force-reinstall
+        pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
         cd cramjam-cli
         cramjam-cli --help
     - name: Upload wheels
