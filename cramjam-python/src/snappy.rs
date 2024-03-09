@@ -100,7 +100,7 @@ pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> P
 #[pyfunction]
 pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes_in = input.as_bytes();
-    let bytes_out = output.as_bytes_mut();
+    let bytes_out = output.as_bytes_mut()?;
     py.allow_threads(|| libcramjam::snappy::raw::compress(bytes_in, bytes_out))
         .map_err(CompressionError::from_err)
 }
@@ -109,7 +109,7 @@ pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) ->
 #[pyfunction]
 pub fn decompress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes_in = input.as_bytes();
-    let bytes_out = output.as_bytes_mut();
+    let bytes_out = output.as_bytes_mut()?;
     py.allow_threads(|| libcramjam::snappy::raw::decompress(bytes_in, bytes_out))
         .map_err(DecompressionError::from_err)
 }

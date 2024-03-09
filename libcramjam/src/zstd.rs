@@ -1,13 +1,12 @@
 //! zstd de/compression interface
 use std::io::{Error, Read, Write};
 pub use zstd;
-pub use zstd_safe;
 
 const DEFAULT_COMPRESSION_LEVEL: i32 = 0;
 
 /// Get the max compressed length for a single pass
 pub fn compress_bound(len: usize) -> usize {
-    zstd_safe::compress_bound(len)
+    zstd::zstd_safe::compress_bound(len)
 }
 
 /// Decompress gzip data

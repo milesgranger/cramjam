@@ -19,7 +19,6 @@ lz4 = "^1"
 flate2 = "^1"
 libdeflater = "^1"
 zstd = "0.13.0"
-zstd-safe = "7.0.0"  # NOTE: This is the same dep version as zstd, as they don't re-export
 libc = { version = "0.2", optional = true }
 xz2 = { version = "0.1.7", features = ["static"] }
 

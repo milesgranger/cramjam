@@ -18,7 +18,7 @@ use std::path::PathBuf;
 
 pub(crate) trait AsBytes {
     fn as_bytes(&self) -> &[u8];
-    fn as_bytes_mut(&mut self) -> &mut [u8];
+    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]>;
 }
 
 /// A native Rust file-like object. Reading and writing takes place
@@ -49,7 +49,7 @@ impl AsBytes for RustyFile {
         entire file into memory; consider using cramjam.Buffer"
         )
     }
-    fn as_bytes_mut(&mut self) -> &mut [u8] {
+    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]> {
         unimplemented!(
             "Converting a File to bytes is not supported, as it'd require reading the \
         entire file into memory; consider using cramjam.Buffer"
@@ -173,6 +173,8 @@ impl RustyFile {
 pub struct PythonBuffer {
     pub(crate) inner: std::pin::Pin<Box<ffi::Py_buffer>>,
     pub(crate) pos: usize,
+    #[cfg(PyPy)]
+    pub(crate) owner: PyObject,
 }
 // PyBuffer is thread-safe: the shape of the buffer is immutable while a Py_buffer exists.
 // Accessing the buffer contents is protected using the GIL.
@@ -194,7 +196,7 @@ impl PythonBuffer {
     }
     /// Is the Python buffer readonly
     pub fn readonly(&self) -> bool {
-        self.inner.readonly != 0
+        self.inner.readonly == 1
     }
     /// Get the underlying buffer as a slice of bytes
     pub fn as_slice(&self) -> &[u8] {
@@ -202,13 +204,24 @@ impl PythonBuffer {
     }
     /// Get the underlying buffer as a mutable slice of bytes
     pub fn as_slice_mut(&mut self) -> PyResult<&mut [u8]> {
-        // TODO: For v3 release, add self.readonly check; bytes is readonly but
-        // v1 and v2 releases have not treated it as such.
+        #[cfg(PyPy)]
+        {
+            Python::with_gil(|py| {
+                let is_memoryview = unsafe { ffi::PyMemoryView_Check(self.owner.as_ptr()) } == 1;
+                if is_memoryview || self.owner.as_ref(py).is_instance_of::<PyBytes>() {
+                    Err(pyo3::exceptions::PyTypeError::new_err(
+                        "With PyPy, an output of type `bytes` or `memoryview` does not work. See issue pypy/pypy#4918",
+                    ))
+                } else {
+                    Ok(())
+                }
+            })?;
+        }
         Ok(unsafe { std::slice::from_raw_parts_mut(self.buf_ptr() as *mut u8, self.len_bytes()) })
     }
     /// If underlying buffer is c_contiguous
     pub fn is_c_contiguous(&self) -> bool {
-        unsafe { ffi::PyBuffer_IsContiguous(&*self.inner as *const ffi::Py_buffer, b'C' as std::os::raw::c_char) != 0 }
+        unsafe { ffi::PyBuffer_IsContiguous(&*self.inner as *const ffi::Py_buffer, b'C' as std::os::raw::c_char) == 1 }
     }
     /// Dimensions for buffer
     pub fn dimensions(&self) -> usize {
@@ -258,6 +271,8 @@ impl<'py> TryFrom<&'py PyAny> for PythonBuffer {
         let buf = Self {
             inner: std::pin::Pin::from(buf),
             pos: 0,
+            #[cfg(PyPy)]
+            owner: Python::with_gil(|py| obj.to_object(py)),
         };
         // sanity checks
         if buf.inner.shape.is_null() {
@@ -328,8 +343,9 @@ impl AsBytes for RustyBuffer {
     fn as_bytes(&self) -> &[u8] {
         self.inner.get_ref().as_slice()
     }
-    fn as_bytes_mut(&mut self) -> &mut [u8] {
-        self.inner.get_mut().as_mut_slice()
+    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]> {
+        let slice = self.inner.get_mut().as_mut_slice();
+        Ok(slice)
     }
 }
 
@@ -431,6 +447,9 @@ impl RustyBuffer {
     }
     fn __repr__(&self) -> String {
         format!("cramjam.Buffer<len={:?}>", self.len())
+    }
+    fn __eq__(&self, other: &Self) -> bool {
+        self.inner == other.inner
     }
     fn __bool__(&self) -> bool {
         self.len() > 0
