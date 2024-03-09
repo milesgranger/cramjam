@@ -1,4 +1,6 @@
 //! LZMA / XZ de/compression interface
+//! Note this is still a bit of a work in progress, especially when it comes
+//! to filter chain support.
 use std::io::{self, BufRead, BufReader};
 use std::io::{Read, Result, Write};
 pub use xz2;

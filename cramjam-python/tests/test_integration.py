@@ -60,9 +60,7 @@ def test_lzma_compat(data, format):
 
     # std lzma lib can decompress us
     cjformat = (
-        cramjam.xz.Format.ALONE
-        if format == lzma.FORMAT_ALONE
-        else cramjam.xz.Format.XZ
+        cramjam.xz.Format.ALONE if format == lzma.FORMAT_ALONE else cramjam.xz.Format.XZ
     )
     compressed = cramjam.xz.compress(data, format=cjformat)
     uncompressed = lzma.decompress(bytes(compressed), format=format)
