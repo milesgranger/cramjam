@@ -298,9 +298,9 @@ dependencies = [
 
 [[package]]
 name = "cramjam-python"
-version = "2.8.3"
+version = "2.8.3-rc1"
 dependencies = [
- "libcramjam 0.3.0",
+ "libcramjam 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "pyo3",
  "pyo3-build-config",
 ]
@@ -496,6 +496,23 @@ dependencies = [
  "flate2",
  "inline-c",
  "libc",
+ "libdeflater",
+ "lz4",
+ "snap",
+ "xz2",
+ "zstd",
+]
+
+[[package]]
+name = "libcramjam"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "45a1a8afbfdfd38e028da85e377178c3dcce4af6ea8fc8a0db0af6e20f36f643"
+dependencies = [
+ "brotli",
+ "bzip2",
+ "cbindgen",
+ "flate2",
  "libdeflater",
  "lz4",
  "snap",
