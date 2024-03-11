@@ -805,7 +805,7 @@ mod tests {
 
     #[test]
     fn test_lz4_block_max_compressed_len() {
-        let mut error: *mut i8 = std::ptr::null_mut();
+        let mut error: *mut c_char = std::ptr::null_mut();
         let len = lz4_block_max_compressed_len(10, &mut error);
         assert!(error.is_null());
         assert_eq!(len, 30);
@@ -823,7 +823,7 @@ mod tests {
         let mut compressed = vec![0; snappy_raw_max_compressed_len(uncompressed.len())];
         let nbytes_written = snappy::raw::compress(uncompressed, &mut compressed).unwrap();
 
-        let mut error: *mut i8 = std::ptr::null_mut();
+        let mut error: *mut c_char = std::ptr::null_mut();
         let len = snappy_raw_decompressed_len(compressed.as_ptr(), nbytes_written, &mut error);
 
         assert!(error.is_null());
