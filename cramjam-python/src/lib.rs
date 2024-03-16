@@ -388,7 +388,6 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> deflate);
     make_submodule!(py -> m -> xz);
     make_submodule!(py -> m -> zstd);
-    make_submodule!(py -> m -> blosc2);
     make_submodule!(py -> m -> experimental);
 
     Ok(())
