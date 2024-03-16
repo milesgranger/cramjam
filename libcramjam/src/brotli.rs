@@ -25,3 +25,12 @@ pub fn compress<W: Write + ?Sized, R: Read>(input: R, output: &mut W, level: Opt
     let n_bytes = std::io::copy(&mut encoder, output)?;
     Ok(n_bytes as usize)
 }
+
+pub fn make_write_compressor<W: Write>(w: W, level: Option<u32>) -> brotli::CompressorWriter<W> {
+    let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
+    brotli::CompressorWriter::new(w, BUF_SIZE, level, LGWIN)
+}
+
+pub fn compress_bound(input_len: usize) -> usize {
+    brotli::ffi::compressor::BrotliEncoderMaxCompressedSize(input_len)
+}

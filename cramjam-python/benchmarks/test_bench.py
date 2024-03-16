@@ -254,7 +254,7 @@ def test_lz4_block(benchmark, file, use_cramjam: bool):
     [
         f
         for f in FILES
-        if not (isinstance(f, FiftyFourMbRandom) or isinstance(f, FiftyFourMbRepeating))
+        if not (isinstance(f, (FiftyFourMbRandom, FiftyFourMbRepeating)))
     ],
     ids=lambda val: val.name,
 )
@@ -326,9 +326,32 @@ def test_bzip2(benchmark, file, use_cramjam: bool):
         )
 
 
+@pytest.mark.parametrize(
+    "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "lzma"
+)
+@pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
+def test_lzma(benchmark, file, use_cramjam: bool):
+    import lzma
+
+    data = file.read_bytes()
+    if use_cramjam:
+        benchmark(
+            round_trip,
+            compress=cramjam.experimental.lzma.compress,
+            decompress=cramjam.experimental.lzma.decompress,
+            data=data,
+        )
+    else:
+        benchmark(
+            round_trip,
+            compress=lzma.compress,
+            decompress=lzma.decompress,
+            data=data,
+        )
+
+
 @profile
 def memory_profile():
-
     import snappy
 
     data = bytearray(FILES[-1].read_bytes())

@@ -1,6 +1,6 @@
 [package]
 name = "cramjam-python"
-version = "2.7.0-rc3"
+version = "2.8.3"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -15,8 +15,12 @@ crate-type = ["cdylib"]
 [features]
 default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
-
+generate-import-lib = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
 
 [dependencies]
-pyo3 = { version = "^0.18", default-features = false, features = ["macros"] }
+pyo3 = { version = "^0.20", default-features = false, features = ["macros"] }
+#libcramjam = { version = "^0.3" }
 libcramjam = { path = "../libcramjam" }
+
+[build-dependencies]
+pyo3-build-config = "^0.20"

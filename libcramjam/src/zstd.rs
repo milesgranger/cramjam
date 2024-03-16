@@ -4,6 +4,11 @@ pub use zstd;
 
 const DEFAULT_COMPRESSION_LEVEL: i32 = 0;
 
+/// Get the max compressed length for a single pass
+pub fn compress_bound(len: usize) -> usize {
+    zstd::zstd_safe::compress_bound(len)
+}
+
 /// Decompress gzip data
 #[inline(always)]
 pub fn decompress<W: Write + ?Sized, R: Read>(input: R, output: &mut W) -> Result<usize, Error> {

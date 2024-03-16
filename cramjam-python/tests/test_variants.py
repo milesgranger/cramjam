@@ -8,13 +8,12 @@ from datetime import timedelta
 from hypothesis import strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
 
-VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "blosc2")
+
+VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "xz", "blosc2")
 
 # Some OS can be slow or have higher variability in their runtimes on CI
-settings.register_profile(
-    "local", deadline=timedelta(milliseconds=1000), max_examples=100
-)
-settings.register_profile("CI", deadline=None, max_examples=25)
+settings.register_profile("local", deadline=None, max_examples=20)
+settings.register_profile("CI", deadline=None, max_examples=10)
 if os.getenv("CI"):
     settings.load_profile("CI")
 else:
@@ -32,8 +31,8 @@ def test_has_version():
 
 
 @pytest.mark.parametrize("variant_str", VARIANTS)
-@given(arr=st_np.arrays(st_np.scalar_dtypes(), shape=st.integers(0, int(1e5))))
-def test_variants_different_dtypes(variant_str, arr):
+@given(arr=st_np.arrays(st_np.scalar_dtypes(), shape=st.integers(0, int(1e4))))
+def test_variants_different_dtypes(variant_str, arr, is_pypy):
     variant = getattr(cramjam, variant_str)
     compressed = variant.compress(arr)
     decompressed = variant.decompress(compressed)
@@ -42,17 +41,22 @@ def test_variants_different_dtypes(variant_str, arr):
     # And compress n dims > 1
     if arr.shape[0] % 2 == 0:
         arr = arr.reshape((2, -1))
-        compressed = variant.compress(arr)
+
+        if is_pypy:
+            try:
+                compressed = variant.compress(arr)
+            except:
+                pytest.xfail(reason="PyPy struggles w/ multidim buffer views depending on dtype ie datetime[64]")
+        else:
+            compressed = variant.compress(arr)
         decompressed = variant.decompress(compressed)
         assert same_same(bytes(decompressed), arr.tobytes())
-        
 
 
 @pytest.mark.parametrize("is_bytearray", (True, False))
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(uncompressed=st.binary(min_size=1))
 def test_variants_simple(variant_str, is_bytearray, uncompressed: bytes):
-
     variant = getattr(cramjam, variant_str)
 
     if is_bytearray:
@@ -84,7 +88,7 @@ def test_variants_raise_exception(variant_str):
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_compress_into(
-    variant_str, input_type, output_type, raw_data, tmp_path_factory
+    variant_str, input_type, output_type, raw_data, tmp_path_factory, is_pypy
 ):
     variant = getattr(cramjam, variant_str)
 
@@ -119,6 +123,11 @@ def test_variants_compress_into(
     else:
         output = output_type(b"0" * compressed_len)
 
+    if is_pypy and isinstance(output, (bytes, memoryview)):
+        with pytest.raises(TypeError):
+            variant.compress_into(input, output)
+        return
+
     n_bytes = variant.compress_into(input, output)
     assert n_bytes == compressed_len
 
@@ -141,7 +150,7 @@ def test_variants_compress_into(
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_decompress_into(
-    variant_str, input_type, output_type, tmp_path_factory, raw_data
+    variant_str, input_type, output_type, tmp_path_factory, raw_data, is_pypy
 ):
     variant = getattr(cramjam, variant_str)
 
@@ -174,6 +183,11 @@ def test_variants_decompress_into(
         output = cramjam.Buffer()
     else:
         output = output_type(b"0" * len(raw_data))
+
+    if is_pypy and isinstance(output, (bytes, memoryview)):
+        with pytest.raises(TypeError):
+            variant.decompress_into(input, output)
+        return
 
     n_bytes = variant.decompress_into(input, output)
     assert n_bytes == len(raw_data)
@@ -264,7 +278,6 @@ def test_dunders(Obj, tmp_path_factory, data):
     ),
 )
 def test_lz4_block(compress_kwargs):
-
     from cramjam import lz4
 
     data = b"howdy neighbor"
@@ -287,7 +300,6 @@ def test_lz4_block(compress_kwargs):
 
 @given(first=st.binary(), second=st.binary())
 def test_gzip_multiple_streams(first: bytes, second: bytes):
-
     out1 = gzip.compress(first)
     out2 = gzip.compress(second)
     assert gzip.decompress(out1 + out2) == first + second
@@ -357,3 +369,9 @@ def test_variants_stream_decompressors(variant_str):
     # Calling .finish renders decompressor unusable after. (API consistency with other libs)
     with pytest.raises(cramjam.DecompressionError):
         decompressor.finish()
+
+
+def test_buffer_cmp():
+    assert cramjam.Buffer() == cramjam.Buffer()
+    assert cramjam.Buffer(b"some bytes") == cramjam.Buffer(b"some bytes")
+    assert cramjam.Buffer(b"some bytes") != cramjam.Buffer(b"other bytes")

@@ -39,6 +39,8 @@ bench-zstd:
 bench-blosc2:
 	$(BASE_BENCH_CMD) blosc2
 	
+bench-lzma:
+	$(BASE_BENCH_CMD) lzma
 
 dev-install:
 	rm -rf ./dist

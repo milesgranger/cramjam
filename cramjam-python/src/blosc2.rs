@@ -94,7 +94,7 @@ pub fn compress(
 /// Compress into output
 #[pyfunction]
 pub fn compress_into(
-    py: Python,
+    _py: Python,
     input: BytesType,
     mut output: BytesType,
     typesize: Option<usize>,
@@ -180,7 +180,7 @@ pub fn decompress_chunk(py: Python, data: BytesType, output_len: Option<usize>) 
 #[pyfunction]
 pub fn decompress_chunk_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
     let bytes = input.as_bytes();
-    let out = output.as_bytes_mut();
+    let out = output.as_bytes_mut()?;
     let nbytes = py.allow_threads(|| libcramjam::blosc2::decompress_chunk_into(bytes, out))?;
     Ok(nbytes)
 }
@@ -225,7 +225,7 @@ pub fn compress_chunk_into(
     codec: Option<PyCodec>,
 ) -> PyResult<usize> {
     let bytes = input.as_bytes();
-    let out = output.as_bytes_mut();
+    let out = output.as_bytes_mut()?;
     py.allow_threads(|| {
         let clevel = clevel.map(Into::into);
         let filter = filter.map(Into::into);
@@ -703,6 +703,7 @@ pub fn get_version() -> PyResult<String> {
     Ok(format!("{}", version))
 }
 
+/// Get the max compressed size of some raw input length in bytes.
 #[pyfunction]
 pub fn max_compressed_len(len_bytes: usize) -> usize {
     libcramjam::blosc2::blosc2::max_compress_len_bytes(len_bytes)
