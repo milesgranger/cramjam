@@ -10,6 +10,7 @@ readme = "README.md"
 [features]
 default = []
 capi = ["libc"]
+use-system-blosc2 = ["blosc2-rs/use-system-blosc2"]
 
 [dependencies]
 snap = "^1"
@@ -17,7 +18,7 @@ brotli = { version = "^3", default-features = false, features = ["std", "ffi-api
 bzip2 = "^0.4"
 lz4 = "^1"
 flate2 = "^1"
-blosc2-rs = { path = "../../blosc2-rs" }
+blosc2-rs = { path = "../../blosc2-rs", version = "0.2.0+2.13.2" }
 libdeflater = "^1"
 zstd = "0.13.0"
 libc = { version = "0.2", optional = true }

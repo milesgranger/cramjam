@@ -11,7 +11,7 @@ edition = "2021"
 homepage = "https://github.com/milesgranger/pyrus-cramjam"
 
 [profile.release]
-# strip = true
+strip = true
 lto = "fat"
 codegen-units = 1
 opt-level = 3
