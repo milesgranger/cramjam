@@ -8,7 +8,7 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-homepage = "https://github.com/milesgranger/pyrus-cramjam"
+homepage = "https://github.com/milesgranger/cramjam"
 
 [profile.release]
 strip = true

@@ -15,11 +15,6 @@ use pyo3::PyResult;
 pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     libcramjam::blosc2::blosc2::init();
 
-    Python::with_gil(|py| {
-        let warning = py.get_type::<pyo3::exceptions::PyUserWarning>();
-        PyErr::warn(py, warning, "Blosc2 implementation is currently unstable", 0)
-    })?;
-
     let ncores = std::thread::available_parallelism().map(|v| v.get()).unwrap_or(1);
     libcramjam::blosc2::blosc2::set_nthreads(ncores);
 
