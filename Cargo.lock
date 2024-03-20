@@ -148,7 +148,8 @@ checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
 [[package]]
 name = "blosc2-rs"
 version = "0.2.0+2.13.2"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=main#282fdb3016d6722421e5fcb1a35c183708597e62"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "644e1ad20be5e35ccb82d9e0f369b93a7ff5805f56295928b1f5ca22f79a402f"
 dependencies = [
  "blosc2-sys",
  "parking_lot",
@@ -157,7 +158,8 @@ dependencies = [
 [[package]]
 name = "blosc2-sys"
 version = "0.2.0+2.13.2"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=main#282fdb3016d6722421e5fcb1a35c183708597e62"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e41d32cfc718da08fcd6e101fc1681feba8f1d95981f6c136d4255992ac98d3"
 dependencies = [
  "bindgen",
  "cmake",
