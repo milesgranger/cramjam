@@ -9,7 +9,7 @@ on:
 
 jobs:
   macos:
-    runs-on: macos-13
+    runs-on: macos-14
     strategy:
       matrix:
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
@@ -22,8 +22,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin
+      - name: Install build stuff
+        run: xcode-select --install
       - name: Tests
-        run: cargo test --no-default-features --release
+        run: CC="clang -arch arm64" cargo test --no-default-features --release
       - name: Build wheels - x86_64 - cramjam-cli
         uses: PyO3/maturin-action@v1
         with:
@@ -125,6 +127,8 @@ jobs:
     - uses: actions/checkout@v3
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
+    - name: Install build stuff
+      run: sudo apt update && sudo apt install build-essential -y
     - name: Tests
       run: cargo test --no-default-features --release --features capi
     - uses: actions/setup-python@v5
