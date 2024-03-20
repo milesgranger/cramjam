@@ -148,6 +148,7 @@ checksum = "ed570934406eb16438a4e976b1b4500774099c13b8cb96eec99f620f05090ddf"
 [[package]]
 name = "blosc2-rs"
 version = "0.2.0+2.13.2"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=main#282fdb3016d6722421e5fcb1a35c183708597e62"
 dependencies = [
  "blosc2-sys",
  "parking_lot",
@@ -156,6 +157,7 @@ dependencies = [
 [[package]]
 name = "blosc2-sys"
 version = "0.2.0+2.13.2"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=main#282fdb3016d6722421e5fcb1a35c183708597e62"
 dependencies = [
  "bindgen",
  "cmake",
