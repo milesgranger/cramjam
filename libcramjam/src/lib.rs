@@ -83,7 +83,7 @@ mod tests {
     test_variant!(deflate, compressed_len = 157174, None);
     test_variant!(zstd, compressed_len = 4990, None);
     test_variant!(lz4, compressed_len = 303278, None);
-    test_variant!(blosc2, compressed_len = 2_403_572);
+    test_variant!(blosc2, compressed_len = 791_923);
 
     #[allow(non_upper_case_globals)]
     const format: Option<crate::xz::Format> = None;
