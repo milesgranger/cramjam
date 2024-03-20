@@ -278,11 +278,51 @@ jobs:
         name: wheels
         path: dist
 
+  musllinux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python:
+          - pypy3.9
+          - pypy3.10
+          - '3.7'
+          - '3.8'
+          - '3.9'
+          - '3.10'
+          - '3.11'
+          - '3.12'
+        target:
+          - x86_64
+          - i686
+          - aarch64
+          - armv7
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build Wheels cramjam-python
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        sccache: true
+        manylinux: musllinux_1_1
+        args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-python/Cargo.toml
+    - name: Build Wheels cramjam-cli
+      uses: PyO3/maturin-action@v1
+      with:
+        target: ${{ matrix.target }}
+        sccache: true
+        manylinux: musllinux_1_1
+        args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-cli/Cargo.toml
+    - name: Upload wheels
+      uses: actions/upload-artifact@v3
+      with:
+        name: wheels
+        path: dist
+
   pypi-publish-cramjam-python:
       name: Upload cramjam release to PyPI
       runs-on: ubuntu-latest
       if: "startsWith(github.ref, 'refs/tags/')"
-      needs: [ macos, windows, linux, linux-cross, pypy ]
+      needs: [ macos, windows, linux, linux-cross, pypy, musllinux ]
       environment:
         name: pypi
         url: https://pypi.org/p/cramjam
@@ -304,7 +344,7 @@ jobs:
       name: Upload cramjam-cli release to PyPI
       runs-on: ubuntu-latest
       if: "startsWith(github.ref, 'refs/tags/')"
-      needs: [ macos, windows, linux, linux-cross, pypy ]
+      needs: [ macos, windows, linux, linux-cross, pypy, musllinux ]
       environment:
         name: pypi
         url: https://pypi.org/p/cramjam-cli
