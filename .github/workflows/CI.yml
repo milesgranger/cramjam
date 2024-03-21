@@ -34,12 +34,14 @@ jobs:
         run: brew install ninja
       - name: Set Env vars
         run: |
+          echo $(which python)
           #echo "MACOSX_DEPLOYMENT_TARGET=13" >> $GITHUB_ENV
-          echo "PYO3_PYTHON=$(which python)" >> $GITHUB_ENV
+          echo "PYO3_PYTHON=$CONDA_PREFIX/bin/python" >> $GITHUB_ENV
           echo "PYO3_PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
           echo "PYO3_LIB_DIR=$CONDA_PREFIX/lib" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$CONDA_PREFIX/lib" >> $GITHUB_ENV
           echo "PKG_CONFIG_PATH=$CONDA_PREFIX/lib/pkgconfig" >> $GITHUB_ENV
+          echo $GITHUB_ENV
       - name: Tests
         run: cargo test --no-default-features --release --features use-system-blosc2
       - name: Build wheels - x86_64 - cramjam-cli
