@@ -56,6 +56,7 @@ jobs:
           args: --release --out dist --sdist --manifest-path cramjam-python/Cargo.toml --features use-system-blosc2
       - name: Install built wheels - x86_64
         run: |
+          ls -l dist
           pip install cramjam --pre --no-index --find-links dist --force-reinstall
           pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
       - name: Build wheels - universal2
