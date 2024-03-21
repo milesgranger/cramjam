@@ -39,7 +39,7 @@ jobs:
           echo "PYO3_PYTHON_VERSION=${{ matrix.python-version }}" >> $GITHUB_ENV
           echo "PYO3_LIB_DIR=$CONDA_PREFIX/lib" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$CONDA_PREFIX/lib" >> $GITHUB_ENV
-          echo "PKG_CONFIG_PATH=$CONDA_PREFIX/envs/cramjam/lib/pkgconfig" >> $GITHUB_ENV
+          echo "PKG_CONFIG_PATH=$CONDA_PREFIX/lib/pkgconfig" >> $GITHUB_ENV
       - name: Tests
         run: cargo test --no-default-features --release --features use-system-blosc2
       - name: Build wheels - x86_64 - cramjam-cli
