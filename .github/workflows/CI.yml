@@ -46,13 +46,11 @@ jobs:
       - name: Build wheels - x86_64 - cramjam-cli
         uses: PyO3/maturin-action@v1
         with:
-          target: x86_64
           sccache: true
           args: --release --out dist --sdist --manifest-path cramjam-cli/Cargo.toml
       - name: Build wheels - x86_64 - cramjam-python
         uses: PyO3/maturin-action@v1
         with:
-          target: x86_64
           sccache: true
           args: --release --out dist --sdist --manifest-path cramjam-python/Cargo.toml --features use-system-blosc2
       - name: Install built wheels - x86_64
