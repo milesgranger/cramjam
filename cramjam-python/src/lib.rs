@@ -51,6 +51,7 @@
 //! b'some bytes here'
 //! ```
 
+pub mod blosc2;
 pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
@@ -156,8 +157,23 @@ impl<'a> Seek for BytesType<'a> {
 }
 
 impl<'a> BytesType<'a> {
+    /// Length in bytes
     fn len(&self) -> usize {
-        self.as_bytes().len()
+        match self {
+            BytesType::RustyFile(file) => file.borrow().len().unwrap(),
+            _ => self.as_bytes().len(),
+        }
+    }
+    /// The item size, in bytes, that the buffer/bytes represent.
+    fn itemsize(&self) -> usize {
+        match self {
+            Self::PyBuffer(pybuffer) => pybuffer.inner.itemsize as _,
+            _ => 1,
+        }
+    }
+    /// Empty
+    fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 

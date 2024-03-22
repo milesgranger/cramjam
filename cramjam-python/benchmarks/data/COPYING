@@ -21,3 +21,68 @@ Some of the benchmark data in in this directory is licensed thusly:
    domain; the latter does not have expired copyright, but is still in the
    public domain according to the license information
    (http://www.gutenberg.org/ebooks/53).
+
+
+  All others are taken from the Silesia compression corpus:
+  https://sun.aei.polsl.pl//~sdeor/index.php?page=silesia
+
+  Silesia Corpus details
+  dickens
+  Charles Dickens wrote many novels. The file is a concatenation of some, fourteen, of his works that can be found in the Project Gutenberg (A Child's History Of England, All The Year Round: Contributions, American Notes, The Battle Of Life, Bleak House, A Christmas Carol, David Copperfield, Dombey And Son, Doctor Marigold, Going Into Society, George Silverman's Explanation, Barnaby Rudge: a tale of the Riots of 'eighty, The Chimes, The Cricket On The Hearth). The file is a simple text.
+
+  MD5: 88334708559f6db57d79096bc0aca07e
+
+  mozilla
+  A Mozilla 1.0 open source web browser was installed on the Tru64 UNIX operating system and then the contents of the Mozilla.org directory were tarred. There are 525 files of such types as: executables, jar archives, HTML, XML, text, and others.
+
+  MD5: c7789a2097f1ff944b0c737430a339b3
+
+  mr
+  A magnetic resonanse medical picture of a head. This file is stored is DICOM format and contains 19 planes.
+
+  MD5: 38e623e3093b7bf2003ca4b1bbc19927
+
+  nci
+  The chemical databases of strucures contain information of structures, their components, 2D and/or 3D coordinates, properites, etc. The file is a part of the August 2000 2D File stored in an SDF format which is common file format developped to handle a list of molecular structures associated with properties. The original database is of size 982MB so we had to truncate it to be suitable for a part of the corpus. The 32MB piece (rounded down to the nearest end of the record), we have chosen, is taken from the middle of the original file (starting at the first record after leaving 400MB of data).
+
+  MD5: 31f85bc8706f3c921104e7c169e2e2e1
+
+  ooffice
+  An Open Office is an open source project, which is composed of the word processor, spreadsheet program, presentation maker, and graphical program. The file is a dynamic linked linbrary from version 1.01.
+
+  MD5: 573c4ae915e36631d8f2dcffb9b9b66d
+
+  osdb
+  An Open Source Database Benchmark is a project invented to provide a free test for database systems. One of the parts of the project are sample databases. The 40MB benchmark was run on the MySQL 3.23 server. The file is one of the MySQL database files, hundred.med.
+
+  MD5: e734b0c48e6a982adfb5802da3032ecd
+
+  reymont
+  A book Ch�opi by W�adys�aw Reymont was honoured the Nobel Price in 1924. The text of the book was taken from the Virtual Library of Polish Literature. Then it was converted to the LaTeX files from which the uncompressed PDF file was produced. The file is uncompressed due to the fact the built-in compression in PDF format is rather poor, and much better results can be obtained when we compress the uncompressed PDF files.
+
+  MD5: d8f54d78105079775f32d76dc55fc671
+
+  samba
+  Samba is an open souce project that is intended to be a free alternative to the SMB/CIFS clients. The file contains tarred source code (also documentation, graphics) of the Samba 2.2-3 version.
+
+  MD5: 154eaea7ea70e89f6339ff0abf4112ca
+
+  sao
+  There are many star catalogs containing the data of sky objects. The chosen one, SAO catalog, is suitable especially for the amator astronomers. It contains the information about 258,996 stars, and is composed of binary records.
+
+  MD5: 79e95a22e18cd82b7e42bf91b380d30b
+
+  webster
+  The 1913 Webster Unabridged Dictionary is an English dictionary stored in a rather simple HTML. The file is a concatenation of files that can be obtained from Project Gutenberg.
+
+  MD5: 474931ad907ac27bf962c75ded46c069
+
+  xml
+  The XML is an incomming standard of document format. The importance of XML is still growing. The file is a corpus prepared for XMLPPM: XML-Conscious PPM Compression. This is a concatenation of all, eleven, files.
+
+  MD5: 9b09c0c80104adb8aae910b7d7db003e
+
+  x-ray
+  An X-ray medical picture of child's hand. This is a 12-bit gray scaled image.
+
+  MD5: 9baec32ad14ec3eff487d254382cb91c

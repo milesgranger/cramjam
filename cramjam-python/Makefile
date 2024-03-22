@@ -36,6 +36,9 @@ bench-bzip2:
 bench-zstd:
 	$(BASE_BENCH_CMD) zstd
 
+bench-blosc2:
+	$(BASE_BENCH_CMD) blosc2
+	
 bench-lzma:
 	$(BASE_BENCH_CMD) lzma
 

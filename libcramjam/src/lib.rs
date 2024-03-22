@@ -1,3 +1,4 @@
+pub mod blosc2;
 pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
@@ -17,7 +18,7 @@ mod tests {
 
     // Default testing data
     fn gen_data() -> Vec<u8> {
-        (0..1000000)
+        (0..1_000_000)
             .map(|_| b"oh what a beautiful morning, oh what a beautiful day!!".to_vec())
             .flat_map(|v| v)
             .collect()
@@ -82,6 +83,7 @@ mod tests {
     test_variant!(deflate, compressed_len = 157174, None);
     test_variant!(zstd, compressed_len = 4990, None);
     test_variant!(lz4, compressed_len = 303278, None);
+    test_variant!(blosc2, compressed_len = 791_923);
 
     #[allow(non_upper_case_globals)]
     const format: Option<crate::xz::Format> = None;
