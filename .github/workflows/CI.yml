@@ -18,8 +18,9 @@ jobs:
         python-version: ['3.8'] #, '3.9', '3.10', '3.11', '3.12']
     steps:
       - uses: actions/checkout@v3
-      - uses: conda-incubator/setup-miniconda@v3
+      - uses: mamba-org/setup-micromamba@v1
         with:
+          micromamba-version: '1.5.7-0'
           python-version: ${{ matrix.python-version }}
           init-shell: bash
           create-args: >-
