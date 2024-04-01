@@ -24,9 +24,9 @@ jobs:
         #   targets: aarch64-apple-darwin
       - name: Install packages
         run: brew install ninja
-      # - name: Set env vars
-      #   run: |
-      #     echo "MACOSX_DEPLOYMENT_TARGET=14.0" >> $GITHUB_ENV
+      - name: Set env vars
+        run: |
+          echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
       - name: Tests
         run: cargo test --no-default-features --release
         env:
