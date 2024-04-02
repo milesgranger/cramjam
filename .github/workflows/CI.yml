@@ -31,7 +31,7 @@ jobs:
         run: cargo test --no-default-features --release
         env:
           CC: gcc
-          LDFLAGS: -Wl,-no_pie
+          CFLAGS: -Wl,-no_pie
       - name: Build wheels - x86_64 - cramjam-cli
         uses: PyO3/maturin-action@v1
         with:
