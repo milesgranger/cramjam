@@ -9,7 +9,7 @@ on:
 
 jobs:
   macos:
-    runs-on: macOS-latest
+    runs-on: macos-14
     strategy:
       matrix:
         python-version: ['3.8'] #, '3.8', '3.9', '3.10', '3.11', '3.12']
@@ -24,16 +24,11 @@ jobs:
         #   targets: aarch64-apple-darwin
       - name: Install packages
         run: brew install ninja
-      - name: Set env vars
-        run: |
-          echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
+      # - name: Set env vars
+        # run: |
+        #   echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
       - name: Tests
         run: cargo test --no-default-features --release
-        env:
-          CC: gcc
-          CFLAGS: ""
-          LDFLAGS: ""
-          CI: true
       - name: Build wheels - x86_64 - cramjam-cli
         uses: PyO3/maturin-action@v1
         with:
