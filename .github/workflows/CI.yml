@@ -9,7 +9,7 @@ on:
 
 jobs:
   macos:
-    runs-on: macos-14
+    runs-on: macOS-latest
     strategy:
       matrix:
         python-version: ['3.8'] #, '3.8', '3.9', '3.10', '3.11', '3.12']
@@ -25,8 +25,8 @@ jobs:
       - name: Install packages
         run: brew install ninja
       # - name: Set env vars
-        # run: |
-        #   echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
+      #   run: |
+      #     echo "MACOSX_DEPLOYMENT_TARGET=13.0" >> $GITHUB_ENV
       - name: Tests
         run: cargo test --no-default-features --release
       - name: Build wheels - x86_64 - cramjam-cli
