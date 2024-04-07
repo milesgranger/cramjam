@@ -41,6 +41,10 @@ jobs:
           target: x86_64
           sccache: true
           args: -i python --release --out dist --sdist --manifest-path cramjam-python/Cargo.toml
+      - name: Fix wheels
+        run: |
+          pip install delocate
+          delocate-wheel -v dist/*.whl
       - name: Install built wheels - x86_64
         run: |
           pip install cramjam --pre --no-index --find-links dist --force-reinstall
