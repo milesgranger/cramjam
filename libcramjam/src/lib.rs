@@ -76,13 +76,13 @@ mod tests {
     }
 
     // Expected compressed_len, subsequent args are supplied to the variant's `compress` call.
-    test_variant!(snappy, compressed_len = 2572398);
-    test_variant!(gzip, compressed_len = 157192, None);
+    test_variant!(snappy, compressed_len = 2_572_398);
+    test_variant!(gzip, compressed_len = 157_192, None);
     test_variant!(brotli, compressed_len = 128, None);
-    test_variant!(bzip2, compressed_len = 14207, None);
-    test_variant!(deflate, compressed_len = 157174, None);
+    test_variant!(bzip2, compressed_len = 14_207, None);
+    test_variant!(deflate, compressed_len = 157_174, None);
     test_variant!(zstd, compressed_len = 4990, None);
-    test_variant!(lz4, compressed_len = 303278, None);
+    test_variant!(lz4, compressed_len = 303_278, None);
     test_variant!(blosc2, compressed_len = 791_923);
 
     #[allow(non_upper_case_globals)]
@@ -93,5 +93,5 @@ mod tests {
     const filters: Option<crate::xz::Filters> = None;
     #[allow(non_upper_case_globals)]
     const opts: Option<crate::xz::LzmaOptions> = None;
-    test_variant!(xz, compressed_len = 8020, None, format, check, filters, opts);
+    test_variant!(xz, compressed_len = 8_020, None, format, check, filters, opts);
 }

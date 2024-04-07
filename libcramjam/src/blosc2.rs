@@ -12,8 +12,12 @@ where
     R: Read,
     W: Write + ?Sized,
 {
-    let mut schunk =
-        blosc2::schunk::SChunk::new(blosc2::schunk::Storage::default().set_cparams(&mut CParams::default()));
+    let mut schunk = blosc2::schunk::SChunk::new(
+        blosc2::schunk::Storage::default()
+            .set_contiguous(true)
+            .set_cparams(&mut CParams::default())
+            .set_dparams(&mut Default::default()),
+    );
     let mut rdr = BufReader::new(rdr);
 
     // stream compress into schunk
@@ -30,6 +34,7 @@ where
     R: Read,
     W: Write + ?Sized,
 {
+    // TODO: Avoid the double copy somehow
     let mut buf = vec![];
     io::copy(&mut BufReader::new(input), &mut buf)?;
 
@@ -58,4 +63,18 @@ pub fn decompress_chunk(input: &[u8]) -> io::Result<Vec<u8>> {
 pub fn decompress_chunk_into<T>(input: &[u8], output: &mut [T]) -> io::Result<usize> {
     let nbytes = blosc2::decompress_into(input, output)?;
     Ok(nbytes)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use super::*;
+
+    #[test]
+    fn test_compress() {
+        let mut compressed = vec![];
+        let data = b"bytes";
+        assert!(compress(Cursor::new(data), &mut compressed).is_ok());
+    }
 }
