@@ -18,7 +18,7 @@ brotli = { version = "^3", default-features = false, features = ["std", "ffi-api
 bzip2 = "^0.4"
 lz4 = "^1"
 flate2 = "^1"
-blosc2-rs = { git = "ssh://git@github.com/milesgranger/blosc2-rs" }
+blosc2-rs = { git = "https://github.com/milesgranger/blosc2-rs.git" }
 libdeflater = "^1"
 zstd = "0.13.0"
 libc = { version = "0.2", optional = true }
