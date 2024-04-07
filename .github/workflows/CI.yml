@@ -29,9 +29,6 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> $GITHUB_ENV
       - name: Tests
         run: cargo test --no-default-features --release
-        env:
-          CC: gcc
-          CFLAGS: -Wl,-no_pie
       - name: Build wheels - x86_64 - cramjam-cli
         uses: PyO3/maturin-action@v1
         with:
