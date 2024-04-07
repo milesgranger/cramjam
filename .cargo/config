@@ -4,3 +4,5 @@ rustflags = [
   "-C", "link-arg=dynamic_lookup",
 ]
 
+[net]
+git-fetch-with-cli = true
