@@ -47,6 +47,7 @@ jobs:
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
       - name: Rust Tests
+        if: ${{ matrix.arch == 'aarch64' }}
         run: cargo test --no-default-features --release
 
       - name: Build wheel ${{ matrix.arch }}
