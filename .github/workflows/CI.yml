@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
         package:
           - dir: cramjam-python
             name: cramjam
@@ -47,7 +47,6 @@ jobs:
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
       - name: Rust Tests
-        if: ${{ matrix.target == 'aarch64' }}
         run: cargo test --no-default-features --release
 
       - name: Build wheel ${{ matrix.target }}
