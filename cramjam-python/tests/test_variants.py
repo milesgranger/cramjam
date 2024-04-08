@@ -95,8 +95,10 @@ def test_variants_compress_into(
 ):
     # TODO: Fix segfault when using blosc2 compress_into cramjam.File
     #       decompress_into appears to work fine.
+    # Further todo is finding out why with pytest.raises(...) is delayed in
+    # detecting the raised error. :S
     if variant_str == 'blosc2' and output_type == cramjam.File:
-        pytest.xfail("NotImplementedError for blosc2 into File")
+        pytest.skip("NotImplementedError for blosc2 into File")
 
     variant = getattr(cramjam, variant_str)
 
