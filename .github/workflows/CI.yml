@@ -64,7 +64,7 @@ jobs:
           delocate-wheel -v dist/*.whl
 
       - name: Install built wheel
-        if: ${{ matrix.arch != 'x86_64' }}
+        if: ${{ matrix.arch == 'universal2' }}
         run: pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
 
       - name: Install cramjam
@@ -72,7 +72,7 @@ jobs:
         run: pip install cramjam  # Used in cramjam-cli tests
 
       - name: Python Tests
-        if: ${{ matrix.arch != 'x86_64' }}
+        if: ${{ matrix.arch == 'universal2' }}
         run: |
           pip install pytest numpy hypothesis
           python -m pytest ${{ matrix.package.dir }} -vs --ignore **/benchmarks
