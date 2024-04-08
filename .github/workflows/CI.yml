@@ -9,7 +9,7 @@ on:
 
 jobs:
   macos:
-    runs-on: macos-14
+    runs-on: macos-13
     name: ${{ matrix.package.name }}-${{ matrix.target }}-python ${{ matrix.python-version }}
     strategy:
       fail-fast: false
@@ -23,7 +23,6 @@ jobs:
         target:
           - x86_64
           - universal2
-          - aarch64
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v5
@@ -43,8 +42,8 @@ jobs:
       - name: Set env vars
         run: |
           echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
-          # echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
-          # echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
+          echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
+          echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
       - name: Rust Tests
         run: cargo test --no-default-features --release
