@@ -15,7 +15,3 @@ strip = true
 lto = "fat"
 codegen-units = 1
 opt-level = 3
-
-[profile.python-release]
-inherits = "release"
-rpath = true

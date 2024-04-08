@@ -41,7 +41,7 @@ jobs:
       - name: Set env vars
         run: |
           echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> $GITHUB_ENV
-          # echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
+          echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
       - name: Rust Tests
