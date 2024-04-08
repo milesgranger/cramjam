@@ -44,10 +44,6 @@ jobs:
           target: x86_64
           sccache: true
           args: -i python --release --out dist --sdist --manifest-path cramjam-python/Cargo.toml
-      - name: Fix wheels
-        run: |
-          pip install delocate
-          delocate-wheel -v dist/*.whl
       - name: Install built wheels - x86_64
         run: |
           pip install cramjam --pre --no-index --find-links dist --force-reinstall
@@ -64,18 +60,21 @@ jobs:
         with:
           sccache: true
           args: -i python --release --target universal2-apple-darwin --out dist --manifest-path cramjam-python/Cargo.toml
+      - name: Fix wheels
+        run: |
+          pip install delocate
+          delocate-wheel -v dist/*.whl
       - name: Install built wheels - universal2
         if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
         run: |
           pip install cramjam --pre --no-index --find-links dist --force-reinstall
           pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
-      # - name: Python UnitTest - cramjam-cli
-      #   run: |
-      #     pip install pytest numpy hypothesis
-      #     python -m pytest cramjam-cli -vs --ignore **/benchmarks
-      - name: Python UnitTest - cramjam-python
+      - name: Python UnitTest - cramjam-cli
         run: |
           pip install pytest numpy hypothesis
+          python -m pytest cramjam-cli -vs --ignore **/benchmarks
+      - name: Python UnitTest - cramjam-python
+        run: |
           python -m pytest cramjam-python -vs --ignore **/benchmarks
       - name: Upload wheels
         uses: actions/upload-artifact@v3
