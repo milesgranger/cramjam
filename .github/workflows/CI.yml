@@ -10,7 +10,7 @@ on:
 jobs:
   macos:
     runs-on: macOS-latest
-    name: ${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}
+    name: ${{ matrix.package.name }}-${{ matrix.target }}-python ${{ matrix.python-version }}
     strategy:
       matrix:
         python-version: ['3.8'] #, '3.8', '3.9', '3.10', '3.11', '3.12']
@@ -21,7 +21,7 @@ jobs:
           #   name: cramjam-cli
         target: 
           - x86_64
-          # - aarch64
+          - aarch64
           # - universal2
     steps:
       - uses: actions/checkout@v3
