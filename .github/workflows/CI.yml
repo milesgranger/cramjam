@@ -12,7 +12,7 @@ jobs:
     runs-on: macOS-latest
     name: ${{ matrix.package.name }}-${{ matrix.target }}-python ${{ matrix.python-version }}
     strategy:
-      fail-fase: false
+      fail-fast: false
       matrix:
         python-version: ['3.8'] #, '3.8', '3.9', '3.10', '3.11', '3.12']
         package:
