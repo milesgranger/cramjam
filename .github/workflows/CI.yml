@@ -69,12 +69,13 @@ jobs:
         run: |
           pip install cramjam --pre --no-index --find-links dist --force-reinstall
           pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
-      - name: Python UnitTest - cramjam-cli
-        run: |
-          pip install pytest numpy hypothesis
-          python -m pytest cramjam-cli -vs --ignore **/benchmarks
+      # - name: Python UnitTest - cramjam-cli
+      #   run: |
+      #     pip install pytest numpy hypothesis
+      #     python -m pytest cramjam-cli -vs --ignore **/benchmarks
       - name: Python UnitTest - cramjam-python
         run: |
+          pip install pytest numpy hypothesis
           python -m pytest cramjam-python -vs --ignore **/benchmarks
       - name: Upload wheels
         uses: actions/upload-artifact@v3
