@@ -109,15 +109,18 @@ pub fn compress_into(
         .set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
     let mut dparams = DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
 
-    let mut storage = Storage::default()
+    let storage = Storage::default()
         .set_contiguous(true)
         .set_cparams(&mut cparams)
         .set_dparams(&mut dparams);
 
-    if let BytesType::RustyFile(file) = output {
-        storage = storage
-            .set_urlpath(&file.borrow().path)
-            .map_err(CompressionError::from_err)?;
+    if let BytesType::RustyFile(_file) = output {
+        return Err(pyo3::exceptions::PyNotImplementedError::new_err(
+            "Output to File w/ blosc2 not implemented yet.",
+        ));
+        // storage = storage
+        //     .set_urlpath(&file.borrow().path)
+        //     .map_err(CompressionError::from_err)?;
     }
 
     let mut schunk = SChunk::new(storage);
