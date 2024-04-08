@@ -9,7 +9,7 @@ on:
 
 jobs:
   macos:
-    runs-on: macOS-13
+    runs-on: macOS-latest
     name: ${{ matrix.package.name }}-${{ matrix.target }}-python ${{ matrix.python-version }}
     strategy:
       fail-fast: false
@@ -33,7 +33,9 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
+          targets: x86_64-apple-darwin
+
+      - uses: Swatinem/rust-cache@v2
 
       - name: Install packages
         run: brew install ninja
@@ -62,11 +64,11 @@ jobs:
           delocate-wheel -v dist/*.whl
 
       - name: Install built wheel
-        if: ${{ matrix.arch != 'aarch64' }}
+        if: ${{ matrix.arch != 'x86_64' }}
         run: pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
 
       - name: Python Tests
-        if: ${{ matrix.arch != 'aarch64' }}
+        if: ${{ matrix.arch != 'x86_64' }}
         run: |
           pip install pytest numpy hypothesis
           python -m pytest ${{ matrix.package.dir }} -vs --ignore **/benchmarks
