@@ -10,72 +10,62 @@ on:
 jobs:
   macos:
     runs-on: macOS-latest
+    name: ${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}
     strategy:
       matrix:
         python-version: ['3.8'] #, '3.8', '3.9', '3.10', '3.11', '3.12']
+        package:
+          - dir: cramjam-python
+            name: cramjam
+          # - dir: cramjam-cli
+          #   name: cramjam-cli
+        target: 
+          - x86_64
+          # - aarch64
+          # - universal2
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        # with:
-        #   targets: aarch64-apple-darwin
+        with:
+          targets: ${{ matrix.target }}-apple-darwin
+
       - name: Install packages
         run: brew install ninja
+
       - name: Set env vars
         run: |
           echo "MACOSX_DEPLOYMENT_TARGET=12.0" >> $GITHUB_ENV
           echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
-      - name: Tests
+      - name: Rust Tests
         run: cargo test --no-default-features --release
-      - name: Build wheels - x86_64 - cramjam-cli
+
+      - name: Build wheel
         uses: PyO3/maturin-action@v1
         with:
-          target: x86_64
+          target: ${{ matrix.target }}
           sccache: true
-          args: -i python --release --out dist --sdist --manifest-path cramjam-cli/Cargo.toml
-      - name: Build wheels - x86_64 - cramjam-python
-        uses: PyO3/maturin-action@v1
-        with:
-          target: x86_64
-          sccache: true
-          args: -i python --release --out dist --sdist --manifest-path cramjam-python/Cargo.toml
-      - name: Install built wheels - x86_64
-        run: |
-          pip install cramjam --pre --no-index --find-links dist --force-reinstall
-          pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
-      - name: Build wheels - universal2
-        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
-        uses: PyO3/maturin-action@v1
-        with:
-          sccache: true
-          args: -i python --release --target universal2-apple-darwin --out dist --manifest-path cramjam-cli/Cargo.toml
-      - name: Build wheels - universal2
-        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
-        uses: PyO3/maturin-action@v1
-        with:
-          sccache: true
-          args: -i python --release --target universal2-apple-darwin --out dist --manifest-path cramjam-python/Cargo.toml
-      - name: Fix wheels
+          args: -i python --release --out dist --sdist --target ${{ matrix.target }}-apple-darwin --manifest-path ${{ matrix.package.dir }}/Cargo.toml
+
+      - name: Fix wheel
         run: |
           pip install delocate
           delocate-wheel -v dist/*.whl
-      - name: Install built wheels - universal2
-        if: ${{ matrix.python-version >= '3.8' || contains(fromJson('["3.10", "3.11", "3.12"]'), matrix.python-version) }}
-        run: |
-          pip install cramjam --pre --no-index --find-links dist --force-reinstall
-          pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
-      - name: Python UnitTest - cramjam-cli
+
+      - name: Install built wheel
+        run: pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
+
+      - name: Python Tests
         run: |
           pip install pytest numpy hypothesis
-          python -m pytest cramjam-cli -vs --ignore **/benchmarks
-      - name: Python UnitTest - cramjam-python
-        run: |
-          python -m pytest cramjam-python -vs --ignore **/benchmarks
+          python -m pytest ${{ matrix.package.dir }} -vs --ignore **/benchmarks
+
       - name: Upload wheels
         uses: actions/upload-artifact@v3
         with:
