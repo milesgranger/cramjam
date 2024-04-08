@@ -70,6 +70,7 @@ impl<T: Write + Any> WritableDowncast for T {
 
 #[derive(Debug)]
 enum Error {
+    #[allow(dead_code)]
     Other(String),
 }
 
