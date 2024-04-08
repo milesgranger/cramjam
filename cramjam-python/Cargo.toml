@@ -25,3 +25,7 @@ libcramjam = { path = "../libcramjam" }
 
 [build-dependencies]
 pyo3-build-config = "^0.20"
+
+[profile.python-release]
+inherits = "release"
+rpath = true

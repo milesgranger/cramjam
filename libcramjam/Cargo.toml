@@ -27,12 +27,6 @@ xz2 = { version = "0.1.7", features = ["static"] }
 [build-dependencies]
 cbindgen = "^0.24"
 
-[profile.release]
-rpath = true
-
-[profile.dev]
-rpath = true
-
 [dev-dependencies]
 inline-c = "0.1"
 

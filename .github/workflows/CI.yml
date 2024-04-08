@@ -52,7 +52,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           sccache: true
-          args: -i python --release --out dist --sdist --target ${{ matrix.target }}-apple-darwin --manifest-path ${{ matrix.package.dir }}/Cargo.toml
+          args: -i python --release --out dist --sdist --target ${{ matrix.target }}-apple-darwin --manifest-path ${{ matrix.package.dir }}/Cargo.toml --profile python-release
 
       - name: Fix wheel
         run: |
