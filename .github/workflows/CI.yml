@@ -48,15 +48,17 @@ jobs:
         run: cargo test --no-default-features --release
 
       - name: Build wheel
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.target }}
-          sccache: true
-          args: -i python --release --out dist --sdist --target ${{ matrix.target }}-apple-darwin --manifest-path ${{ matrix.package.dir }}/Cargo.toml --profile python-release
-
-      - name: Fix wheel
         run: |
-          pip install delocate
+          pip install maturin delocate
+
+          maturin build \
+            -i python \
+            --release \
+            --out dist \
+            --sdist \
+            --target ${{ matrix.target }}-apple-darwin \
+            --manifest-path ${{ matrix.package.dir }}/Cargo.toml
+
           delocate-wheel -v dist/*.whl
 
       - name: Install built wheel
