@@ -47,10 +47,10 @@ jobs:
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
       - name: Rust Tests
-        if: ${{ matrix.arch == 'aarch64' }}
+        if: ${{ matrix.target == 'aarch64' }}
         run: cargo test --no-default-features --release
 
-      - name: Build wheel ${{ matrix.arch }}
+      - name: Build wheel ${{ matrix.target }}
         run: |
           pip install maturin delocate
 
@@ -65,7 +65,7 @@ jobs:
           delocate-wheel -v dist/*.whl
 
       - name: Install built wheel
-        if: ${{ matrix.arch == 'universal2' }}
+        if: ${{ matrix.target == 'universal2' }}
         run: pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
 
       - name: Install cramjam
@@ -73,7 +73,7 @@ jobs:
         run: pip install cramjam  # Used in cramjam-cli tests
 
       - name: Python Tests
-        if: ${{ matrix.arch == 'universal2' }}
+        if: ${{ matrix.target == 'universal2' }}
         run: |
           pip install pytest numpy hypothesis
           python -m pytest ${{ matrix.package.dir }} -vs --ignore **/benchmarks
