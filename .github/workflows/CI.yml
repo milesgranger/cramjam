@@ -67,6 +67,10 @@ jobs:
         if: ${{ matrix.arch != 'x86_64' }}
         run: pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
 
+      - name: Install cramjam
+        if: ${{ matrix.package.name == 'cramjam-cli' }}
+        run: pip install cramjam  # Used in cramjam-cli tests
+
       - name: Python Tests
         if: ${{ matrix.arch != 'x86_64' }}
         run: |
