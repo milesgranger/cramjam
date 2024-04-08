@@ -4,7 +4,7 @@ import numpy as np
 from hypothesis import strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
 
-from cramjam import blosc2
+from cramjam.experimental import blosc2
 
 
 settings.register_profile("local", max_examples=10)

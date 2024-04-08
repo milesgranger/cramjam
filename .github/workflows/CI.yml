@@ -21,7 +21,7 @@ jobs:
           # - dir: cramjam-cli
           #   name: cramjam-cli
         target: 
-          # - x86_64
+          - x86_64
           - aarch64
           # - universal2
     steps:
@@ -45,7 +45,7 @@ jobs:
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
       - name: Rust Tests
-        run: cargo test --no-default-features --release
+        run: cargo test --no-default-features --release --target ${{ matrix.target }}-apple-darwin
 
       - name: Build wheel
         uses: PyO3/maturin-action@v1
