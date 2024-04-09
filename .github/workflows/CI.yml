@@ -58,6 +58,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+          architecture: ${{ matrix.conf.target }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
