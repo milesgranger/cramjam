@@ -46,7 +46,7 @@ jobs:
             target: x86
             target-triple: i686-pc-windows-gnu
             features: --features static-blosc2
-            skip-python-testing: true
+            skip-rust-testing: true
 
           - os: windows-latest
             target: x64
@@ -96,6 +96,7 @@ jobs:
         run: cargo install cargo-audit && cargo audit
 
       - name: Rust Tests
+        if: ${{ matrix.conf.skip-rust-testing == null || matrix.conf.skip-rust-testing == false }}
         run: cargo test --no-default-features --release ${{ matrix.conf.features || ''}}
 
       - name: Build wheel (Linux)
