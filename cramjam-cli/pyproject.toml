@@ -20,5 +20,6 @@ strip = true
 [project.optional-dependencies]
 dev = [
   "pytest>=5.30",
+  "cramjam",
   "hypothesis"
 ]

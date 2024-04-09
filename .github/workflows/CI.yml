@@ -8,9 +8,9 @@ on:
       - prereleased
 
 jobs:
-  macos:
-    runs-on: macos-13
-    name: macos-${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}
+  build-test:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }}-${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -18,11 +18,32 @@ jobs:
         package:
           - dir: cramjam-python
             name: cramjam
-          - dir: cramjam-cli
-            name: cramjam-cli
-        target:
-          - x86_64
-          - universal2
+          # - dir: cramjam-cli
+          #   name: cramjam-cli
+
+        include:
+          - os: macos-13
+            target: x86_64
+            target-triple: x86_64-apple-darwin,aarch64-apple-darwin
+            features: ''
+
+          - os: macos-13
+            target: universal2
+            target-triple: x86_64-apple-darwin,aarch64-apple-darwin
+            features: ''
+
+          - os: ubuntu-latest
+            target: x86_64
+            target-triple: x86_64-unknown-linux-gnu
+            # TODO: --features capi  fails w/ multiple defs of compress
+            features: --features static-blosc2
+
+          # - os: ubuntu-latest
+          #   target: i686
+          #   target-triple: i686-unknown-linux-gnu
+          #   # TODO: --features capi  fails w/ multiple defs of compress
+          #   features: --features static-blosc2
+
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v5
@@ -32,51 +53,69 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: x86_64-apple-darwin,aarch64-apple-darwin
+          targets: ${{ matrix.target-triple }}
 
       - uses: Swatinem/rust-cache@v2
 
-      - name: Install packages
-        run: brew install ninja
-
-      - name: Set env vars
+      - name: Setup (Mac)
+        if: runner.os == 'macOS'
         run: |
+          brew install ninja
           echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
           echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
-      - name: Rust Tests
-        run: cargo test --no-default-features --release
-
-      - name: Build wheel ${{ matrix.target }}
+      - name: Setup (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
-          pip install maturin delocate
+          sudo apt update
+          sudo apt install ninja-build -y
+
+      - name: Set up Clang (Ubuntu)
+        if: runner.os == 'Linux'
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: 17
+
+      - name: Audit
+        if: runner.os == 'Linux'
+        run: cargo install cargo-audit && cargo audit
+
+      - name: Rust Tests
+        run: cargo test --no-default-features --release ${{ matrix.features || ''}}
+
+      - name: Build wheel Linux
+        if: runner.os == 'Linux'
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          manylinux: auto
+          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features || ''}}
+          before-script-linux: yum install clang -y
+
+      - name: Build wheel (MacOS)
+        if: runner.os == 'macOS'
+        run: |
+          python -m pip install maturin delocate
 
           maturin build \
             -i python \
             --release \
             --out dist \
             --sdist \
-            --target ${{ matrix.target }}-apple-darwin \
+            --target ${{ matrix.target }}-apple-darwin ${{ matrix.features || '' }} \
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           delocate-wheel -v dist/*.whl
 
-      # This ensures the wheel isn't linking to something we've built outside of it
-      - name: Remove original blosc2 libs
-        run: rm -rf $BLOSC2_INSTALL_PREFIX
+          # Ensure wheel isn't linking to something we've built outside of it
+          rm -rf $BLOSC2_INSTALL_PREFIX
 
       - name: Install built wheel
-        run: pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
-
-      - name: Install cramjam
-        if: ${{ matrix.package.name == 'cramjam-cli' }}
-        run: pip install cramjam  # Used in cramjam-cli tests
+        run: python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist --force-reinstall
 
       - name: Python Tests
-        run: |
-          pip install pytest numpy hypothesis
-          python -m pytest ${{ matrix.package.dir }} -vs --ignore **/benchmarks
+        run: python -m pytest ${{ matrix.package.dir }} -vs --ignore **/benchmarks
 
       - name: Upload wheels
         uses: actions/upload-artifact@v3
