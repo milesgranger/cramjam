@@ -106,6 +106,12 @@ jobs:
           args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.conf.features || ''}}
           before-script-linux: yum install clang -y
 
+      - name: Build wheels (Windows)
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          args: -i python --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.conf.features || '' }}
+
       - name: Build wheel (MacOS)
         if: runner.os == 'macOS'
         run: |
