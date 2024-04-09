@@ -44,13 +44,11 @@ jobs:
 
           - os: windows-latest
             target: x86
-            target-triple: i686-pc-windows-gnu
             features: --features static-blosc2
             skip-rust-testing: true
 
           - os: windows-latest
             target: x64
-            target-triple: x86_64-pc-windows-gnu
             features: --features static-blosc2
 
     steps:
