@@ -22,24 +22,36 @@ jobs:
           #   name: cramjam-cli
 
         conf:
-          - os: macos-13
-            target: x86_64
-            target-triple: x86_64-apple-darwin,aarch64-apple-darwin
+          # - os: macos-13
+          #   target: x86_64
+          #   target-triple: x86_64-apple-darwin,aarch64-apple-darwin
 
-          - os: macos-13
-            target: universal2
-            target-triple: x86_64-apple-darwin,aarch64-apple-darwin
+          # - os: macos-13
+          #   target: universal2
+          #   target-triple: x86_64-apple-darwin,aarch64-apple-darwin
 
-          - os: ubuntu-latest
-            target: x86_64
-            target-triple: x86_64-unknown-linux-gnu
-            features: --features static-blosc2  # TODO: --features capi  fails w/ multiple defs of compress
+          # - os: ubuntu-latest
+          #   target: x86_64
+          #   target-triple: x86_64-unknown-linux-gnu
+          #   features: --features static-blosc2  # TODO: --features capi  fails w/ multiple defs of compress
 
-          - os: ubuntu-latest
-            target: i686
-            target-triple: i686-unknown-linux-gnu
-            features: --features static-blosc2  # TODO: --features capi  fails w/ multiple defs of compress
-            skip-python-testing: true  # Don't test cross compiled wheel on x86_64
+          # - os: ubuntu-latest
+          #   target: i686
+          #   target-triple: i686-unknown-linux-gnu
+          #   features: --features static-blosc2  # TODO: --features capi  fails w/ multiple defs of compress
+          #   skip-python-testing: true  # Don't test cross compiled wheel on x86_64
+          #   features: --features static-blosc2
+
+          - os: windows-latest
+            target: x86
+            target-triple: i686-pc-windows-gnu
+            features: --features static-blosc2
+            skip-python-testing: true
+
+          - os: windows-latest
+            target: x64
+            target-triple: x86_64-pc-windows-gnu
+            features: --features static-blosc2
 
     steps:
       - uses: actions/checkout@v3
@@ -61,6 +73,10 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
           echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
+
+      - name: Setup (Windows)
+        if: runner.os == 'Windows'
+        run: choco install ninja cmake
 
       - name: Setup (Ubuntu)
         if: runner.os == 'Linux'
