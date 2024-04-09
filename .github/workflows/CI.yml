@@ -9,8 +9,8 @@ on:
 
 jobs:
   build-test:
-    runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}
+    runs-on: ${{ matrix.conf.os }}
+    name: ${{ matrix.conf.os }}-${{ matrix.package.name }}-${{ matrix.conf.target }}-${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -21,7 +21,7 @@ jobs:
           # - dir: cramjam-cli
           #   name: cramjam-cli
 
-        include:
+        conf:
           - os: macos-13
             target: x86_64
             target-triple: x86_64-apple-darwin,aarch64-apple-darwin
@@ -38,11 +38,11 @@ jobs:
             # TODO: --features capi  fails w/ multiple defs of compress
             features: --features static-blosc2
 
-          # - os: ubuntu-latest
-          #   target: i686
-          #   target-triple: i686-unknown-linux-gnu
-          #   # TODO: --features capi  fails w/ multiple defs of compress
-          #   features: --features static-blosc2
+          - os: ubuntu-latest
+            target: i686
+            target-triple: i686-unknown-linux-gnu
+            # TODO: --features capi  fails w/ multiple defs of compress
+            features: --features static-blosc2
 
     steps:
       - uses: actions/checkout@v3
@@ -53,7 +53,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.target-triple }}
+          targets: ${{ matrix.conf.target-triple }}
 
       - uses: Swatinem/rust-cache@v2
 
@@ -82,15 +82,15 @@ jobs:
         run: cargo install cargo-audit && cargo audit
 
       - name: Rust Tests
-        run: cargo test --no-default-features --release ${{ matrix.features || ''}}
+        run: cargo test --no-default-features --release ${{ matrix.conf.features || ''}}
 
-      - name: Build wheel Linux
+      - name: Build wheel (Linux)
         if: runner.os == 'Linux'
         uses: PyO3/maturin-action@v1
         with:
-          target: ${{ matrix.target }}
+          target: ${{ matrix.conf.target }}
           manylinux: auto
-          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features || ''}}
+          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.conf.features || ''}}
           before-script-linux: yum install clang -y
 
       - name: Build wheel (MacOS)
@@ -103,7 +103,7 @@ jobs:
             --release \
             --out dist \
             --sdist \
-            --target ${{ matrix.target }}-apple-darwin ${{ matrix.features || '' }} \
+            --target ${{ matrix.conf.target }}-apple-darwin ${{ matrix.conf.features || '' }} \
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           delocate-wheel -v dist/*.whl
