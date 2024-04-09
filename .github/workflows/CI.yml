@@ -70,6 +70,12 @@ jobs:
           sudo apt update
           sudo apt install ninja-build -y
 
+      - name: Set up Clang (Ubuntu)
+        if: runner.os == 'Linux'
+        uses: egor-tensin/setup-clang@v1
+        with:
+          version: 17
+
       - name: Audit
         if: runner.os == 'Linux'
         run: cargo install cargo-audit && cargo audit
