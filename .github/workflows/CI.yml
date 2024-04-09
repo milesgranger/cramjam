@@ -10,7 +10,7 @@ on:
 jobs:
   build-test:
     runs-on: ${{ matrix.conf.os }}
-    name: ${{ matrix.conf.os }}-${{ matrix.package.name }}-${{ matrix.conf.target }}-${{ matrix.python-version }}
+    name: ${{ runner.os }}-${{ matrix.package.name }}-${{ matrix.conf.target }}-${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -71,12 +71,6 @@ jobs:
           sudo apt update
           sudo apt install ninja-build -y
 
-      - name: Set up Clang (Ubuntu)
-        if: runner.os == 'Linux'
-        uses: egor-tensin/setup-clang@v1
-        with:
-          version: 17
-
       - name: Audit
         if: runner.os == 'Linux'
         run: cargo install cargo-audit && cargo audit
@@ -115,6 +109,8 @@ jobs:
         run: python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist --force-reinstall
 
       - name: Python Tests
+        # Don't test cross compiled wheels
+        if: matrix.conf.target != 'i686'
         run: python -m pytest ${{ matrix.package.dir }} -vs --ignore **/benchmarks
 
       - name: Upload wheels
