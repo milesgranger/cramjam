@@ -10,7 +10,7 @@ on:
 jobs:
   macos:
     runs-on: macos-13
-    name: ${{ matrix.package.name }}-${{ matrix.target }}-python ${{ matrix.python-version }}
+    name: macos-${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -61,6 +61,10 @@ jobs:
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           delocate-wheel -v dist/*.whl
+
+      # This ensures the wheel isn't linking to something we've built outside of it
+      - name: Remove original blosc2 libs
+        run: rm -rf $BLOSC2_INSTALL_PREFIX
 
       - name: Install built wheel
         run: pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
