@@ -127,7 +127,7 @@ jobs:
 
       - name: Set CFLAGS
         if: matrix.target == 'aarch64' && runner.os == 'Linux'
-        run: echo 'RUSTFLAGS="-C -march=armv8-a+crc"' >> $GITHUB_ENV
+        run: echo 'CFLAGS="-march=armv8-a+crc"' >> $GITHUB_ENV
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
