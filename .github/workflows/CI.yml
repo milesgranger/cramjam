@@ -114,11 +114,11 @@ jobs:
         run: cargo install cargo-audit && cargo audit
 
       - name: Rust Tests (MacOS & Windows)
-        if: runner.os != 'Linux' && matrix.target == x86_64
+        if: runner.os != 'Linux' && matrix.target == 'x86_64'
         run: cargo test --no-default-features --release
 
       - name: Rust Tests (Linux)
-        if: runner.os == 'Linux' && matrix.target == x86_64
+        if: runner.os == 'Linux' && matrix.target == 'x86_64'
         run: cargo test --no-default-features --release --features static-blosc2
 
       - name: Build wheel (Linux)
