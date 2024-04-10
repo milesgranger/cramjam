@@ -20,6 +20,10 @@ jobs:
             name: cramjam
           # - dir: cramjam-cli
           #   name: cramjam-cli
+        os: []
+        manylinux: []
+        target: []
+        python-architecture: []
 
         include:
           - { os: ubuntu-latest, manylinux: auto, target: x86_64 }
