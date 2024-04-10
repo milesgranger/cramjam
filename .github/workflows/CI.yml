@@ -10,6 +10,7 @@ on:
 jobs:
   build-test:
     runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }}-${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-${{ matrix.manylinux }}
     strategy:
       fail-fast: false
       matrix:
@@ -42,6 +43,7 @@ jobs:
             python-architecture: x64
 
         exclude:
+
           - os: macos-13
             target: i686 
           - os: macos-13
@@ -51,6 +53,8 @@ jobs:
 
           - os: ubuntu-latest
             target: universal2
+          - os: ubuntu-latest
+            target: ppc64le
 
           - os: windows-latest
             target: ppc64le
@@ -86,6 +90,7 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           choco install ninja cmake
+          rustup target add i686-pc-windows-msvc
 
           echo "BLOSC2_INSTALL_PREFIX=${{ github.workspace }}\build" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
