@@ -3,7 +3,6 @@ import pytest
 import cramjam
 import pathlib
 import numpy as np
-from memory_profiler import profile
 
 
 class Bzip2CompressedFile:
@@ -348,18 +347,3 @@ def test_lzma(benchmark, file, use_cramjam: bool):
             decompress=lzma.decompress,
             data=data,
         )
-
-
-@profile
-def memory_profile():
-    import snappy
-
-    data = bytearray(FILES[-1].read_bytes())
-    out1 = bytes(cramjam.snappy.compress_raw(data))
-    _out1 = bytes(cramjam.snappy.decompress_raw(out1))
-    out2 = snappy.compress(data)
-    _ou2 = snappy.decompress(out2)
-
-
-if __name__ == "__main__":
-    memory_profile()
