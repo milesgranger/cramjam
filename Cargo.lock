@@ -126,7 +126,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 [[package]]
 name = "blosc2-rs"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#ed84fb08aeecdb675519a18a5add2b79f44021a5"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#e4b2c9d01f00f3666a291a663e47fc98f9629668"
 dependencies = [
  "blosc2-sys",
  "parking_lot",
@@ -135,7 +135,7 @@ dependencies = [
 [[package]]
 name = "blosc2-sys"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#ed84fb08aeecdb675519a18a5add2b79f44021a5"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#e4b2c9d01f00f3666a291a663e47fc98f9629668"
 dependencies = [
  "cmake",
  "pkg-config",
@@ -221,9 +221,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.91"
+version = "1.0.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1fd97381a8cc6493395a5afc4c691c1084b3768db713b73aa215217aa245d153"
+checksum = "2678b2e3449475e95b0aa6f9b506a28e61b3dc8996592b983695e8ebb58a8b41"
 dependencies = [
  "jobserver",
  "libc",
@@ -325,7 +325,7 @@ dependencies = [
 
 [[package]]
 name = "cramjam-python"
-version = "2.8.3"
+version = "2.8.4"
 dependencies = [
  "libcramjam 0.3.0",
  "pyo3",
@@ -511,7 +511,7 @@ dependencies = [
  "bzip2",
  "cbindgen",
  "flate2",
- "libdeflater",
+ "libdeflater 1.20.0",
  "lz4",
  "snap",
  "xz2",
@@ -530,7 +530,7 @@ dependencies = [
  "flate2",
  "inline-c",
  "libc",
- "libdeflater",
+ "libdeflater 0.2.0",
  "lz4",
  "snap",
  "xz2",
@@ -542,6 +542,15 @@ name = "libdeflate-sys"
 version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "669ea17f9257bcb48c09c7ee4bef3957777504acffac557263e20c11001977bc"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "libdeflater"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "66dca08b13369865b2f6dca1dd05f833985cbe6c12a676b04d55f78b85e80246"
 dependencies = [
  "cc",
 ]
@@ -819,9 +828,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.35"
+version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef"
+checksum = "0fa76aaf39101c457836aec0ce2316dbdc3ab723cdda1c6bd4e6ad4208acaca7"
 dependencies = [
  "proc-macro2",
 ]

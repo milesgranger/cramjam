@@ -132,7 +132,7 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features static-blosc2
-          before-script-linux: apt install clang -y || yum install clang -y
+          # before-script-linux: apt install clang -y || yum install clang -y
 
       - name: Build wheel (Windows)
         if: runner.os == 'Windows'
