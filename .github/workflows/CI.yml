@@ -10,16 +10,16 @@ on:
 jobs:
   build-test:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-version }} #-${{ matrix.python-architecture }}-${{ matrix.manylinux }}
+    name: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-${{ matrix.manylinux }}
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8'] #, '3.9', '3.10', '3.11', '3.12', 'pypy3.9', 'pypy3.10']
+        python-version: ['3.8'] #, '3.9', '3.10', '3.11', '3.12']
         package:
           - dir: cramjam-python
             name: cramjam
-          # - dir: cramjam-cli
-          #   name: cramjam-cli
+          - dir: cramjam-cli
+            name: cramjam-cli
         os:
           - ubuntu-latest
           - macos-13
@@ -38,6 +38,19 @@ jobs:
         python-architecture:
           - x86
           - x64
+        features:
+          - ''
+
+        include:
+          - { os: ubuntu-latest, target: x86_64, features: '--features experimental --features static-blosc2'}
+          - { os: ubuntu-latest, target: x86_64, python-version: 'pypy3.9' }
+          - { os: ubuntu-latest, target: x86_64, python-version: 'pypy3.10' }
+          - { os: ubuntu-latest, target: aarch64, python-version: 'pypy3.9' }
+          - { os: ubuntu-latest, target: aarch64, python-version: 'pypy3.10' }
+          - { os: windows-latest, target: x86_64, python-version: 'pypy3.9' }
+          - { os: windows-latest, target: x86_64, python-version: 'pypy3.10' }
+          - { os: macos-13, target: x86_64, python-version: 'pypy3.9' }
+          - { os: macos-13, target: x86_64, python-version: 'pypy3.10' }
 
         exclude:
           - { os: ubuntu-latest, python-architecture: x86 }
@@ -117,12 +130,8 @@ jobs:
         if: runner.os == 'Linux'
         run: cargo install cargo-audit && cargo audit
 
-      - name: Rust Tests (MacOS & Windows)
-        if: runner.os != 'Linux' && matrix.target == 'x86_64'
-        run: cargo test --no-default-features --release
-
-      - name: Rust Tests (Linux)
-        if: runner.os == 'Linux' && matrix.target == 'x86_64'
+      - name: Rust Tests
+        if: matrix.target == 'x86_64'
         run: cargo test --no-default-features --release
 
       - name: Build wheel (Linux)
@@ -131,11 +140,13 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
-          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml
+          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features }}
           # before-script-linux: apt install clang -y || yum install clang -y
 
       - name: Build wheel (Windows)
         if: runner.os == 'Windows'
+        env:
+          FEATURES: ${{ matrix.features }}
         run: |
           python -m pip install maturin delvewheel
 
@@ -144,7 +155,7 @@ jobs:
             --release `
             --out dist `
             --target ${{ matrix.target }}-pc-windows-msvc `
-            --manifest-path ${{ matrix.package.dir }}/Cargo.toml
+            --manifest-path ${{ matrix.package.dir }}/Cargo.toml $env:FEATURES
 
           # Repair wheel
           $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Select-Object -First 1
@@ -159,6 +170,8 @@ jobs:
 
       - name: Build wheel (MacOS)
         if: runner.os == 'macOS'
+        env:
+          FEATURES: ${{ matrix.features }}
         run: |
           python -m pip install maturin delocate
 
@@ -168,7 +181,7 @@ jobs:
             --out dist \
             --sdist \
             --target ${{ matrix.target }}-apple-darwin \
-            --manifest-path ${{ matrix.package.dir }}/Cargo.toml
+            --manifest-path ${{ matrix.package.dir }}/Cargo.toml $FEATURES
 
           delocate-wheel -v dist/*.whl
 
