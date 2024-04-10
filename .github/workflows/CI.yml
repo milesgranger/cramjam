@@ -125,7 +125,7 @@ jobs:
             --release `
             --out dist `
             --sdist `
-            --target ${{ matrix.conf.target }} ${{ matrix.conf.features || '' }} `
+            --target ${{ matrix.conf.target-triple }} ${{ matrix.conf.features || '' }} `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           delvewheel repair -v dist\*.whl
