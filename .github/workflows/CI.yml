@@ -10,7 +10,6 @@ on:
 jobs:
   build-test:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -78,6 +77,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install ninja
+          rustup target add aarch64-apple-darwin
           echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
           echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
@@ -129,7 +129,6 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features static-blosc2
-          before-script-linux: yum install clang -y
 
       - name: Build wheel (Windows)
         if: runner.os == 'Windows'
