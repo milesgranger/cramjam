@@ -46,14 +46,14 @@ jobs:
             target: x86
             target-triple: i686-pc-windows-msvc
             python-architecture: x86
-            features: --features static-blosc2
+            # features: --features static-blosc2
             skip-rust-testing: true
 
           - os: windows-latest
             target: x64
             target-triple: x86_64-pc-windows-msvc
             python-architecture: x64
-            features: --features static-blosc2
+            # features: --features static-blosc2
 
     steps:
       - uses: actions/checkout@v3
@@ -79,7 +79,19 @@ jobs:
 
       - name: Setup (Windows)
         if: runner.os == 'Windows'
-        run: choco install ninja cmake
+        run: |
+          choco install ninja cmake
+
+          echo "BLOSC2_INSTALL_PREFIX=${{ github.workspace }}\build" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+          $Env:PATH += ";${{ github.workspace }}\build\lib;${{ github.workspace }}\build\lib64;${{ github.workspace }}\build\bin"
+          echo "PATH=$Env:PATH" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+          $Env:LIBPATH += ";${{ github.workspace }}\build\lib;${{ github.workspace }}\build\lib64;${{ github.workspace }}\build\bin"
+          echo "LIBPATH=$Env:LIBPATH" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+          $Env:LIB += ";${{ github.workspace }}\build\lib;${{ github.workspace }}\build\lib64;${{ github.workspace }}\build\bin"
+          echo "LIB=$Env:LIB" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Setup (Ubuntu)
         if: runner.os == 'Linux'
@@ -128,12 +140,16 @@ jobs:
             --target ${{ matrix.conf.target-triple }} ${{ matrix.conf.features || '' }} `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
-          $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          # Repair wheel
+          $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Select-Object -First 1
           if ($file -ne $null) {
               & delvewheel repair -v $file.FullName
           } else {
               Write-Host "No .whl file found in the dist directory."
           }
+
+          # Remove location of blosc2 to ensure fixing wheel works
+          Remove-Item -Path $env:BLOSC2_INSTALL_PREFIX -Recurse -Force
 
 
       - name: Build wheel (MacOS)
