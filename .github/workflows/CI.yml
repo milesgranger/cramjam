@@ -128,7 +128,12 @@ jobs:
             --target ${{ matrix.conf.target-triple }} ${{ matrix.conf.features || '' }} `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
-          delvewheel repair -v dist\*.whl
+          $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+          if ($file -ne $null) {
+              & delvewheel repair -v $file.FullName
+          } else {
+              Write-Host "No .whl file found in the dist directory."
+          }
 
 
       - name: Build wheel (MacOS)
