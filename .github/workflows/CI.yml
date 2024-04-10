@@ -174,7 +174,7 @@ jobs:
 
       - name: Python Tests
         if: ${{ matrix.conf.skip-python-testing == null || matrix.conf.skip-python-testing == false }}
-        run: python -m pytest ${{ matrix.package.dir }} -vs --ignore **/benchmarks
+        run: python -m pytest ${{ matrix.package.dir }} -vs --benchmark-skip
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
