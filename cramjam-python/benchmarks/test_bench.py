@@ -24,7 +24,7 @@ class Bzip2CompressedFile:
 
 FILES = [
     Bzip2CompressedFile(f)
-    for f in pathlib.Path("benchmarks/data").iterdir()
+    for f in pathlib.Path(__file__).parent.joinpath("data").iterdir()
     if f.is_file() and f.name != "COPYING"
 ]
 
