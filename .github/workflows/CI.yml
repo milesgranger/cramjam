@@ -120,12 +120,12 @@ jobs:
         run: |
           python -m pip install maturin delvewheel
 
-          maturin build \
-            -i python \
-            --release \
-            --out dist \
-            --sdist \
-            --target ${{ matrix.conf.target }} ${{ matrix.conf.features || '' }} \
+          maturin build `
+            -i python `
+            --release `
+            --out dist `
+            --sdist `
+            --target ${{ matrix.conf.target }} ${{ matrix.conf.features || '' }} `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           delvewheel repair -v dist\*.whl
