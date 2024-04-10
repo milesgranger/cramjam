@@ -64,7 +64,9 @@ jobs:
         with:
           targets: ${{ matrix.conf.target-triple }}
 
-      # - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: ${{ matrix.conf.os }}-${{ matrix.conf.target-triple }}
 
       - name: Setup (Mac)
         if: runner.os == 'macOS'
