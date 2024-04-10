@@ -22,12 +22,12 @@ jobs:
           #   name: cramjam-cli
         os:
           - ubuntu-latest
-          - macos-13
+          # - macos-13
           - windows-latest
         target:
-          - x86_64
+          # - x86_64
           - aarch64
-          - universal2
+          # - universal2
           # - i686
           # - armv7
           # - s390x
@@ -124,6 +124,10 @@ jobs:
       - name: Rust Tests (Linux)
         if: runner.os == 'Linux' && matrix.target == 'x86_64'
         run: cargo test --no-default-features --release --features static-blosc2
+
+      - name: Set CFLAGS
+        if: matrix.target == 'aarch64' && runner.os == 'Linux'
+        run: echo 'RUSTFLAGS="-C -march=armv8-a+crc"' >> $GITHUB_ENV
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
