@@ -10,7 +10,7 @@ on:
 jobs:
   build-test:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-${{ matrix.manylinux }}
+    name: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-version }} #-${{ matrix.python-architecture }}-${{ matrix.manylinux }}
     strategy:
       fail-fast: false
       matrix:
@@ -27,39 +27,39 @@ jobs:
         target:
           - x86_64
           - aarch64
-          - i686
           - universal2
-          - armv7
-          - s390x
-          - ppc64le
-        manylinux:
-          - auto
-          - musllinux_1_1
-        python-architecture:
-          - x86
-          - x64
+          # - i686
+          # - armv7
+          # - s390x
+          # - ppc64le
+        # manylinux:
+        #   - auto
+        #   - musllinux_1_1
+        # python-architecture:
+        #   - x86
+        #   - x64
 
         exclude:
-          - { os: ubuntu-latest, python-architecture: x86 }
+          # - { os: ubuntu-latest, python-architecture: x86 }
           - { os: ubuntu-latest, target: universal2 }
-          - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: s390x, manylinux: musllinux_1_1 }
+          # - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 }
+          # - { os: ubuntu-latest, target: s390x, manylinux: musllinux_1_1 }
 
-          - { os: windows-latest, manylinux: musllinux_1_1 }
-          - { os: windows-latest, python-architecture: x86, target: x86_64 }
-          - { os: windows-latest, python-architecture: x64, target: i686 }
+          # - { os: windows-latest, manylinux: musllinux_1_1 }
+          # - { os: windows-latest, python-architecture: x86, target: x86_64 }
+          # - { os: windows-latest, python-architecture: x64, target: i686 }
           - { os: windows-latest, target: universal2 }
-          - { os: windows-latest, target: armv7 }
-          - { os: windows-latest, target: s390x }
-          - { os: windows-latest, target: ppc64le }
+          # - { os: windows-latest, target: armv7 }
+          # - { os: windows-latest, target: s390x }
+          # - { os: windows-latest, target: ppc64le }
           - { os: windows-latest, target: aarch64 }
 
-          - { os: macos-13, manylinux: musllinux_1_1 }
-          - { os: macos-13, python-architecture: x86 }
-          - { os: macos-13, target: armv7 }
-          - { os: macos-13, target: s390x }
-          - { os: macos-13, target: i686 }
-          - { os: macos-13, target: ppc64le }
+          # - { os: macos-13, manylinux: musllinux_1_1 }
+          # - { os: macos-13, python-architecture: x86 }
+          # - { os: macos-13, target: armv7 }
+          # - { os: macos-13, target: s390x }
+          # - { os: macos-13, target: i686 }
+          # - { os: macos-13, target: ppc64le }
           
     steps:
       - uses: actions/checkout@v3
