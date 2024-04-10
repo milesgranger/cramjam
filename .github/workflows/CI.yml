@@ -10,7 +10,7 @@ on:
 jobs:
   build-test:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-${{ matrix.manylinux }}
+    name: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-${{ matrix.manylinux }}
     strategy:
       fail-fast: false
       matrix:
@@ -33,35 +33,23 @@ jobs:
           - windows-latest
 
         include:
-          - os: ubuntu-latest
-            manylinux: auto
-          - os: ubuntu-latest
-            manylinux: musllinux_1_1
-          - os: windows-latest
-            python-architecture: x86
-          - os: windows-latest
-            python-architecture: x64
+          - { os: ubuntu-latest, manylinux: auto }
+          - { os: ubuntu-latest, manylinux: musllinux_1_1 }
+          - { os: windows-latest, python-architecture: x86, target: i686 }
+          - { os: windows-latest, python-architecture: x64, target: x86_64 }
 
         exclude:
+          - { os: macos-13, target: i686 }
+          - { os: macos-13, target: armv7 }
+          - { os: macos-13, target: ppc64le }
 
-          - os: macos-13
-            target: i686 
-          - os: macos-13
-            target: armv7
-          - os: macos-13
-            target: ppc64le
+          - { os: ubuntu-latest, target: universal2 }
+          - { os: ubuntu-latest, target: ppc64le }
 
-          - os: ubuntu-latest
-            target: universal2
-          - os: ubuntu-latest
-            target: ppc64le
-
-          - os: windows-latest
-            target: ppc64le
-          - os: windows-latest
-            target: armv7
-          - os: windows-latest
-            target: universal2
+          - { os: windows-latest, target: ppc64le }
+          - { os: windows-latest, target: armv7 }
+          - { os: windows-latest, target: universal2 }
+          - { os: windows-latest, target: aarch64 }
           
     steps:
       - uses: actions/checkout@v3
