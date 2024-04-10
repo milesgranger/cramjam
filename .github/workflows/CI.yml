@@ -125,9 +125,9 @@ jobs:
         if: runner.os == 'Linux' && matrix.target == 'x86_64'
         run: cargo test --no-default-features --release --features static-blosc2
 
-      - name: Set CFLAGS
+      - name: Set CFLAGS (Linux aarch64)
         if: matrix.target == 'aarch64' && runner.os == 'Linux'
-        run: echo 'CFLAGS="-march=armv8-a+crc"' >> $GITHUB_ENV
+        run: echo 'CFLAGS="-march=armv8.1-a+crc"' >> $GITHUB_ENV
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
