@@ -24,11 +24,11 @@ jobs:
         conf:
           - os: macos-13
             target: x86_64
-            target-triple: x86_64-apple-darwin,aarch64-apple-darwin
+            target-triple: x86_64-apple-darwin
 
           - os: macos-13
             target: universal2
-            target-triple: x86_64-apple-darwin,aarch64-apple-darwin
+            target-triple: aarch64-apple-darwin
 
           - os: ubuntu-latest
             target: x86_64
@@ -105,6 +105,10 @@ jobs:
       - name: Audit
         if: runner.os == 'Linux'
         run: cargo install cargo-audit && cargo audit
+
+      - name: Rust Build
+        if: ${{ matrix.conf.skip-rust-testing == true }}
+        run: cargo build --release ${{ matrix.conf.features || ''}} --target ${{ matrix.conf.target-triple }}
 
       - name: Rust Tests
         if: ${{ matrix.conf.skip-rust-testing == null || matrix.conf.skip-rust-testing == false }}
