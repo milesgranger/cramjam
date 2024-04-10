@@ -22,5 +22,6 @@ dev = [
   "numpy",
   "pytest>=5.30",
   "pytest-xdist",
+  "pytest-benchmark",
   "hypothesis"
 ]
