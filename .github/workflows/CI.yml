@@ -31,18 +31,19 @@ jobs:
           - s390x
           - i686
           - ppc64le
+        manylinux:
+          - auto
 
         include:
-          - { os: ubuntu-latest, manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, manylinux: auto }
+          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: x86_64 }
+          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: i686 }
+          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: aarch64 }
+          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: armv7 }
           - { os: windows-latest, python-architecture: x86, target: i686 }
           - { os: windows-latest, python-architecture: x64, target: x86_64 }
 
         exclude:
           - { os: ubuntu-latest, manylinux: auto, target: universal2 }
-          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: universal2 }
-          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: ppc64le }
-          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: s390x }
           - { os: macos-13, target: armv7 }
           - { os: macos-13, target: s390x }
           - { os: macos-13, target: i686 }
