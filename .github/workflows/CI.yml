@@ -9,8 +9,8 @@ on:
 
 jobs:
   build-test:
-    runs-on: ${{ matrix.conf.os }}
-    name: ${{ matrix.conf.os }}-${{ matrix.package.name }}-${{ matrix.conf.target }}-${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }}-${{ matrix.package.name }}-${{ matrix.target }}-${{ matrix.python-version }}
     strategy:
       fail-fast: false
       matrix:
@@ -27,15 +27,16 @@ jobs:
           - universal2
           - armv7
           - ppc64le
-        manylinux:
-          - auto
-          - musllinux_1_1
         os:
           - macos-13
           - ubuntu-latest
           - windows-latest
 
         include:
+          - os: ubuntu-latest
+            manylinux: auto
+          - os: ubuntu-latest
+            manylinux: musllinux_1_1
           - os: windows-latest
             python-architecture: x86
           - os: windows-latest
@@ -49,14 +50,14 @@ jobs:
           - os: macos-13
             target: ppc64le
 
+          - os: ubuntu-latest
+            target: universal2
+
           - os: windows-latest
             target: ppc64le
           - os: windows-latest
             target: armv7
           - os: windows-latest
-            target: universal2
-
-          - os: ubuntu-latest
             target: universal2
           
     steps:
