@@ -134,7 +134,6 @@ jobs:
             -i python `
             --release `
             --out dist `
-            --sdist `
             --target ${{ matrix.conf.target-triple }} ${{ matrix.conf.features || '' }} `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
