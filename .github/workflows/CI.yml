@@ -143,14 +143,13 @@ jobs:
           # Repair wheel
           $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Select-Object -First 1
           if ($file -ne $null) {
-              & delvewheel repair -v $file.FullName
+              & delvewheel repair -v $file.FullName -w dist
           } else {
               Write-Host "No .whl file found in the dist directory."
           }
 
           # Remove location of blosc2 to ensure fixing wheel works
           Remove-Item -Path $env:BLOSC2_INSTALL_PREFIX -Recurse -Force
-
 
       - name: Build wheel (MacOS)
         if: runner.os == 'macOS'
