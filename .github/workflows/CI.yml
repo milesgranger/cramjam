@@ -14,59 +14,64 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8'] #, '3.9', '3.10', '3.11', '3.12', 'pypy3.9', 'pypy3.10']
         package:
           - dir: cramjam-python
             name: cramjam
           # - dir: cramjam-cli
           #   name: cramjam-cli
+        target:
+          - x86_64
+          - aarch64
+          - i686
+          - universal2
+          - armv7
+          - ppc64le
+        manylinux:
+          - auto
+          - musllinux_1_1
+        os:
+          - macos-13
+          - ubuntu-latest
+          - windows-latest
 
-        conf:
-          - os: macos-13
-            target: x86_64
-            target-triple: x86_64-apple-darwin
-
-          - os: macos-13
-            target: universal2
-            target-triple: aarch64-apple-darwin
-
-          - os: ubuntu-latest
-            target: x86_64
-            target-triple: x86_64-unknown-linux-gnu
-            features: --features static-blosc2  # TODO: --features capi  fails w/ multiple defs of compress
-
-          - os: ubuntu-latest
-            target: i686
-            target-triple: i686-unknown-linux-gnu
-            features: --features static-blosc2  # TODO: --features capi  fails w/ multiple defs of compress
-            skip-python-testing: true  # Don't test cross compiled wheel on x86_64
-
+        include:
           - os: windows-latest
-            target: x86
-            target-triple: i686-pc-windows-msvc
             python-architecture: x86
-            skip-rust-testing: true
-
           - os: windows-latest
-            target: x64
-            target-triple: x86_64-pc-windows-msvc
             python-architecture: x64
 
+        exclude:
+          - os: macos-13
+            target: i686 
+          - os: macos-13
+            target: armv7
+          - os: macos-13
+            target: ppc64le
+
+          - os: windows-latest
+            target: ppc64le
+          - os: windows-latest
+            target: armv7
+          - os: windows-latest
+            target: universal2
+
+          - os: ubuntu-latest
+            target: universal2
+          
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.conf.python-architecture }}
+          architecture: ${{ matrix.python-architecture }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.conf.target-triple }}
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ matrix.conf.os }}-${{ matrix.conf.target-triple }}
+      # - uses: Swatinem/rust-cache@v2
+      #   with:
+      #     shared-key: ${{ matrix.conf.os }}-${{ matrix.conf.target-triple }}
 
       - name: Setup (Mac)
         if: runner.os == 'macOS'
@@ -108,21 +113,21 @@ jobs:
         if: runner.os == 'Linux'
         run: cargo install cargo-audit && cargo audit
 
-      - name: Rust Build
-        if: ${{ matrix.conf.skip-rust-testing == true }}
-        run: cargo build --release ${{ matrix.conf.features || ''}} --target ${{ matrix.conf.target-triple }}
+      - name: Rust Tests (MacOS & Windows)
+        if: runner.os != 'Linux' && matrix.target == x86_64
+        run: cargo test --no-default-features --release
 
-      - name: Rust Tests
-        if: ${{ matrix.conf.skip-rust-testing == null || matrix.conf.skip-rust-testing == false }}
-        run: cargo test --no-default-features --release ${{ matrix.conf.features || ''}}
+      - name: Rust Tests (Linux)
+        if: runner.os == 'Linux' && matrix.target == x86_64
+        run: cargo test --no-default-features --release --features static-blosc2
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
         uses: PyO3/maturin-action@v1
         with:
-          target: ${{ matrix.conf.target }}
-          manylinux: auto
-          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.conf.features || ''}}
+          target: ${{ matrix.target }}
+          manylinux: ${{ matrix.manylinux }}
+          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features static-blosc2
           before-script-linux: yum install clang -y
 
       - name: Build wheel (Windows)
@@ -134,7 +139,7 @@ jobs:
             -i python `
             --release `
             --out dist `
-            --target ${{ matrix.conf.target-triple }} ${{ matrix.conf.features || '' }} `
+            --target ${{ matrix.target }}-pc-windows-msvc `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           # Repair wheel
@@ -158,7 +163,7 @@ jobs:
             --release \
             --out dist \
             --sdist \
-            --target ${{ matrix.conf.target }}-apple-darwin ${{ matrix.conf.features || '' }} \
+            --target ${{ matrix.target }}-apple-darwin \
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           delocate-wheel -v dist/*.whl
@@ -166,12 +171,40 @@ jobs:
           # Ensure wheel isn't linking to something we've built outside of it
           rm -rf $BLOSC2_INSTALL_PREFIX
 
-      - name: Install built wheel
-        run: python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist --force-reinstall
+      - name: Install built wheel and Test (Native)
+        if: matrix.target == 'x86_64' || matrix.target == 'i686'
+        run: |
+          python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist --force-reinstall
+          python -m pytest ${{ matrix.package.dir }} -vs --benchmark-skip
 
-      - name: Python Tests
-        if: ${{ matrix.conf.skip-python-testing == null || matrix.conf.skip-python-testing == false }}
-        run: python -m pytest ${{ matrix.package.dir }} -vs --benchmark-skip
+      - name: Install built wheel and Test (Cross)
+        if: runner.os == 'Linux' && (matrix.target == 'x86_64' || matrix.target == 'i686')
+        uses: uraimo/run-on-arch-action@v2.3.0
+        with:
+          arch: ${{ matrix.target }}
+          distro: ubuntu20.04
+          githubToken: ${{ github.token }}
+          # Mount the dist directory as /artifacts in the container
+          dockerRunArgs: |
+            --volume "${PWD}/dist:/artifacts"
+          install: |
+            apt-get update
+            apt-get install -y --no-install-recommends python3 python3-venv software-properties-common
+            add-apt-repository ppa:deadsnakes/ppa
+            apt-get update
+            apt-get install -y curl python${{ matrix.python-version }}-venv
+          run: |
+            ls -lrth /artifacts
+            PYTHON=python${{ matrix.python-version }}
+            $PYTHON -m venv venv
+            venv/bin/pip install -U pip
+            venv/bin/pip install ${{ matrix.package.name }} --pre --find-links /artifacts --force-reinstall
+
+            if ["${{ matrix.package.name }}" = "cramjam"]; then
+              venv/bin/python -c 'import cramjam'
+            else
+              venv/bin/cramjam-cli --help
+            fi
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
@@ -180,257 +213,42 @@ jobs:
           path: dist
           overwrite: true
 
-  # windows:
-  #   runs-on: windows-latest
-  #   strategy:
-  #     matrix:
-  #       python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-  #       target: [x64, x86]
-  #   steps:
-  #     - uses: actions/checkout@v3
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python-version }}
-  #         architecture: ${{ matrix.target }}
-  #     - name: Install Rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
-  #     - name: Tests
-  #       if: matrix.target == 'x64'
-  #       run: cargo test --no-default-features --release
-  #     - name: Build wheels - cramjam-python
-  #       uses: PyO3/maturin-action@v1
-  #       with:
-  #         target: ${{ matrix.target }}
-  #         sccache: true
-  #         args: -i python --release --out dist --manifest-path cramjam-python/Cargo.toml
-  #     - name: Build wheels - cramjam-cli
-  #       uses: PyO3/maturin-action@v1
-  #       with:
-  #         target: ${{ matrix.target }}
-  #         sccache: true
-  #         args: -i python --release --out dist --manifest-path cramjam-cli/Cargo.toml
-  #     - name: Install built wheel
-  #       run: |
-  #         pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
-  #         pip install cramjam[dev] --pre --find-links dist --force-reinstall
-  #     - name: Python UnitTest - cramjam-python
-  #       run: |
-  #         python -m pytest cramjam-python -vs --ignore cramjam-python\benchmarks
-  #     - name: Python UnitTest - cramjam-cli
-  #       run: |
-  #         python -m pytest cramjam-cli -vs --ignore cramjam-cli\benchmarks
-  #     - name: Upload wheels
-  #       uses: actions/upload-artifact@v3
-  #       with:
-  #         name: wheels
-  #         path: dist
+  pypi-publish:
+      name: Upload ${{ matrix.package }} release to PyPI
+      strategy:
+        fail-fast: false
+        matrix:
+          package: 
+            - cramjam
+            - cramjam-cli
+      runs-on: ubuntu-latest
+      if: "startsWith(github.ref, 'refs/tags/')"
+      needs: [build-test]
+      environment:
+        name: pypi
+        url: https://pypi.org/p/${{ matrix.package }}
+      permissions:
+        id-token: write
+      steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: wheels
+      - name: Separate packages into directories
+        run: |
+          ls -l
 
-  # linux:
-  #   runs-on: ubicloud-standard-2
-  #   strategy:
-  #     matrix:
-  #       python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']
-  #       target: [x86_64, i686]
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #   - name: Install Rust toolchain
-  #     uses: dtolnay/rust-toolchain@stable
-  #   - name: Tests
-  #     run: cargo test --no-default-features --release --features capi
-  #   - uses: actions/setup-python@v5
-  #     with:
-  #       python-version: ${{ matrix.python-version }}
-  #   - name: Audit
-  #     run: cargo install cargo-audit && cargo audit
-  #   - name: Build Wheels - cramjam-python
-  #     uses: PyO3/maturin-action@v1
-  #     with:
-  #       target: ${{ matrix.target }}
-  #       manylinux: auto
-  #       sccache: true
-  #       args: -i ${{ matrix.python-version }} --release --out dist --manifest-path cramjam-python/Cargo.toml
-  #   - name: Build Wheels - cramjam-cli
-  #     uses: PyO3/maturin-action@v1
-  #     with:
-  #       target: ${{ matrix.target }}
-  #       manylinux: auto
-  #       sccache: true
-  #       args: -i ${{ matrix.python-version }} --release --out dist --manifest-path cramjam-cli/Cargo.toml
-  #   - name: Python UnitTest - cramjam-python
-  #     if: matrix.target == 'x86_64'
-  #     run: |
-  #       pip install cramjam[dev] --pre --find-links dist --force-reinstall
-  #       python -m pytest cramjam-python -vs --ignore **/benchmarks
-  #   - name: Python UnitTest - cramjam-cli
-  #     if: matrix.target == 'x86_64'
-  #     run: |
-  #       pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
-  #       python -m pytest cramjam-cli -vs --ignore **/benchmarks
-  #   - name: Upload wheels
-  #     uses: actions/upload-artifact@v3
-  #     with:
-  #       name: wheels
-  #       path: dist
+          mkdir artifacts-cramjam-cli
+          mv cramjam_cli* artifacts-cramjam-cli/
+          ls -l artifacts-cramjam-cli/
 
-  # linux-cross:
-  #   runs-on: ubicloud-standard-4
-  #   strategy:
-  #     matrix:
-  #       python:
-  #         - '3.7'
-  #         - '3.8'
-  #         - '3.9'
-  #         - '3.10'
-  #         - '3.11'
-  #         - '3.12'
-  #       target: [aarch64, armv7, s390x, ppc64le]
-  #       include:
-  #         - python: pypy3.9
-  #           target: aarch64
-  #         - python: pypy3.10
-  #           target: aarch64
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #   - name: Build Wheels cramjam-python
-  #     uses: PyO3/maturin-action@v1
-  #     with:
-  #       target: ${{ matrix.target }}
-  #       sccache: true
-  #       manylinux: auto
-  #       args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-python/Cargo.toml
-  #   - name: Build Wheels cramjam-cli
-  #     uses: PyO3/maturin-action@v1
-  #     with:
-  #       target: ${{ matrix.target }}
-  #       sccache: true
-  #       manylinux: auto
-  #       args: -i ${{ matrix.python }} --release --out dist --manifest-path cramjam-cli/Cargo.toml
-  #   - uses: uraimo/run-on-arch-action@v2.3.0
-  #     # skipped cross compiled pypy wheel tests for now
-  #     if: ${{ !startsWith(matrix.python, 'pypy') }}
-  #     name: Install built wheel
-  #     with:
-  #       arch: ${{ matrix.target }}
-  #       distro: ubuntu20.04
-  #       githubToken: ${{ github.token }}
-  #       # Mount the dist directory as /artifacts in the container
-  #       dockerRunArgs: |
-  #         --volume "${PWD}/dist:/artifacts"
-  #       install: |
-  #         apt-get update
-  #         apt-get install -y --no-install-recommends python3 python3-venv software-properties-common
-  #         add-apt-repository ppa:deadsnakes/ppa
-  #         apt-get update
-  #         apt-get install -y curl python3.7-venv python3.9-venv python3.10-venv python3.11-venv python3.12-venv
-  #       run: |
-  #         ls -lrth /artifacts
-  #         PYTHON=python${{ matrix.python }}
-  #         $PYTHON -m venv venv
-  #         venv/bin/pip install -U pip
-  #         venv/bin/pip install cramjam --pre --no-index --find-links /artifacts --force-reinstall
-  #         venv/bin/pip install cramjam-cli --pre --no-index --find-links /artifacts --force-reinstall
-  #         venv/bin/python -c 'import cramjam'
-  #         venv/bin/cramjam-cli --help
-  #   - name: Upload wheels
-  #     uses: actions/upload-artifact@v3
-  #     with:
-  #       name: wheels
-  #       path: dist
+          mkdir artifacts-cramjam
+          mv cramjam* artifacts-cramjam/
+          ls -l artifacts-cramjam/
 
-  # pypy:
-  #   runs-on: ${{ matrix.platform.os }}
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       platform:
-  #         - os: ubicloud-standard-2
-  #           flags: ''
-  #         - os: macos-13
-  #           flags: ''
-  #         - os: windows-latest
-  #           flags: '--features generate-import-lib'
-  #       python:
-  #         - pypy-3.9
-  #         - pypy-3.10
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #   - uses: actions/setup-python@v5
-  #     with:
-  #       python-version: ${{ matrix.python }}
-  #   - name: Build Wheels - cramjam-python
-  #     uses: PyO3/maturin-action@v1
-  #     with:
-  #       manylinux: auto
-  #       sccache: true
-  #       args: -i ${{ matrix.python }} --release ${{ matrix.platform.flags }} --out dist --manifest-path cramjam-python/Cargo.toml
-  #   - name: Build Wheels - cramjam-cli
-  #     if: ${{ matrix.platform.os != 'windows-latest' }}
-  #     uses: PyO3/maturin-action@v1
-  #     with:
-  #       manylinux: auto
-  #       sccache: true
-  #       args: -i ${{ matrix.python }} --release ${{ matrix.platform.flags }} --out dist --manifest-path cramjam-cli/Cargo.toml
-  #   - name: cramjam test
-  #     # TODO: I'm not sure but the actual collection of tests on windows using pypy3.10 takes forever and/or fails
-  #     if: ${{ matrix.python != 'pypy-3.10' && matrix.platform.os != 'windows-latest' }}
-  #     run: |
-  #       pip install cramjam[dev] --pre --find-links dist --force-reinstall
-  #       python -m pytest cramjam-python -vs --ignore **/benchmarks
-  #   - name: cramjam-cli test
-  #     if: ${{ matrix.platform.os != 'windows-latest' }}
-  #     run: |
-  #       pip install cramjam-cli --pre --no-index --find-links dist --force-reinstall
-  #       cd cramjam-cli
-  #       cramjam-cli --help
-  #   - name: Upload wheels
-  #     uses: actions/upload-artifact@v3
-  #     with:
-  #       name: wheels
-  #       path: dist
+          ls -l
 
-  # pypi-publish-cramjam-python:
-  #     name: Upload cramjam release to PyPI
-  #     runs-on: ubuntu-latest
-  #     if: "startsWith(github.ref, 'refs/tags/')"
-  #     needs: [ macos, windows, linux, linux-cross, pypy ]
-  #     environment:
-  #       name: pypi
-  #       url: https://pypi.org/p/cramjam
-  #     permissions:
-  #       id-token: write
-  #     steps:
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: wheels
-  #     - name: Only cramjam-python stuff
-  #       run: rm cramjam_cli*
-  #     - name: Publish package distributions to PyPI
-  #       uses: pypa/gh-action-pypi-publish@release/v1
-  #       with:
-  #         skip-existing: true
-  #         packages-dir: ./
-
-  # pypi-publish-cramjam-cli:
-  #     name: Upload cramjam-cli release to PyPI
-  #     runs-on: ubuntu-latest
-  #     if: "startsWith(github.ref, 'refs/tags/')"
-  #     needs: [ macos, windows, linux, linux-cross, pypy ]
-  #     environment:
-  #       name: pypi
-  #       url: https://pypi.org/p/cramjam-cli
-  #     permissions:
-  #       id-token: write
-  #     steps:
-  #     - uses: actions/download-artifact@v3
-  #       with:
-  #         name: wheels
-  #     - name: Only cramjam-cli stuff
-  #       run: |
-  #         ls -l
-  #         mkdir cramjam-cli
-  #         mv cramjam_cli* cramjam-cli/
-  #     - name: Publish package distributions to PyPI
-  #       uses: pypa/gh-action-pypi-publish@release/v1
-  #       with:
-  #         skip-existing: true
-  #         packages-dir: cramjam-cli/
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true
+          packages-dir: artifacts-${{ matrix.package }}/
