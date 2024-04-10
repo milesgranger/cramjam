@@ -43,8 +43,11 @@ jobs:
           - { os: ubuntu-latest, python-architecture: x86 }
           - { os: ubuntu-latest, target: universal2 }
           - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 }
+          - { os: ubuntu-latest, target: s390x, manylinux: musllinux_1_1 }
 
           - { os: windows-latest, manylinux: musllinux_1_1 }
+          - { os: windows-latest, python-architecture: x86, target: x86_64 }
+          - { os: windows-latest, python-architecture: x64, target: i686 }
           - { os: windows-latest, target: universal2 }
           - { os: windows-latest, target: armv7 }
           - { os: windows-latest, target: s390x }
@@ -129,6 +132,7 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features static-blosc2
+          before-script-linux: yum install clang -y
 
       - name: Build wheel (Windows)
         if: runner.os == 'Windows'
@@ -172,14 +176,14 @@ jobs:
           rm -rf $BLOSC2_INSTALL_PREFIX
 
       - name: Install built wheel and Test (Native)
-        if: matrix.target == 'x86_64' || matrix.target == 'i686'
+        if: matrix.target == 'x86_64' || matrix.target == 'universal2'
         run: |
           python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist --force-reinstall
           python -m pytest ${{ matrix.package.dir }} -vs --benchmark-skip
 
       - name: Install built wheel and Test (Cross)
-        if: runner.os == 'Linux' && (matrix.target == 'x86_64' || matrix.target == 'i686')
-        uses: uraimo/run-on-arch-action@v2.3.0
+        if: runner.os == 'Linux' && contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.target)
+        uses: uraimo/run-on-arch-action@v2.7.1
         with:
           arch: ${{ matrix.target }}
           distro: ubuntu20.04
