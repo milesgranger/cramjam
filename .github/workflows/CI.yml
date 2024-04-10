@@ -44,14 +44,14 @@ jobs:
 
           - os: windows-latest
             target: x86
-            target-triple: i686-pc-windows-gnu
+            target-triple: i686-pc-windows-msvc
             python-architecture: x86
             features: --features static-blosc2
             skip-rust-testing: true
 
           - os: windows-latest
             target: x64
-            target-triple: x86_64-pc-windows-gnu
+            target-triple: x86_64-pc-windows-msvc
             python-architecture: x64
             features: --features static-blosc2
 
@@ -110,11 +110,26 @@ jobs:
           args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.conf.features || ''}}
           before-script-linux: yum install clang -y
 
-      - name: Build wheels (Windows)
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.conf.target }}
-          args: -i python --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.conf.features || '' }}
+      # - name: Build wheels (Windows)
+      #   uses: PyO3/maturin-action@v1
+      #   with:
+      #     target: ${{ matrix.conf.target }}
+      #     args: -i python --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.conf.features || '' }}
+      - name: Build wheel (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          python -m pip install maturin delvewheel
+
+          maturin build \
+            -i python \
+            --release \
+            --out dist \
+            --sdist \
+            --target ${{ matrix.conf.target }} ${{ matrix.conf.features || '' }} \
+            --manifest-path ${{ matrix.package.dir }}/Cargo.toml
+
+          delvewheel repair -v dist\*.whl
+
 
       - name: Build wheel (MacOS)
         if: runner.os == 'macOS'
