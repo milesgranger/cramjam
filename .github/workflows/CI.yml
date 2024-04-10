@@ -123,11 +123,7 @@ jobs:
 
       - name: Rust Tests (Linux)
         if: runner.os == 'Linux' && matrix.target == 'x86_64'
-        run: cargo test --no-default-features --release --features static-blosc2
-
-      - name: Set CFLAGS (Linux aarch64)
-        if: matrix.target == 'aarch64' && runner.os == 'Linux'
-        run: echo 'CFLAGS="-march=armv8.1-a+crc"' >> $GITHUB_ENV
+        run: cargo test --no-default-features --release
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
@@ -135,7 +131,7 @@ jobs:
         with:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
-          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features static-blosc2
+          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml
           # before-script-linux: apt install clang -y || yum install clang -y
 
       - name: Build wheel (Windows)
@@ -159,7 +155,7 @@ jobs:
           }
 
           # Remove location of blosc2 to ensure fixing wheel works
-          Remove-Item -Path $env:BLOSC2_INSTALL_PREFIX -Recurse -Force
+          Remove-Item -Path $env:BLOSC2_INSTALL_PREFIX -Recurse -Force 2>nul
 
       - name: Build wheel (MacOS)
         if: runner.os == 'macOS'

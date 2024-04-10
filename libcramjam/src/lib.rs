@@ -1,4 +1,6 @@
+#[cfg(feature = "blosc2")]
 pub mod blosc2;
+
 pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
@@ -83,6 +85,8 @@ mod tests {
     test_variant!(deflate, compressed_len = 157_174, None);
     test_variant!(zstd, compressed_len = 4990, None);
     test_variant!(lz4, compressed_len = 303_278, None);
+
+    #[cfg(feature = "blosc2")]
     test_variant!(blosc2, compressed_len = 791_923);
 
     #[allow(non_upper_case_globals)]

@@ -10,8 +10,9 @@ readme = "README.md"
 [features]
 default = []
 capi = ["libc"]
-use-system-blosc2 = ["blosc2-rs/use-system-blosc2"]
-static-blosc2 = ["blosc2-rs/static"]
+use-system-blosc2 = ["blosc2", "blosc2-rs/use-system-blosc2"]
+static-blosc2 = ["blosc2", "blosc2-rs/static"]
+blosc2 = ["blosc2-rs"]
 
 [dependencies]
 snap = "^1"
@@ -19,7 +20,7 @@ brotli = { version = "^3", default-features = false, features = ["std", "ffi-api
 bzip2 = "^0.4"
 lz4 = "^1"
 flate2 = "^1"
-blosc2-rs = { git = "https://github.com/milesgranger/blosc2-rs.git", branch = "update-for-cramjam-build" }
+blosc2-rs = { git = "https://github.com/milesgranger/blosc2-rs.git", branch = "update-for-cramjam-build", optional = true }
 libdeflater = "<1.20.0"  # TODO: requires gcc>=4.9 not available on Python's CI wheel builds
 zstd = "0.13.0"
 libc = { version = "0.2", optional = true }

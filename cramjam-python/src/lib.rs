@@ -51,12 +51,17 @@
 //! b'some bytes here'
 //! ```
 
+#[cfg(feature = "experimental")]
 pub mod blosc2;
+
 pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
 pub mod exceptions;
+
+#[cfg(feature = "experimental")]
 pub mod experimental;
+
 pub mod gzip;
 pub mod io;
 pub mod lz4;
@@ -165,6 +170,7 @@ impl<'a> BytesType<'a> {
         }
     }
     /// The item size, in bytes, that the buffer/bytes represent.
+    #[allow(dead_code)]
     fn itemsize(&self) -> usize {
         match self {
             Self::PyBuffer(pybuffer) => pybuffer.inner.itemsize as _,
@@ -172,6 +178,7 @@ impl<'a> BytesType<'a> {
         }
     }
     /// Empty
+    #[allow(dead_code)]
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
@@ -388,6 +395,8 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> deflate);
     make_submodule!(py -> m -> xz);
     make_submodule!(py -> m -> zstd);
+
+    #[cfg(feature = "experimental")]
     make_submodule!(py -> m -> experimental);
 
     Ok(())
