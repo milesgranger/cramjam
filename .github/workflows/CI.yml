@@ -23,27 +23,36 @@ jobs:
         os:
           - ubuntu-latest
           - macos-13
+          - windows-latest
         target:
           - x86_64
           - aarch64
+          - i686
           - universal2
           - armv7
           - s390x
-          - i686
           - ppc64le
         manylinux:
           - auto
-
-        include:
-          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: x86_64 }
-          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: i686 }
-          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: aarch64 }
-          - { os: ubuntu-latest, manylinux: musllinux_1_1, target: armv7 }
-          - { os: windows-latest, python-architecture: x86, target: i686 }
-          - { os: windows-latest, python-architecture: x64, target: x86_64 }
+          - musllinux_1_1
+        python-achitecture:
+          - x86
+          - x64
 
         exclude:
-          - { os: ubuntu-latest, manylinux: auto, target: universal2 }
+          - { os: ubuntu-latest, python-architecture: x86 }
+          - { os: ubuntu-latest, target: universal2 }
+          - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 }
+
+          - { os: windows-latest, manylinux: musllinux_1_1 }
+          - { os: windows-latest, target: universal2 }
+          - { os: windows-latest, target: armv7 }
+          - { os: windows-latest, target: s390x }
+          - { os: windows-latest, target: ppc64le }
+          - { os: windows-latest, target: aarch64 }
+
+          - { os: macos-13, manylinux: musllinux_1_1 }
+          - { os: macos-13, python-architecture: x86 }
           - { os: macos-13, target: armv7 }
           - { os: macos-13, target: s390x }
           - { os: macos-13, target: i686 }
