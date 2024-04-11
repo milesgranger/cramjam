@@ -93,7 +93,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          shared-key: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-architecture }}
+          shared-key: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-architecture }}-${{ matrix.features }}
 
       - name: Setup (Mac)
         if: runner.os == 'macOS'
