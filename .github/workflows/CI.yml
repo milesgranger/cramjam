@@ -94,15 +94,9 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v5
-        if: ${{ !matrix.os == 'macos-14' }}
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.python-architecture }}
-
-      - uses: actions/setup-python@v5
-        if: matrix.os == 'macos-14'
-        with:
-          python-version: ${{ matrix.python-version }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -122,7 +116,7 @@ jobs:
           echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
-          # blosc2-rs / c-blosc2 has a difficult time compiling on x86_64 mac w/ missing symbol __cpu_model.
+          # blosc2-rs has a difficult time compiling on x86_64 mac w/ missing symbol __cpu_model.
           # and python less than 3.10 is not available on macos-14 M1. So we'll grab the already compiled one
           pip download --platform macosx_10_9_x86_64 --only-binary=:all: blosc2==2.6.2 --dest out --no-deps --python-version 3.12
           unzip out/blosc2-2.6.2-cp312-cp312-macosx_10_9_x86_64.whl
@@ -162,11 +156,11 @@ jobs:
         run: cargo install cargo-audit && cargo audit
 
       - name: Rust Tests (Linux & Windows)
-        if: matrix.os != 'macOS' && matrix.target == 'x86_64'
+        if: matrix.os != 'macos-13' && matrix.target == 'x86_64'
         run: cargo test --no-default-features --release ${{ matrix.features }}
 
       - name: Rust Tests (MacOS)
-        if: runner.os == 'macOS' && matrix.target == 'x86_64'
+        if: matrix.os == 'macos-13' && matrix.target == 'x86_64'
         run: cargo test --no-default-features --release ${{ matrix.features }} --features use-system-blosc2
 
       - name: Build wheel (Linux)
