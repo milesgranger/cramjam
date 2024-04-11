@@ -43,8 +43,9 @@ jobs:
           - '--features experimental'
 
         exclude:
-          # TODO: to get blosc2 out of experimental, it needs to compile on these
+          # TODO: to get blosc2 out of experimental, it probably needs to compile on these
           #       but fails w/, for example, crc feature modifier on aarch64
+          #       official blosc2 dist has aarch64 so maybe re-use that?
           - { target: aarch64, features: '--features experimental'}
           - { target: armv7, features: '--features experimental'}
           - { target: s390x, features: '--features experimental'}

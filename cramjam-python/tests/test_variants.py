@@ -9,10 +9,13 @@ from hypothesis import strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
 
 
-VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "xz", "blosc2")
+VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "xz")
 
 if not hasattr(cramjam, "blosc2") and hasattr(cramjam, "experimental"):
     cramjam.blosc2 = cramjam.experimental.blosc2
+
+if hasattr(cramjam, 'blosc2'):
+    VARIANTS = (*VARIANTS, "blosc2")
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile("local", deadline=None, max_examples=20)
