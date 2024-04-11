@@ -126,7 +126,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 [[package]]
 name = "blosc2-rs"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#e4b2c9d01f00f3666a291a663e47fc98f9629668"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#5c5357352dc8f62198e12058af48f64b786a964a"
 dependencies = [
  "blosc2-sys",
  "parking_lot",
@@ -135,9 +135,10 @@ dependencies = [
 [[package]]
 name = "blosc2-sys"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#e4b2c9d01f00f3666a291a663e47fc98f9629668"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#5c5357352dc8f62198e12058af48f64b786a964a"
 dependencies = [
- "cmake",
+ "cc",
+ "libc",
  "pkg-config",
 ]
 
@@ -300,15 +301,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98cc8fbded0c607b7ba9dd60cd98df59af97e84d24e49c8557331cfc26d301ce"
 
 [[package]]
-name = "cmake"
-version = "0.1.50"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a31c789563b815f77f4250caee12365734369f942439b7defd71e18a48197130"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "colorchoice"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -320,14 +312,14 @@ version = "0.1.1"
 dependencies = [
  "bytesize",
  "clap 4.5.4",
- "libcramjam 0.2.0",
+ "libcramjam",
 ]
 
 [[package]]
 name = "cramjam-python"
 version = "2.8.4"
 dependencies = [
- "libcramjam 0.3.0",
+ "libcramjam",
  "pyo3",
  "pyo3-build-config",
 ]
@@ -500,24 +492,6 @@ name = "libc"
 version = "0.2.153"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9c198f91728a82281a64e1f4f9eeb25d82cb32a5de251c6bd1b5154d63a8e7bd"
-
-[[package]]
-name = "libcramjam"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1122d475df7c0461d2ed3af60e609512e4ec0c1c98156be1f320513b84fd9510"
-dependencies = [
- "brotli",
- "bzip2",
- "cbindgen",
- "flate2",
- "libdeflater",
- "lz4",
- "snap",
- "xz2",
- "zstd",
- "zstd-safe",
-]
 
 [[package]]
 name = "libcramjam"
