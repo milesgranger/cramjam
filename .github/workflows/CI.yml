@@ -46,7 +46,6 @@ jobs:
           - x86
           - x64
         features:
-          - ''
           - '--features experimental'
 
         exclude:
@@ -68,11 +67,13 @@ jobs:
           - { target: ppc64le, python-version: 'pypy3.9' }
           - { target: ppc64le, python-version: 'pypy3.10' }
 
+          # Unsupported linux configs
           - { os: ubuntu-latest, python-architecture: x86 }
           - { os: ubuntu-latest, target: universal2 }
           - { os: ubuntu-latest, target: s390x, manylinux: musllinux_1_1 }    # No target s390x-unknown-linux-musl
           - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 }  # No target powerpc64le-unknown-linux-musl
 
+          # Unsupported windows configs
           - { os: windows-latest, manylinux: musllinux_1_1 }
           - { os: windows-latest, python-architecture: x86, target: x86_64 }
           - { os: windows-latest, python-architecture: x64, target: i686 }
@@ -80,8 +81,9 @@ jobs:
           - { os: windows-latest, target: armv7 }
           - { os: windows-latest, target: s390x }
           - { os: windows-latest, target: ppc64le }
-          - { os: windows-latest, target: aarch64 }
+          - { os: windows-latest, target: aarch64 }  # TODO: this should work
 
+          # Unsupported OSX configs
           - { os: macos-13, manylinux: musllinux_1_1 }
           - { os: macos-13, python-architecture: x86 }
           - { os: macos-13, target: armv7 }
