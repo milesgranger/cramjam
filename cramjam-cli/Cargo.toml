@@ -7,6 +7,7 @@ edition = "2021"
 [features]
 default = []
 experimental = ["libcramjam/blosc2"]
+use-system-blosc2 = ["experimental", "libcramjam/use-system-blosc2"]
 
 [dependencies]
 clap = { version = "^4.2", features = ["derive"] }

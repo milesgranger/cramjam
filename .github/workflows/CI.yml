@@ -29,7 +29,7 @@ jobs:
             name: cramjam-cli
         os:
           - ubuntu-latest
-          - macos-14
+          - macos-13
           - windows-latest
         target:
           - x86_64
@@ -115,11 +115,18 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install ninja
+
           rustup target add aarch64-apple-darwin
           rustup target add x86_64-apple-darwin
+
           echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
-          echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
           echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
+
+          # blosc2-rs / c-blosc2 has a difficult time compiling on x86_64 mac w/ missing symbol __cpu_model.
+          # and python less than 3.10 is not available on macos-14 M1. So we'll grab the already compiled one
+          pip download --platform macosx_10_9_x86_64 --only-binary=:all: blosc2==2.6.2 --dest out --no-deps --python-version 3.12
+          unzip out/blosc2-2.6.2-cp312-cp312-macosx_10_9_x86_64.whl
+          echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2-2.6.2.data/data" >> $GITHUB_ENV
 
       - name: Setup (Windows)
         if: runner.os == 'Windows'
@@ -201,6 +208,7 @@ jobs:
             --out dist \
             --sdist \
             --target ${{ matrix.target }}-apple-darwin \
+            --features use-system-blosc2 \
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features }}
 
           delocate-wheel -v dist/*.whl
