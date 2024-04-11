@@ -14,12 +14,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8'] #, '3.9', '3.10', '3.11', '3.12']
+        python-version: ['3.8'] #, '3.9', '3.10', '3.11', '3.12', 'pypy3.9', 'pypy3.10']
         package:
           - dir: cramjam-python
             name: cramjam
-          - dir: cramjam-cli
-            name: cramjam-cli
+          # - dir: cramjam-cli
+          #   name: cramjam-cli
         os:
           - ubuntu-latest
           - macos-13
@@ -40,21 +40,16 @@ jobs:
           - x64
         features:
           - ''
-
-        include:
-          - { os: ubuntu-latest, target: x86_64, features: '--features experimental --features static-blosc2'}
-          - { os: ubuntu-latest, target: x86_64, python-version: 'pypy3.9' }
-          - { os: ubuntu-latest, target: x86_64, python-version: 'pypy3.10' }
-          - { os: ubuntu-latest, target: aarch64, python-version: 'pypy3.9' }
-          - { os: ubuntu-latest, target: aarch64, python-version: 'pypy3.10' }
-
-          - { os: windows-latest, target: x86_64, python-version: 'pypy3.9' }
-          - { os: windows-latest, target: x86_64, python-version: 'pypy3.10' }
-
-          - { os: macos-13, target: x86_64, python-version: 'pypy3.9' }
-          - { os: macos-13, target: x86_64, python-version: 'pypy3.10' }
+          - '--features experimental'
 
         exclude:
+          # TODO: to get blosc2 out of experimental, it needs to compile on these
+          #       but fails w/, for example, crc feature modifier on aarch64
+          - { target: aarch64, features: '--features experimental'}
+          - { target: armv7, features: '--features experimental'}
+          - { target: s390x, features: '--features experimental'}
+          - { target: ppc64le, features: '--features experimental'}
+
           - { os: ubuntu-latest, python-architecture: x86 }
           - { os: ubuntu-latest, target: universal2 }
           - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 }
@@ -196,6 +191,10 @@ jobs:
           # Second install guarantees 
           python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist
           python -m pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
+
+          # TODO: Remove after next release of cramjam-cli
+          python -m pip install pytest-benchmark
+
           python -m pytest ${{ matrix.package.dir }} -vs --benchmark-skip
 
       - name: Install built wheel and Test (Cross)
