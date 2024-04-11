@@ -4,8 +4,13 @@ import numpy as np
 from hypothesis import strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
 
-from cramjam import experimental
-blosc2 = experimental.blosc2
+
+try:
+    from cramjam import experimental
+except ImportError:
+    pytest.skip("experimental module not built")
+else:
+    blosc2 = experimental.blosc2
 
 
 settings.register_profile("local", max_examples=10)

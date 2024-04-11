@@ -10,7 +10,7 @@ on:
 jobs:
   build-test:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-${{ matrix.manylinux }}-${{ matrix.features }}
+    name: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.package.name }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-${{ matrix.manylinux }}-${{ matrix.features }}
     strategy:
       fail-fast: false
       matrix:
@@ -193,7 +193,9 @@ jobs:
       - name: Install built wheel and Test (Native)
         if: matrix.target == 'x86_64' || matrix.target == 'universal2'
         run: |
-          python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist --force-reinstall
+          # Second install guarantees 
+          python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist
+          python -m pip install ${{ matrix.package.name }} --pre --no-index --find-links dist --force-reinstall
           python -m pytest ${{ matrix.package.dir }} -vs --benchmark-skip
 
       - name: Install built wheel and Test (Cross)
@@ -217,7 +219,7 @@ jobs:
             PYTHON=python${{ matrix.python-version }}
             $PYTHON -m venv venv
             venv/bin/pip install -U pip
-            venv/bin/pip install ${{ matrix.package.name }} --pre --find-links /artifacts --force-reinstall
+            venv/bin/pip install ${{ matrix.package.name }} --pre --no-index --find-links /artifacts --force-reinstall
 
             venv/bin/python -c 'import cramjam' || venv/bin/cramjam-cli --help
 
