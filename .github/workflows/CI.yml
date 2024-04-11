@@ -50,10 +50,18 @@ jobs:
           - { target: s390x, features: '--features experimental'}
           - { target: ppc64le, features: '--features experimental'}
 
+          # Unsupported PyPy
+          - { target: i686, python-version: 'pypy3.9' }
+          - { target: i686, python-version: 'pypy3.10' }
+          - { target: armv7, python-version: 'pypy3.9' }
+          - { target: armv7, python-version: 'pypy3.10' }
+          - { target: s390x, python-version: 'pypy3.9' }
+          - { target: s390x, python-version: 'pypy3.10' }
+          - { target: ppc64le, python-version: 'pypy3.9' }
+          - { target: ppc64le, python-version: 'pypy3.10' }
+
           - { os: ubuntu-latest, python-architecture: x86 }
           - { os: ubuntu-latest, target: universal2 }
-          - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 } 
-          - { os: ubuntu-latest, target: s390x, manylinux: musllinux_1_1 }
 
           - { os: windows-latest, manylinux: musllinux_1_1 }
           - { os: windows-latest, python-architecture: x86, target: x86_64 }
@@ -161,7 +169,7 @@ jobs:
           }
 
           # Remove location of blosc2 to ensure fixing wheel works
-          Remove-Item -Path $env:BLOSC2_INSTALL_PREFIX -Recurse -Force 2>nul
+          Remove-Item -Path $env:BLOSC2_INSTALL_PREFIX -Recurse -Force -ErrorAction SilentlyContinue
 
       - name: Build wheel (MacOS)
         if: runner.os == 'macOS'

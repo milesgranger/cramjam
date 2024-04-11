@@ -8,7 +8,7 @@ from hypothesis.extra import numpy as st_np
 try:
     from cramjam import experimental
 except ImportError:
-    pytest.skip("experimental module not built")
+    pytest.skip("experimental module not built", allow_module_level=True)
 else:
     blosc2 = experimental.blosc2
 
