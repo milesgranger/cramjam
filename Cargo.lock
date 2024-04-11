@@ -126,7 +126,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 [[package]]
 name = "blosc2-rs"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#5c5357352dc8f62198e12058af48f64b786a964a"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#50d55dc6f0f538445806bdc16a2bd11365f07a6b"
 dependencies = [
  "blosc2-sys",
  "parking_lot",
@@ -135,7 +135,7 @@ dependencies = [
 [[package]]
 name = "blosc2-sys"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#5c5357352dc8f62198e12058af48f64b786a964a"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#50d55dc6f0f538445806bdc16a2bd11365f07a6b"
 dependencies = [
  "cc",
  "libc",
@@ -474,9 +474,9 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
 name = "jobserver"
-version = "0.1.28"
+version = "0.1.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab46a6e9526ddef3ae7f787c06f0f2600639ba80ea3eade3d8e670a2230f51d6"
+checksum = "f08474e32172238f2827bd160c67871cdb2801430f65c3979184dc362e3ca118"
 dependencies = [
  "libc",
 ]

@@ -11,7 +11,6 @@ readme = "README.md"
 default = []
 capi = ["libc"]
 use-system-blosc2 = ["blosc2", "blosc2-rs/use-system-blosc2"]
-static-blosc2 = ["blosc2", "blosc2-rs/static"]
 blosc2 = ["blosc2-rs"]
 
 [dependencies]
