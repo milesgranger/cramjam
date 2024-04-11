@@ -52,7 +52,7 @@ jobs:
 
           - { os: ubuntu-latest, python-architecture: x86 }
           - { os: ubuntu-latest, target: universal2 }
-          - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 }
+          - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 } 
           - { os: ubuntu-latest, target: s390x, manylinux: musllinux_1_1 }
 
           - { os: windows-latest, manylinux: musllinux_1_1 }
@@ -142,8 +142,6 @@ jobs:
 
       - name: Build wheel (Windows)
         if: runner.os == 'Windows'
-        env:
-          FEATURES: ${{ matrix.features }}
         run: |
           python -m pip install maturin delvewheel
 
@@ -152,7 +150,7 @@ jobs:
             --release `
             --out dist `
             --target ${{ matrix.target }}-pc-windows-msvc `
-            --manifest-path ${{ matrix.package.dir }}/Cargo.toml $env:FEATURES
+            --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features }}
 
           # Repair wheel
           $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Select-Object -First 1
@@ -167,8 +165,6 @@ jobs:
 
       - name: Build wheel (MacOS)
         if: runner.os == 'macOS'
-        env:
-          FEATURES: ${{ matrix.features }}
         run: |
           python -m pip install maturin delocate
 
@@ -178,7 +174,7 @@ jobs:
             --out dist \
             --sdist \
             --target ${{ matrix.target }}-apple-darwin \
-            --manifest-path ${{ matrix.package.dir }}/Cargo.toml $FEATURES
+            --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features }}
 
           delocate-wheel -v dist/*.whl
 
