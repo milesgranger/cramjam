@@ -14,12 +14,19 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.8'] #, '3.9', '3.10', '3.11', '3.12', 'pypy3.9', 'pypy3.10']
+        python-version: 
+          - '3.8' 
+          - '3.9' 
+          - '3.10'
+          - '3.11'
+          - '3.12'
+          - 'pypy3.9'
+          - 'pypy3.10'
         package:
           - dir: cramjam-python
             name: cramjam
-          # - dir: cramjam-cli
-          #   name: cramjam-cli
+          - dir: cramjam-cli
+            name: cramjam-cli
         os:
           - ubuntu-latest
           - macos-13
@@ -140,7 +147,7 @@ jobs:
 
       - name: Rust Tests
         if: matrix.target == 'x86_64'
-        run: cargo test --no-default-features --release
+        run: cargo test --no-default-features --release ${{ matrix.features }}
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
