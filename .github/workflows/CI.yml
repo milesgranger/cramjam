@@ -162,7 +162,7 @@ jobs:
         run: cargo install cargo-audit && cargo audit
 
       - name: Rust Tests (Linux & Windows)
-        if: matrix.target == 'x86_64'
+        if: matrix.os != 'macOS' && matrix.target == 'x86_64'
         run: cargo test --no-default-features --release ${{ matrix.features }}
 
       - name: Rust Tests (MacOS)
