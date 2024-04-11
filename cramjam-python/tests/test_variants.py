@@ -11,7 +11,7 @@ from hypothesis.extra import numpy as st_np
 
 VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "xz", "blosc2")
 
-if not hasattr(cramjam, "blosc2") and hasattr(cramjam.experimental, "blosc2"):
+if not hasattr(cramjam, "blosc2") and hasattr(cramjam, "experimental"):
     cramjam.blosc2 = cramjam.experimental.blosc2
 
 # Some OS can be slow or have higher variability in their runtimes on CI
