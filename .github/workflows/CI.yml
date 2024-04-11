@@ -62,6 +62,8 @@ jobs:
 
           - { os: ubuntu-latest, python-architecture: x86 }
           - { os: ubuntu-latest, target: universal2 }
+          - { os: ubuntu-latest, target: s390x, manylinux: musllinux_1_1 }    # No target s390x-unknown-linux-musl
+          - { os: ubuntu-latest, target: ppc64le, manylinux: musllinux_1_1 }  # No target powerpc64le-unknown-linux-musl
 
           - { os: windows-latest, manylinux: musllinux_1_1 }
           - { os: windows-latest, python-architecture: x86, target: x86_64 }
@@ -190,7 +192,9 @@ jobs:
           rm -rf $BLOSC2_INSTALL_PREFIX
 
       - name: Install built wheel and Test (Native)
-        if: matrix.target == 'x86_64' || matrix.target == 'universal2'
+        if: |
+          !startsWith(matrix.manylinux, 'musl') &&
+          (matrix.target == 'x86_64' || matrix.target == 'universal2')
         run: |
           # Second install guarantees 
           python -m pip install ${{ matrix.package.name }}[dev] --pre --find-links dist
@@ -202,7 +206,10 @@ jobs:
           python -m pytest ${{ matrix.package.dir }} -vs --benchmark-skip
 
       - name: Install built wheel and Test (Cross)
-        if: runner.os == 'Linux' && contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.target)
+        if: |
+          !startsWith(matrix.manylinux, 'musl') && 
+          runner.os == 'Linux' &&
+          contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.target) 
         uses: uraimo/run-on-arch-action@v2.7.1
         with:
           arch: ${{ matrix.target }}
