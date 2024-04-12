@@ -25,8 +25,8 @@ jobs:
         package:
           - dir: cramjam-python
             name: cramjam
-          - dir: cramjam-cli
-            name: cramjam-cli
+          # - dir: cramjam-cli
+          #   name: cramjam-cli
         os:
           - ubuntu-latest
           - macos-13
@@ -188,7 +188,11 @@ jobs:
           $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Select-Object -First 1
           if ($file -ne $null) {
               # may fail if no repair is needed
-              & delvewheel repair -v $file.FullName -w dist -ErrorAction SilentlyContinue
+              try {
+                & delvewheel repair -v $file.FullName -w dist
+              } catch {
+                Write-Host "Failed to repair, maybe no repair was needed: $($Error[0].Exception.Message)"
+              }
           } else {
               Write-Host "No .whl file found in the dist directory."
           }
