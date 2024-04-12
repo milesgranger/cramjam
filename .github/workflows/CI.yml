@@ -101,9 +101,9 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-architecture }}-${{ matrix.features }}
+      # - uses: Swatinem/rust-cache@v2
+      #   with:
+      #     shared-key: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-architecture }}-${{ matrix.features }}
 
       - name: Setup (Mac)
         if: runner.os == 'macOS'
@@ -182,6 +182,8 @@ jobs:
             --release `
             --out dist `
             --target ${{ matrix.target }}-pc-windows-msvc `
+            --features blosc2-static `
+            --features blosc2-shared `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features }}
 
           # Repair wheel
