@@ -46,16 +46,16 @@ jobs:
           - x86
           - x64
         features:
-          - '--features experimental --features blosc2-static'
+          - '--features experimental'
 
         exclude:
           # TODO: to get blosc2 out of experimental, it probably needs to compile on these
           #       but fails w/, for example, crc feature modifier on aarch64
           #       official blosc2 dist has aarch64 so maybe re-use that?
-          - { target: aarch64, features: '--features experimental --features blosc2-static'}
-          - { target: armv7, features: '--features experimental --features blosc2-static'}
-          - { target: s390x, features: '--features experimental --features blosc2-static'}
-          - { target: ppc64le, features: '--features experimental --features blosc2-static'}
+          - { target: aarch64, features: '--features experimental'}
+          - { target: armv7, features: '--features experimental'}
+          - { target: s390x, features: '--features experimental'}
+          - { target: ppc64le, features: '--features experimental'}
 
           # Unsupported PyPy
           - { target: i686, python-version: 'pypy3.9' }
@@ -157,11 +157,11 @@ jobs:
 
       - name: Rust Tests (Linux & Windows)
         if: matrix.os != 'macos-13' && matrix.target == 'x86_64'
-        run: cargo test --no-default-features --release ${{ matrix.features }}
+        run: cargo test --no-default-features --release ${{ matrix.features }} --lib
 
       - name: Rust Tests (MacOS)
         if: matrix.os == 'macos-13' && matrix.target == 'x86_64'
-        run: cargo test --no-default-features --release ${{ matrix.features }} --features use-system-blosc2
+        run: cargo test --no-default-features --release ${{ matrix.features }} --features use-system-blosc2 --lib
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
