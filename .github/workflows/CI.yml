@@ -187,7 +187,8 @@ jobs:
           # Repair wheel
           $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Select-Object -First 1
           if ($file -ne $null) {
-              & delvewheel repair -v $file.FullName -w dist
+              # may fail if no repair is needed
+              & delvewheel repair -v $file.FullName -w dist -ErrorAction SilentlyContinue
           } else {
               Write-Host "No .whl file found in the dist directory."
           }
