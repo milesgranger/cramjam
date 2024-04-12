@@ -16,8 +16,13 @@ crate-type = ["cdylib"]
 default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
 generate-import-lib = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
-use-system-blosc2 = ["experimental", "libcramjam/use-system-blosc2"]
+
 experimental = ["libcramjam/blosc2"]
+
+blosc2-static = ["experimental", "libcramjam/blosc2-static"]
+blosc2-shared = ["experimental", "libcramjam/blosc2-shared"]
+use-system-blosc2 = ["experimental", "libcramjam/use-system-blosc2"]
+
 
 [dependencies]
 pyo3 = { version = "^0.20", default-features = false, features = ["macros"] }

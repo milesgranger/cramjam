@@ -10,8 +10,10 @@ readme = "README.md"
 [features]
 default = []
 capi = ["libc"]
-use-system-blosc2 = ["blosc2", "blosc2-rs/use-system-blosc2"]
 blosc2 = ["blosc2-rs"]
+blosc2-static = ["blosc2", "blosc2-rs/static"]
+blosc2-shared = ["blosc2", "blosc2-rs/shared"]
+use-system-blosc2 = ["blosc2", "blosc2-rs/use-system-blosc2"]
 
 [dependencies]
 snap = "^1"

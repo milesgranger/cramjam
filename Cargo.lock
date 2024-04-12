@@ -126,7 +126,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 [[package]]
 name = "blosc2-rs"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#50d55dc6f0f538445806bdc16a2bd11365f07a6b"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#f582226854eab30b0abac3beecfd61cc5c884d15"
 dependencies = [
  "blosc2-sys",
  "parking_lot",
@@ -135,9 +135,9 @@ dependencies = [
 [[package]]
 name = "blosc2-sys"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#50d55dc6f0f538445806bdc16a2bd11365f07a6b"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#f582226854eab30b0abac3beecfd61cc5c884d15"
 dependencies = [
- "cc",
+ "cmake",
  "libc",
  "pkg-config",
 ]
@@ -299,6 +299,15 @@ name = "clap_lex"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "98cc8fbded0c607b7ba9dd60cd98df59af97e84d24e49c8557331cfc26d301ce"
+
+[[package]]
+name = "cmake"
+version = "0.1.50"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a31c789563b815f77f4250caee12365734369f942439b7defd71e18a48197130"
+dependencies = [
+ "cc",
+]
 
 [[package]]
 name = "colorchoice"
