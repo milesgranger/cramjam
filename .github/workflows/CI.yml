@@ -180,12 +180,12 @@ jobs:
           maturin build `
             -i python `
             --release `
-            --out wheels `
+            --out dist `
             --target ${{ matrix.target }}-pc-windows-msvc `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features }}
 
           # Repair wheel
-          $file = Get-ChildItem -Path ".\wheels\" -Filter "*.whl" | Select-Object -First 1
+          $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Select-Object -First 1
           if ($file -ne $null) {
               & delvewheel repair -v $file.FullName -w dist
           } else {
