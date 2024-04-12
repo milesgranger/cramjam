@@ -126,7 +126,7 @@ checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 [[package]]
 name = "blosc2-rs"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#79b7b40e5f8bec1f61718c49045d1a36f25984e4"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#462efdb63c23b544c58c962cc68fc3329f3ba167"
 dependencies = [
  "blosc2-sys",
  "parking_lot",
@@ -135,7 +135,7 @@ dependencies = [
 [[package]]
 name = "blosc2-sys"
 version = "0.2.3+2.14.3"
-source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#79b7b40e5f8bec1f61718c49045d1a36f25984e4"
+source = "git+https://github.com/milesgranger/blosc2-rs.git?branch=update-for-cramjam-build#462efdb63c23b544c58c962cc68fc3329f3ba167"
 dependencies = [
  "cmake",
  "libc",
