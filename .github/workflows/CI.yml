@@ -52,10 +52,10 @@ jobs:
           # TODO: to get blosc2 out of experimental, it probably needs to compile on these
           #       but fails w/, for example, crc feature modifier on aarch64
           #       official blosc2 dist has aarch64 so maybe re-use that?
-          - { target: aarch64, features: '--features experimental'}
-          - { target: armv7, features: '--features experimental'}
-          - { target: s390x, features: '--features experimental'}
-          - { target: ppc64le, features: '--features experimental'}
+          # - { target: aarch64, features: '--features experimental'}
+          # - { target: armv7, features: '--features experimental'}
+          # - { target: s390x, features: '--features experimental'}
+          # - { target: ppc64le, features: '--features experimental'}
 
           # Unsupported PyPy
           - { target: i686, python-version: 'pypy3.9' }
@@ -101,9 +101,9 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      # - uses: Swatinem/rust-cache@v2
-      #   with:
-      #     shared-key: ${{ matrix.os }}-${{ matrix.target }}-${{ matrix.python-architecture }}-${{ matrix.features }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: ${{ matrix.os }}-${{ matrix.manylinux }}-${{ matrix.target }}-${{ matrix.python-architecture }}-${{ matrix.package.name }}-${{ matrix.features }}-
 
       - name: Setup (Mac)
         if: runner.os == 'macOS'
@@ -170,7 +170,6 @@ jobs:
           target: ${{ matrix.target }}
           manylinux: ${{ matrix.manylinux }}
           args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml ${{ matrix.features }}
-          # before-script-linux: apt install clang -y || yum install clang -y
 
       - name: Build wheel (Windows)
         if: runner.os == 'Windows'
