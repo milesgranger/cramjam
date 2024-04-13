@@ -95,9 +95,6 @@ jobs:
           sudo apt update
           sudo apt install ninja-build -y
 
-          mkdir ${{ github.workspace }}/build
-          echo "BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/build" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${{ github.workspace }}/build/lib:${{ github.workspace }}/build/lib64"
 
       - name: Set up Clang (Ubuntu)
         if: runner.os == 'Linux'
@@ -120,10 +117,19 @@ jobs:
       # maturin action fails building blosc2 for armv7 and aarch64
       # so we'll just use 'cross' to build and pass it in for the action
       - name: Build blosc2 (Linux)
+        env: 
+          TARGET_TRIPLE: ${{ matrix.conf.target-triple }}
+          WORKSPACE: ${{ github.workspace }}
         run: |
           cargo install cross --git https://github.com/cross-rs/cross --rev 6d097fb
-          cross build --release --target ${{ matrix.conf.target-triple }} --package blosc2-rs
-          ls -lhs $BLOSC2_INSTALL_PREFIX
+          cross build --release --target $TARGET_TRIPLE --package blosc2-sys --target-dir build
+
+          blosc2_sys_dir=$(ls build/$TARGET_TRIPLE/release/build/ | grep blosc2-sys)
+          export BLOSC2_INSTALL_PREFIX=$WORKSPACE/build/$TARGET_TRIPLE/release/build/$blosc2_sys_dir/out
+          ls -l $BLOSC2_INSTALL_PREFIX
+
+          echo "BLOSC2_INSTALL_PREFIX=$BLOSC2_INSTALL_PREFIX" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BLOSC2_INSTALL_PREFIX/lib:$BLOSC2_INSTALL_PREFIX/lib64" >> $GITHUB_ENV
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
@@ -131,7 +137,7 @@ jobs:
         with:
           target: ${{ matrix.conf.target }}
           manylinux: ${{ matrix.conf.manylinux }}
-          docker-options: -e BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/build
+          docker-options: -e BLOSC2_INSTALL_PREFIX=$BLOSC2_INSTALL_PREFIX -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH
           args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features use-system-blosc2 --features blosc-static
           before-script-linux: ls -lhs $BLOSC2_INSTALL_PREFIX
 
