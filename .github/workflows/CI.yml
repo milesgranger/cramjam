@@ -212,7 +212,7 @@ jobs:
           contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.conf.target) 
         uses: uraimo/run-on-arch-action@v2.7.1
         with:
-          arch: ${{ matrix.target }}
+          arch: ${{ matrix.conf.target }}
           distro: ubuntu20.04
           githubToken: ${{ github.token }}
           # Mount the dist directory as /artifacts in the container
