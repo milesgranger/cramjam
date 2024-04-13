@@ -22,6 +22,11 @@ jobs:
           # - '3.12'
           # - 'pypy3.9'
           # - 'pypy3.10'
+        package:
+          - dir: cramjam-python
+            name: cramjam
+          # - dir: cramjam-cli
+          #   name: cramjam-cli
         conf:
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl, manylinux: musllinux_1_1 }
@@ -43,11 +48,20 @@ jobs:
           - { os: windows-latest, target: x86_64, target-triple: x86_64-pc-windows-msvc, python-architecture: x64 }
           - { os: windows-latest, target: i686, target-triple: i686-pc-windows-msvc, python-architecture: x86 }
 
-        package:
-          - dir: cramjam-python
-            name: cramjam
-          # - dir: cramjam-cli
-          #   name: cramjam-cli
+        # PyPy builds
+        # include:
+        #   - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto, python-version: pypy3.9, package: { dir: cramjam-python, name: cramjam } }
+        #   - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto, python-version: pypy3.10, package: { dir: cramjam-cli, name: cramjam-cli} }
+        #   - { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto, python-version: pypy3.9, package: { dir: cramjam-python, name: cramjam } }
+        #   - { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto, python-version: pypy3.10, package: { dir: cramjam-cli, name: cramjam-cli} }
+
+        #   - { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc, python-version: pypy3.9, package: { dir: cramjam-python, name: cramjam } }
+        #   - { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc, python-version: pypy3.10, package: { dir: cramjam-cli, name: cramjam-cli} }
+
+        #   - { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin, python-version: pypy3.9, package: { dir: cramjam-python, name: cramjam } }
+        #   - { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin, python-version: pypy3.10, package: { dir: cramjam-cli, name: cramjam-cli} }
+        #   - { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin, python-version: pypy3.9, package: { dir: cramjam-python, name: cramjam } }
+        #   - { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin, python-version: pypy3.10, package: { dir: cramjam-cli, name: cramjam-cli} }
           
     steps:
       - uses: actions/checkout@v3
@@ -61,7 +75,7 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
         with:
-          prefix-key: ${{ matrix.conf.os }}-${{ matrix.conf.manylinux }}-${{ matrix.conf.target }}-${{ matrix.conf.python-architecture }}-${{ matrix.package.name }}-
+          prefix-key: ${{ matrix.conf.os }}-${{ matrix.conf.manylinux }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.python-architecture }}-${{ matrix.package.name }}-
 
       - name: Setup (Mac)
         if: runner.os == 'macOS'
@@ -127,6 +141,7 @@ jobs:
       # maturin action fails building blosc2 for armv7 and aarch64
       # so we'll just use 'cross' to build and pass it in for the action for all archs
       - name: Build blosc2 (Linux)
+        if: runner.os == 'Linux'
         env: 
           TARGET_TRIPLE: ${{ matrix.conf.target-triple }}
           WORKSPACE: ${{ github.workspace }}
