@@ -227,7 +227,8 @@ jobs:
               try {
                 & delvewheel repair -v $file.FullName -w dist
               } catch {
-                Write-Host "Failed to repair, maybe no repair was needed: $($Error[0].Exception.Message)"
+                Write-Host "Failed to repair, maybe no repair was needed" -ForegroundColor Red
+                Write-Host $_.ScriptStackTrace
               }
           } else {
               Write-Host "No .whl file found in the dist directory."
