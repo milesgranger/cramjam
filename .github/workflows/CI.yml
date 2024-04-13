@@ -95,6 +95,8 @@ jobs:
           sudo apt update
           sudo apt install ninja-build -y
 
+          echo "BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/blosc2" >> $GITHUB_ENV
+          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${{ github.workspace }}/blosc2/lib:${{ github.workspace }}/blosc2/lib64" >> $GITHUB_ENV
 
       - name: Set up Clang (Ubuntu)
         if: runner.os == 'Linux'
@@ -125,11 +127,8 @@ jobs:
           cross build --release --target $TARGET_TRIPLE --package blosc2-sys --target-dir build
 
           blosc2_sys_dir=$(ls build/$TARGET_TRIPLE/release/build/ | grep blosc2-sys)
-          export BLOSC2_INSTALL_PREFIX=$WORKSPACE/build/$TARGET_TRIPLE/release/build/$blosc2_sys_dir/out
+          mv $WORKSPACE/build/$TARGET_TRIPLE/release/build/$blosc2_sys_dir/out $BLOSC2_INSTALL_PREFIX
           ls -l $BLOSC2_INSTALL_PREFIX
-
-          echo "BLOSC2_INSTALL_PREFIX=$BLOSC2_INSTALL_PREFIX" >> $GITHUB_ENV
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BLOSC2_INSTALL_PREFIX/lib:$BLOSC2_INSTALL_PREFIX/lib64" >> $GITHUB_ENV
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
@@ -137,7 +136,7 @@ jobs:
         with:
           target: ${{ matrix.conf.target }}
           manylinux: ${{ matrix.conf.manylinux }}
-          docker-options: -e BLOSC2_INSTALL_PREFIX=$BLOSC2_INSTALL_PREFIX -e LD_LIBRARY_PATH=$LD_LIBRARY_PATH
+          docker-options: -e BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/blosc2
           args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features use-system-blosc2 --features blosc-static
           before-script-linux: ls -lhs $BLOSC2_INSTALL_PREFIX
 
