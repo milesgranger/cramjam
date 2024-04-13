@@ -204,9 +204,26 @@ jobs:
 
           python -m pytest ${{ matrix.package.dir }} -vs --benchmark-skip
 
+      # Could use 'distro: alpine_latest' in 'run-on-arch-action' but seems difficult to install a specific version of python
+      # so we'll just use existing python alpine images to test import and cli use w/o testing archs other than x86_64
+      - name: Install built wheel and Test (musllinux)
+        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64'
+        run: |
+          if ["${{ matrix.package.name }}" = "cramjam"]; then
+            docker run \
+              -v $(pwd)/dist:/wheels \
+              --rm python:${{ matrix.python-version }}-alpine sh \
+                -c "pip install ${{ matrix.package.name }} --no-index --find-links /wheels && python -c 'import cramjam'"
+          else
+            docker run \
+              -v $(pwd)/dist:/wheels \
+              --rm python:${{ matrix.python-version }}-alpine sh \
+                -c "pip install ${{ matrix.package.name }} --no-index --find-links /wheels && cramjam-cli --help"
+          fi
+
       - name: Install built wheel and Test (Cross)
         if: |
-          matrix.conf.manylinux == 'auto' && 
+          !startsWith(matrix.conf.manylinux, 'musl') && 
           runner.os == 'Linux' &&
           contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.conf.target) 
         uses: uraimo/run-on-arch-action@v2.7.1
