@@ -207,7 +207,7 @@ jobs:
 
       - name: Install built wheel and Test (Cross)
         if: |
-          !startsWith(matrix.manylinux, 'musl') && 
+          matrix.conf.manylinux == 'auto' && 
           runner.os == 'Linux' &&
           contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.conf.target) 
         uses: uraimo/run-on-arch-action@v2.7.1
