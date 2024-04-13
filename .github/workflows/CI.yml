@@ -117,7 +117,7 @@ jobs:
         run: cargo test --no-default-features --release --features use-system-blosc2 --lib
 
       # maturin action fails building blosc2 for armv7 and aarch64
-      # so we'll just use 'cross' to build and pass it in for the action
+      # so we'll just use 'cross' to build and pass it in for the action for all archs
       - name: Build blosc2 (Linux)
         env: 
           TARGET_TRIPLE: ${{ matrix.conf.target-triple }}
@@ -209,7 +209,7 @@ jobs:
       - name: Install built wheel and Test (musllinux)
         if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64'
         run: |
-          if ["${{ matrix.package.name }}" = "cramjam"]; then
+          if [ "${{ matrix.package.name }}" = "cramjam" ]; then
             docker run \
               -v $(pwd)/dist:/wheels \
               --rm python:${{ matrix.python-version }}-alpine sh \
