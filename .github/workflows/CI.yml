@@ -35,6 +35,14 @@ jobs:
           # - { os: ubuntu-latest, target: s390x, target-triple: s390x-unknown-linux-musl, manylinux: musllinux_1_1 }  # no target musl for s390x
           - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-gnu, manylinux: auto }
           # - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-musleabihf, manylinux: musllinux_1_1 }  # no target musl for ppc64le
+
+          - { os: macos-13, target: x86_64, target-triple: x86_64-apple-darwin }
+          - { os: macos-13, target: aarch64, target-triple: aarch64-apple-darwin }
+          - { os: macos-13, target: universal2, target-triple: x86_64-apple-darwin }
+
+          - { os: windows-latest, target: x86_64, target-triple: x86_64-pc-windows-msvc, python-architecture: x64 }
+          - { os: windows-latest, target: i686, target-triple: i686-pc-windows-msvc, python-architecture: x86 }
+
         package:
           - dir: cramjam-python
             name: cramjam
@@ -46,7 +54,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.python-architecture }}
+          architecture: ${{ matrix.conf.python-architecture }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
