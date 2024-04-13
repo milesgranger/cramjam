@@ -300,6 +300,7 @@ jobs:
         if: |
           !startsWith(matrix.conf.manylinux, 'musl') && 
           runner.os == 'Linux' &&
+          !startsWith(matrix.python-version, 'pypy')  &&
           contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.conf.target) 
         uses: uraimo/run-on-arch-action@v2.7.1
         with:
