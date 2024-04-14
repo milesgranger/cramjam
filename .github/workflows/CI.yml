@@ -23,8 +23,8 @@ jobs:
         package:
           - dir: cramjam-python
             name: cramjam
-          # - dir: cramjam-cli
-          #   name: cramjam-cli
+          - dir: cramjam-cli
+            name: cramjam-cli
         conf:
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu,             manylinux: auto }
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl,            manylinux: musllinux_1_1 }
@@ -47,6 +47,20 @@ jobs:
           - { os: windows-latest, target: i686,   target-triple: i686-pc-windows-msvc,   python-architecture: x86 }
 
         include:
+          # Windows x86_64 pypy
+          - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
+            python-version: pypy3.9
+            package: { name: cramjam, dir: cramjam-python }
+          - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
+            python-version: pypy3.9
+            package: { name: cramjam-cli, dir: cramjam-cli }
+          - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
+            python-version: pypy3.10
+            package: { name: cramjam, dir: cramjam-python }
+          - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
+            python-version: pypy3.10
+            package: { name: cramjam-cli, dir: cramjam-cli }
+
           # Linux x86_64 pypy
           - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
             python-version: pypy3.9
