@@ -344,11 +344,10 @@ jobs:
             venv/bin/python -c 'import cramjam' || venv/bin/cramjam-cli --help
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: wheels
           path: dist
-          overwrite: true
 
   pypi-publish:
       name: Upload ${{ matrix.package }} release to PyPI
@@ -367,7 +366,7 @@ jobs:
       permissions:
         id-token: write
       steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v3
         with:
           name: wheels
       - name: Separate packages into directories
