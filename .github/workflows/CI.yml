@@ -23,8 +23,8 @@ jobs:
         package:
           - dir: cramjam-python
             name: cramjam
-          - dir: cramjam-cli
-            name: cramjam-cli
+          # - dir: cramjam-cli
+          #   name: cramjam-cli
         conf:
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu,             manylinux: auto }
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl,            manylinux: musllinux_1_1 }
@@ -126,6 +126,8 @@ jobs:
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+        with:
+          target: ${{ matrix.conf.target-triple }}
 
       - uses: Swatinem/rust-cache@v2
         name: Rust Cache
@@ -151,20 +153,32 @@ jobs:
 
       - name: Setup (Windows)
         if: runner.os == 'Windows'
+        env:
+          BLOSC2_INSTALL_PREFIX: ${{ github.workspace }}/blosc2
         run: |
           choco install ninja cmake
           rustup target add i686-pc-windows-msvc
 
-          echo "BLOSC2_INSTALL_PREFIX=${{ github.workspace }}\build" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+          echo "BLOSC2_INSTALL_PREFIX=$Env:BLOSC2_INSTALL_PREFIX" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
-          $Env:PATH += ";${{ github.workspace }}\build\lib;${{ github.workspace }}\build\lib64;${{ github.workspace }}\build\bin"
+          $Env:PATH += ";$Env:BLOSC2_INSTALL_PREFIX\lib;$Env:BLOSC2_INSTALL_PREFIX\lib64;$Env:BLOSC2_INSTALL_PREFIX\bin"
           echo "PATH=$Env:PATH" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
-          $Env:LIBPATH += ";${{ github.workspace }}\build\lib;${{ github.workspace }}\build\lib64;${{ github.workspace }}\build\bin"
+          $Env:LIBPATH += ";$Env:BLOSC2_INSTALL_PREFIX\lib;$Env:BLOSC2_INSTALL_PREFIX\lib64;$Env:BLOSC2_INSTALL_PREFIX\bin"
           echo "LIBPATH=$Env:LIBPATH" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
-          $Env:LIB += ";${{ github.workspace }}\build\lib;${{ github.workspace }}\build\lib64;${{ github.workspace }}\build\bin"
+          $Env:LIB += ";$Env:BLOSC2_INSTALL_PREFIX\lib;$Env:BLOSC2_INSTALL_PREFIX\lib64;$Env:BLOSC2_INSTALL_PREFIX\bin"
           echo "LIB=$Env:LIB" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+
+          # Now just build blosc2-sys to ensure caching doesn't get in the way and sanity purposes
+          cargo build --release --target ${{ matrix.conf.target-triple }} --package blosc2-sys --target-dir build
+          echo "Built blosc2"
+          $blosc2_sys_dir = (Get-ChildItem -Path "build\$env:TARGET_TRIPLE\release\build" -Filter "blosc2-sys*" -Directory).Name
+          Get-ChildItem -Path $blosc2_sys_dir | Tree -Depth 3
+          echo "Found blosc2 sys out, moving"
+          Move-Item -Path "build\${{ matrix.conf.target-triple }}\release\build\$blosc2_sys_dir\out" -Destination $env:BLOSC2_INSTALL_PREFIX -Force
+          echo "Moved, echoing tree"
+          Get-ChildItem -Path $env:BLOSC2_INSTALL_PREFIX | Tree -Depth 2
 
       - name: Setup (Linux)
         if: runner.os == 'Linux'
@@ -218,6 +232,7 @@ jobs:
             --target ${{ matrix.conf.target-triple }} `
             --features blosc2-static `
             --features blosc2-shared `
+            --features use-system-blosc2 `
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           # Repair wheel
