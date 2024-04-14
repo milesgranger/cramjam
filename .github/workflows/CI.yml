@@ -16,106 +16,106 @@ jobs:
       matrix:
         python-version: 
           - '3.8' 
-          - '3.9' 
-          - '3.10'
-          - '3.11'
-          - '3.12'
+          # - '3.9' 
+          # - '3.10'
+          # - '3.11'
+          # - '3.12'
         package:
           - dir: cramjam-python
             name: cramjam
           # - dir: cramjam-cli
           #   name: cramjam-cli
         conf:
-          - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu,             manylinux: auto }
-          - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl,            manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: i686,    target-triple: i686-unknown-linux-gnu,               manylinux: auto }
-          - { os: ubuntu-latest, target: i686,    target-triple: i686-unknown-linux-musl,              manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: aarch64, target-triple: aarch64-unknown-linux-gnu,            manylinux: auto }
-          - { os: ubuntu-latest, target: aarch64, target-triple: aarch64-unknown-linux-musl,           manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: armv7,   target-triple: armv7-unknown-linux-gnueabihf,        manylinux: auto }
-          - { os: ubuntu-latest, target: armv7,   target-triple: armv7-unknown-linux-musleabihf,       manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: s390x,   target-triple: s390x-unknown-linux-gnu,              manylinux: auto }
-        # - { os: ubuntu-latest, target: s390x,   target-triple: s390x-unknown-linux-musl,             manylinux: musllinux_1_1 }  # no target musl for s390x
-          - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-gnu,        manylinux: auto }
-        # - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-musleabihf, manylinux: musllinux_1_1 }  # no target musl for ppc64le
+        #   - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu,             manylinux: auto }
+        #   - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl,            manylinux: musllinux_1_1 }
+        #   - { os: ubuntu-latest, target: i686,    target-triple: i686-unknown-linux-gnu,               manylinux: auto }
+        #   - { os: ubuntu-latest, target: i686,    target-triple: i686-unknown-linux-musl,              manylinux: musllinux_1_1 }
+        #   - { os: ubuntu-latest, target: aarch64, target-triple: aarch64-unknown-linux-gnu,            manylinux: auto }
+        #   - { os: ubuntu-latest, target: aarch64, target-triple: aarch64-unknown-linux-musl,           manylinux: musllinux_1_1 }
+        #   - { os: ubuntu-latest, target: armv7,   target-triple: armv7-unknown-linux-gnueabihf,        manylinux: auto }
+        #   - { os: ubuntu-latest, target: armv7,   target-triple: armv7-unknown-linux-musleabihf,       manylinux: musllinux_1_1 }
+        #   - { os: ubuntu-latest, target: s390x,   target-triple: s390x-unknown-linux-gnu,              manylinux: auto }
+        # # - { os: ubuntu-latest, target: s390x,   target-triple: s390x-unknown-linux-musl,             manylinux: musllinux_1_1 }  # no target musl for s390x
+        #   - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-gnu,        manylinux: auto }
+        # # - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-musleabihf, manylinux: musllinux_1_1 }  # no target musl for ppc64le
 
-          - { os: macos-13, target: x86_64,     target-triple: x86_64-apple-darwin }
-          - { os: macos-13, target: aarch64,    target-triple: aarch64-apple-darwin }
-          - { os: macos-13, target: universal2, target-triple: x86_64-apple-darwin }
+        #   - { os: macos-13, target: x86_64,     target-triple: x86_64-apple-darwin }
+        #   - { os: macos-13, target: aarch64,    target-triple: aarch64-apple-darwin }
+        #   - { os: macos-13, target: universal2, target-triple: x86_64-apple-darwin }
 
           - { os: windows-latest, target: x86_64, target-triple: x86_64-pc-windows-msvc, python-architecture: x64 }
           - { os: windows-latest, target: i686,   target-triple: i686-pc-windows-msvc,   python-architecture: x86 }
 
-        include:
-          # Linux x86_64 pypy
-          - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.9
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.9
-            package: { name: cramjam-cli, dir: cramjam-cli }
-          - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.10
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.10
-            package: { name: cramjam-cli, dir: cramjam-cli }
+        # include:
+        #   # Linux x86_64 pypy
+        #   - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
+        #   - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
 
-          # Linux arm pypy
-          - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.9
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.9
-            package: { name: cramjam-cli, dir: cramjam-cli }
-          - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.10
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.10
-            package: { name: cramjam-cli, dir: cramjam-cli }
+        #   # Linux arm pypy
+        #   - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
+        #   - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
 
-          # OSX x86_64 pypy
-          - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.9
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.9
-            package: { name: cramjam-cli, dir: cramjam-cli }
-          - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.10
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.10
-            package: { name: cramjam-cli, dir: cramjam-cli }
+        #   # OSX x86_64 pypy
+        #   - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
+        #   - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
 
-          # OSX universal2 pypy
-          - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.9
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.9
-            package: { name: cramjam-cli, dir: cramjam-cli }
-          - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.10
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.10
-            package: { name: cramjam-cli, dir: cramjam-cli }
+        #   # OSX universal2 pypy
+        #   - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
+        #   - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
 
-          # OSX arm pypy
-          - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
-            python-version: pypy3.9
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
-            python-version: pypy3.9
-            package: { name: cramjam-cli, dir: cramjam-cli }
-          - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
-            python-version: pypy3.10
-            package: { name: cramjam, dir: cramjam-python }
-          - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
-            python-version: pypy3.10
-            package: { name: cramjam-cli, dir: cramjam-cli }
+        #   # OSX arm pypy
+        #   - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
+        #     python-version: pypy3.9
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
+        #   - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam, dir: cramjam-python }
+        #   - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
+        #     python-version: pypy3.10
+        #     package: { name: cramjam-cli, dir: cramjam-cli }
           
     steps:
       - uses: actions/checkout@v3
@@ -171,14 +171,10 @@ jobs:
           echo "LIB=$Env:LIB" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
           # Now just build blosc2-sys to ensure caching doesn't get in the way and sanity purposes
-          cargo build --release --target ${{ matrix.conf.target-triple }} --package blosc2-sys --target-dir build
-          echo "Built blosc2"
-          $blosc2_sys_dir = (Get-ChildItem -Path "build\$env:TARGET_TRIPLE\release\build" -Filter "blosc2-sys*" -Directory).Name
-          Get-ChildItem -Path $blosc2_sys_dir | Tree -Depth 3
-          echo "Found blosc2 sys out, moving"
-          Move-Item -Path "build\${{ matrix.conf.target-triple }}\release\build\$blosc2_sys_dir\out" -Destination $env:BLOSC2_INSTALL_PREFIX -Force
-          echo "Moved, echoing tree"
-          Get-ChildItem -Path $env:BLOSC2_INSTALL_PREFIX | Tree -Depth 2
+          cargo build --release --target ${{ matrix.conf.target-triple }} --package blosc2-sys --target-dir build -vv
+          # $blosc2_sys_dir = (Get-ChildItem -Path "build\$env:TARGET_TRIPLE\release\build" -Filter "blosc2-sys*" -Directory).Name
+          # Move-Item -Path "build\${{ matrix.conf.target-triple }}\release\build\$blosc2_sys_dir\out" -Destination $env:BLOSC2_INSTALL_PREFIX -Force
+          # Get-ChildItem -Path $env:BLOSC2_INSTALL_PREFIX | Tree -Depth 2
 
       - name: Setup (Linux)
         if: runner.os == 'Linux'
