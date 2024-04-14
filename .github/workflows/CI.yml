@@ -269,6 +269,7 @@ jobs:
             --sdist \
             --target ${{ matrix.conf.target-triple }} \
             --features use-system-blosc2 \
+            --features blosc2-static \
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           delocate-wheel -v dist/*.whl
