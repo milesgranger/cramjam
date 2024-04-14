@@ -239,7 +239,7 @@ jobs:
           maturin build `
             -i python `
             --release `
-            --out dist `
+            --out wheels `
             --target ${{ matrix.conf.target-triple }} `
             --features blosc2-static `
             --features blosc2-shared `
@@ -247,17 +247,11 @@ jobs:
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
           # Repair wheel
-          $file = Get-ChildItem -Path ".\dist\" -Filter "*.whl" | Select-Object -First 1
+          $file = Get-ChildItem -Path ".\wheels\" -Filter "*.whl" | Select-Object -First 1
           if ($file -ne $null) {
-              # may fail if no repair is needed
-              try {
-                & delvewheel repair -v $file.FullName -w dist
-              } catch {
-                Write-Host "Failed to repair, maybe no repair was needed" -ForegroundColor Red
-                Write-Host $_.ScriptStackTrace
-              }
+              & delvewheel repair -v $file.FullName -w dist
           } else {
-              Write-Host "No .whl file found in the dist directory."
+              Write-Host "No .whl file found in the wheels directory."
           }
 
           # Remove location of blosc2 to ensure fixing wheel works
