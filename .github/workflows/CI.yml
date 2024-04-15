@@ -285,9 +285,9 @@ jobs:
       - name: Install built wheel and Test (Native)
         # TODO: I'm not sure but the actual collection of tests on windows using pypy3.10 takes forever and/or fails
         if: |
-          (matrix.conf.target == 'x86_64' || matrix.conf.target == 'universal2') &&
-          (matrix.python-version != 'pypy-3.10' && matrix.conf.os != 'windows-latest') &&
-          (!startsWith(matrix.conf.manylinux, 'musl'))
+          !startsWith(matrix.conf.manylinux, 'musl') && 
+          !( matrix.python-version == 'pypy3.10' && runner.os == 'Windows' ) &&
+          ( matrix.conf.target == 'x86_64' || matrix.conf.target == 'universal2' )
         run: |
           # TODO: Remove after next release of cramjam-cli
           python -m pip install pytest-benchmark cramjam
