@@ -279,7 +279,7 @@ jobs:
         # TODO: I'm not sure but the actual collection of tests on windows using pypy3.10 takes forever and/or fails
         if: |
           (matrix.conf.target == 'x86_64' || matrix.conf.target == 'universal2') &&
-          (matrix.python != 'pypy-3.10' && matrix.platform.os != 'windows-latest') &&
+          (matrix.python-version != 'pypy-3.10' && matrix.conf.os != 'windows-latest') &&
           (!startsWith(matrix.conf.manylinux, 'musl') || matrix.conf.manylinux == null)
         run: |
           # TODO: Remove after next release of cramjam-cli
