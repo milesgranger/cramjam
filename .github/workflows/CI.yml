@@ -12,7 +12,7 @@ jobs:
     runs-on: ${{ matrix.conf.os }}
     name: ${{ matrix.conf.os }}-${{ matrix.conf.target }}-${{ matrix.package.name }}-${{ matrix.python-version }}-${{ matrix.conf.python-architecture }}-${{ matrix.conf.manylinux }}
     strategy:
-      fail-fast: true
+      fail-fast: ${{ !(startsWith(github.ref, 'refs/heads/main') && !startsWith(github.ref, 'refs/tags/')) }}
       matrix:
         python-version: 
           - '3.8' 
@@ -338,6 +338,7 @@ jobs:
             venv/bin/python -c 'import cramjam' || venv/bin/cramjam-cli --help
 
       - name: Upload wheels
+        if: startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v3
         with:
           name: wheels
@@ -352,7 +353,7 @@ jobs:
             - cramjam
             - cramjam-cli
       runs-on: ubuntu-latest
-      if: "startsWith(github.ref, 'refs/tags/')"
+      if: startsWith(github.ref, 'refs/tags/')
       needs: [build-test]
       environment:
         name: pypi
