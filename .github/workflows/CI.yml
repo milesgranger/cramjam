@@ -287,7 +287,7 @@ jobs:
         if: |
           (matrix.conf.target == 'x86_64' || matrix.conf.target == 'universal2') &&
           (matrix.python-version != 'pypy-3.10' && matrix.conf.os != 'windows-latest') &&
-          (!startsWith(matrix.conf.manylinux, 'musl') || matrix.conf.manylinux == null)
+          (!startsWith(matrix.conf.manylinux, 'musl'))
         run: |
           # TODO: Remove after next release of cramjam-cli
           python -m pip install pytest-benchmark cramjam
