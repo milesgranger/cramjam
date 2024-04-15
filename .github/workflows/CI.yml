@@ -261,10 +261,12 @@ jobs:
         run: |
           python -m pip install maturin delocate
 
-          if [ "${{ matrix.conf.target }}" = "x86_64" ]; then
-            export BLOSC2_LINK_TYPE="blosc2-shared"
+          # TODO: probably remove this when cramjam-cli has blosc2 support and cramjam is released w/ blosc2
+          # so cramjam-cli can be tested against it.
+          if [ "${{ matrix.package.name }}" = "cramjam-cli" ]; then
+            export USE_BLOSC2=""
           else
-            export BLOSC2_LINK_TYPE="blosc2-static"
+            export USE_BLOSC2="--features use-system-blosc2"
           fi
 
           maturin build \
@@ -273,9 +275,7 @@ jobs:
             --out dist \
             --sdist \
             --target ${{ matrix.conf.target-triple }} \
-            --features use-system-blosc2 \
-            --features $BLOSC2_LINK_TYPE \
-            --manifest-path ${{ matrix.package.dir }}/Cargo.toml
+            --manifest-path ${{ matrix.package.dir }}/Cargo.toml $USE_BLOSC2
 
           delocate-wheel -v dist/*.whl
 

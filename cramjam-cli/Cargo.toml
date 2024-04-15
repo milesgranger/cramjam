@@ -5,7 +5,7 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = ["experimental"]
+default = []
 experimental = ["libcramjam/blosc2"]
 use-system-blosc2 = ["experimental", "libcramjam/use-system-blosc2"]
 blosc2-static = ["experimental", "libcramjam/blosc2-static"]
