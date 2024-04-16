@@ -5,6 +5,10 @@ import pathlib
 import numpy as np
 
 
+if hasattr(cramjam, 'experimental') and not hasattr(cramjam, 'blosc2'):
+    cramjam.blosc2 = cramjam.experimental.blosc2
+
+
 class Bzip2CompressedFile:
     """
     Too bad can't just inherit pathlib.Path

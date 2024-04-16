@@ -1,9 +1,0 @@
-name: cramjam
-channels:
-  - conda-forge
-dependencies:
-  - pkg-config
-  - c-blosc2 ==2.13.2
-  - cmake
-  - clangxx_osx-64
-  - clang_osx-64
