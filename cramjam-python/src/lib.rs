@@ -51,11 +51,17 @@
 //! b'some bytes here'
 //! ```
 
+#[cfg(feature = "experimental")]
+pub mod blosc2;
+
 pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
 pub mod exceptions;
+
+#[cfg(feature = "experimental")]
 pub mod experimental;
+
 pub mod gzip;
 pub mod io;
 pub mod lz4;
@@ -156,8 +162,25 @@ impl<'a> Seek for BytesType<'a> {
 }
 
 impl<'a> BytesType<'a> {
+    /// Length in bytes
     fn len(&self) -> usize {
-        self.as_bytes().len()
+        match self {
+            BytesType::RustyFile(file) => file.borrow().len().unwrap(),
+            _ => self.as_bytes().len(),
+        }
+    }
+    /// The item size, in bytes, that the buffer/bytes represent.
+    #[allow(dead_code)]
+    fn itemsize(&self) -> usize {
+        match self {
+            Self::PyBuffer(pybuffer) => pybuffer.inner.itemsize as _,
+            _ => 1,
+        }
+    }
+    /// Empty
+    #[allow(dead_code)]
+    fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
@@ -372,6 +395,8 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> deflate);
     make_submodule!(py -> m -> xz);
     make_submodule!(py -> m -> zstd);
+
+    #[cfg(feature = "experimental")]
     make_submodule!(py -> m -> experimental);
 
     Ok(())

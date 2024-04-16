@@ -1,6 +1,6 @@
 [package]
 name = "libcramjam"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 license = "MIT"
 description = "Compression library combining a plethora of algorithms in a similar as possible API"
@@ -10,6 +10,10 @@ readme = "README.md"
 [features]
 default = []
 capi = ["libc"]
+blosc2 = ["blosc2-rs"]
+blosc2-static = ["blosc2", "blosc2-rs/static"]
+blosc2-shared = ["blosc2", "blosc2-rs/shared"]
+use-system-blosc2 = ["blosc2", "blosc2-rs/use-system-blosc2"]
 
 [dependencies]
 snap = "^1"
@@ -17,7 +21,9 @@ brotli = { version = "^3", default-features = false, features = ["std", "ffi-api
 bzip2 = "^0.4"
 lz4 = "^1"
 flate2 = "^1"
-libdeflater = "^1"
+blosc2-rs = { git = "https://github.com/milesgranger/blosc2-rs.git", optional = true }
+libdeflater = "^1"  
+libdeflate-sys = "<1.20.0"# TODO: requires gcc>=4.9 not available on Python's CI wheel builds
 zstd = "0.13.0"
 libc = { version = "0.2", optional = true }
 xz2 = { version = "0.1.7", features = ["static"] }

@@ -1,3 +1,6 @@
+#[cfg(feature = "blosc2")]
+pub mod blosc2;
+
 pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
@@ -17,7 +20,7 @@ mod tests {
 
     // Default testing data
     fn gen_data() -> Vec<u8> {
-        (0..1000000)
+        (0..1_000_000)
             .map(|_| b"oh what a beautiful morning, oh what a beautiful day!!".to_vec())
             .flat_map(|v| v)
             .collect()
@@ -75,13 +78,16 @@ mod tests {
     }
 
     // Expected compressed_len, subsequent args are supplied to the variant's `compress` call.
-    test_variant!(snappy, compressed_len = 2572398);
-    test_variant!(gzip, compressed_len = 157192, None);
+    test_variant!(snappy, compressed_len = 2_572_398);
+    test_variant!(gzip, compressed_len = 157_192, None);
     test_variant!(brotli, compressed_len = 128, None);
-    test_variant!(bzip2, compressed_len = 14207, None);
-    test_variant!(deflate, compressed_len = 157174, None);
+    test_variant!(bzip2, compressed_len = 14_207, None);
+    test_variant!(deflate, compressed_len = 157_174, None);
     test_variant!(zstd, compressed_len = 4990, None);
-    test_variant!(lz4, compressed_len = 303278, None);
+    test_variant!(lz4, compressed_len = 303_278, None);
+
+    #[cfg(feature = "blosc2")]
+    test_variant!(blosc2, compressed_len = 791_923);
 
     #[allow(non_upper_case_globals)]
     const format: Option<crate::xz::Format> = None;
@@ -91,5 +97,5 @@ mod tests {
     const filters: Option<crate::xz::Filters> = None;
     #[allow(non_upper_case_globals)]
     const opts: Option<crate::xz::LzmaOptions> = None;
-    test_variant!(xz, compressed_len = 8020, None, format, check, filters, opts);
+    test_variant!(xz, compressed_len = 8_020, None, format, check, filters, opts);
 }

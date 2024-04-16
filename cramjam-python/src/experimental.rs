@@ -8,6 +8,10 @@ pub(crate) fn init_py_module(m: &PyModule) -> PyResult<()> {
     Python::with_gil(|py| add_experimental_modules(py, m))?;
     Ok(())
 }
-fn add_experimental_modules(_py: Python, _m: &PyModule) -> PyResult<()> {
+fn add_experimental_modules(py: Python, m: &PyModule) -> PyResult<()> {
+    use crate::blosc2;
+    let sub_mod = PyModule::new(py, "blosc2")?;
+    blosc2::init_py_module(sub_mod)?;
+    m.add_submodule(sub_mod)?;
     Ok(())
 }

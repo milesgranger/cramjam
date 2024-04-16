@@ -3,11 +3,32 @@ import pytest
 import cramjam
 import pathlib
 import numpy as np
-from memory_profiler import profile
+
+
+if hasattr(cramjam, 'experimental') and not hasattr(cramjam, 'blosc2'):
+    cramjam.blosc2 = cramjam.experimental.blosc2
+
+
+class Bzip2CompressedFile:
+    """
+    Too bad can't just inherit pathlib.Path
+
+    Simple wrapper to decompress benchmark file on read_bytes()
+    """
+    def __init__(self, path: pathlib.Path ):
+        self.path = path
+
+    @property
+    def name(self):
+        return self.path.name.replace('.bz2', '')
+
+    def read_bytes(self):
+        return cramjam.bzip2.decompress(self.path.read_bytes()).read()
+
 
 FILES = [
-    f
-    for f in pathlib.Path("benchmarks/data").iterdir()
+    Bzip2CompressedFile(f)
+    for f in pathlib.Path(__file__).parent.joinpath("data").iterdir()
     if f.is_file() and f.name != "COPYING"
 ]
 
@@ -40,6 +61,31 @@ FILES.extend([FiftyFourMbRepeating(), FiftyFourMbRandom()])
 def round_trip(compress, decompress, data, **kwargs):
     return decompress(compress(data, **kwargs))
 
+@pytest.mark.parametrize(
+    "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "blosc2"
+)
+@pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
+def test_blosc2(benchmark, file, use_cramjam: bool):
+    """
+    Uses snappy compression raw
+    """
+    import blosc2
+
+    data = file.read_bytes()
+    if use_cramjam:
+        benchmark(
+            round_trip,
+            compress=cramjam.blosc2.compress_chunk,
+            decompress=cramjam.blosc2.decompress_chunk,
+            data=data,
+        )
+    else:
+        benchmark(
+            round_trip,
+            compress=blosc2.compress,
+            decompress=blosc2.decompress,
+            data=data,
+        )
 
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "snappy"
@@ -305,18 +351,3 @@ def test_lzma(benchmark, file, use_cramjam: bool):
             decompress=lzma.decompress,
             data=data,
         )
-
-
-@profile
-def memory_profile():
-    import snappy
-
-    data = bytearray(FILES[-1].read_bytes())
-    out1 = bytes(cramjam.snappy.compress_raw(data))
-    _out1 = bytes(cramjam.snappy.decompress_raw(out1))
-    out2 = snappy.compress(data)
-    _ou2 = snappy.decompress(out2)
-
-
-if __name__ == "__main__":
-    memory_profile()

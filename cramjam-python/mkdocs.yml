@@ -1,0 +1,9 @@
+site_name: cramjam
+# site_url: https://example.com/
+nav:
+  - Home: index.md
+theme: readthedocs
+markdown_extensions:
+  - def_list
+  - pymdownx.tasklist:
+      custom_checkbox: false
