@@ -277,7 +277,6 @@ jobs:
             -i python \
             --release \
             --out dist \
-            --sdist \
             --target ${{ matrix.conf.target-triple }} \
             --manifest-path ${{ matrix.package.dir }}/Cargo.toml $USE_BLOSC2
 
@@ -350,48 +349,67 @@ jobs:
             venv/bin/python -c 'import cramjam' || venv/bin/cramjam-cli --help
 
       - name: Upload wheels
-        if: startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/')
         uses: actions/upload-artifact@v3
         with:
-          name: wheels
+          name: dist
+          path: dist
+
+  build-sdist:
+    name: Build sdists
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Build sdist cramjam
+        run: |
+          pip install build
+          python -m build --sdist cramjam-python/ -o ./dist
+      - name: Build sdist cramjam-cli
+        run: python -m build --sdist cramjam-cli/ -o ./dist
+      - name: Upload sdists
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
           path: dist
 
   pypi-publish:
-      name: Upload ${{ matrix.package }} release to PyPI
-      strategy:
-        fail-fast: false
-        matrix:
-          package: 
-            - cramjam
-            - cramjam-cli
-      runs-on: ubuntu-latest
-      if: startsWith(github.ref, 'refs/tags/')
-      needs: [build-test]
-      environment:
-        name: pypi
-        url: https://pypi.org/p/${{ matrix.package }}
-      permissions:
-        id-token: write
-      steps:
-      - uses: actions/download-artifact@v3
-        with:
-          name: wheels
-      - name: Separate packages into directories
-        run: |
-          ls -l
+    name: Upload ${{ matrix.package }} release to PyPI
+    strategy:
+      fail-fast: false
+      matrix:
+        package: 
+          - cramjam
+          - cramjam-cli
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-test, build-sdist]
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{ matrix.package }}
+    permissions:
+      id-token: write
+    steps:
+    - uses: actions/download-artifact@v3
+      with:
+        name: dist
+    - name: Separate packages into directories
+      run: |
+        ls -l
 
-          mkdir artifacts-cramjam-cli
-          mv cramjam_cli* artifacts-cramjam-cli/
-          ls -l artifacts-cramjam-cli/
+        mkdir artifacts-cramjam-cli
+        mv cramjam_cli* artifacts-cramjam-cli/
+        ls -l artifacts-cramjam-cli/
 
-          mkdir artifacts-cramjam
-          mv cramjam* artifacts-cramjam/
-          ls -l artifacts-cramjam/
+        mkdir artifacts-cramjam
+        mv cramjam* artifacts-cramjam/
+        ls -l artifacts-cramjam/
 
-          ls -l
+        ls -l
 
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          skip-existing: true
-          packages-dir: artifacts-${{ matrix.package }}/
+    - name: Publish package distributions to PyPI
+      uses: pypa/gh-action-pypi-publish@release/v1
+      with:
+        skip-existing: true
+        packages-dir: artifacts-${{ matrix.package }}/
