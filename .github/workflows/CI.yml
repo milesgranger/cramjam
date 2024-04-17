@@ -349,8 +349,6 @@ jobs:
 
             venv/bin/python -c 'import cramjam' || venv/bin/cramjam-cli --help
 
-            - name: artifact-mover upload single file
-
       # The standard upload-artifact action was very frustrating as it would fail intermittently 
       # xref: https://github.com/actions/upload-artifact/issues/560
       - name: Upload Wheels
