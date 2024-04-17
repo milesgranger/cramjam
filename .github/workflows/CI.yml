@@ -349,10 +349,20 @@ jobs:
 
             venv/bin/python -c 'import cramjam' || venv/bin/cramjam-cli --help
 
-      - name: Upload wheels
-        if: startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/')
-        uses: actions/upload-artifact@v3
+            - name: artifact-mover upload single file
+
+      # The standard upload-artifact action was very frustrating as it would fail intermittently 
+      # xref: https://github.com/actions/upload-artifact/issues/560
+      - name: Upload Wheels
+        # if: startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/')
+        uses: milesgranger/artifact-mover@main
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
         with:
+          action: upload
+          bucket: ${{ secrets.AWS_BUCKET }}
           name: wheels
           path: dist
 
@@ -365,7 +375,7 @@ jobs:
             - cramjam
             - cramjam-cli
       runs-on: ubuntu-latest
-      if: startsWith(github.ref, 'refs/tags/')
+      # if: startsWith(github.ref, 'refs/tags/')
       needs: [build-test]
       environment:
         name: pypi
@@ -373,9 +383,18 @@ jobs:
       permissions:
         id-token: write
       steps:
-      - uses: actions/download-artifact@v3
+      - name: Download Wheels
+        uses: milesgranger/artifact-mover@main
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: us-east-1
         with:
+          action: download
+          bucket: ${{ secrets.AWS_BUCKET }}
           name: wheels
+          path: ./
+
       - name: Separate packages into directories
         run: |
           ls -l
@@ -390,8 +409,8 @@ jobs:
 
           ls -l
 
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          skip-existing: true
-          packages-dir: artifacts-${{ matrix.package }}/
+      # - name: Publish package distributions to PyPI
+      #   uses: pypa/gh-action-pypi-publish@release/v1
+      #   with:
+      #     skip-existing: true
+      #     packages-dir: artifacts-${{ matrix.package }}/
