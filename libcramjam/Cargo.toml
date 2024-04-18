@@ -1,32 +1,40 @@
 [package]
-name = "libcramjam"
-version = "0.4.0"
-edition = "2021"
-license = "MIT"
+name        = "libcramjam"
+version     = "0.4.0"
+edition     = "2021"
+license     = "MIT"
 description = "Compression library combining a plethora of algorithms in a similar as possible API"
-readme = "README.md"
+readme      = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default = []
-capi = ["libc"]
-blosc2 = ["blosc2-rs"]
-blosc2-static = ["blosc2", "blosc2-rs/static"]
-blosc2-shared = ["blosc2", "blosc2-rs/shared"]
+default           = ["snappy", "lz4", "bzip2", "brotli", "xz", "gzip", "deflate", "blosc2"]
+capi              = ["dep:libc"]
+snappy            = ["dep:snap"]
+lz4               = ["dep:lz4"]
+bzip2             = ["dep:bzip2"]
+brotli            = ["dep:brotli"]
+xz                = ["dep:xz2"]
+zstd              = ["dep:zstd"]
+gzip              = ["dep:libdeflater", "dep:libdeflate-sys", "dep:flate2"]
+deflate           = ["dep:libdeflater", "dep:libdeflate-sys", "dep:flate2"]
+blosc2            = ["dep:blosc2-rs"]
+blosc2-static     = ["blosc2", "blosc2-rs/static"]
+blosc2-shared     = ["blosc2", "blosc2-rs/shared"]
 use-system-blosc2 = ["blosc2", "blosc2-rs/use-system-blosc2"]
 
 [dependencies]
-snap = "^1"
-brotli = { version = "^3", default-features = false, features = ["std", "ffi-api"] }
-bzip2 = "^0.4"
-lz4 = "^1"
-flate2 = "^1"
-blosc2-rs = { git = "https://github.com/milesgranger/blosc2-rs.git", optional = true }
-libdeflater = "^1"  
-libdeflate-sys = "<1.20.0"# TODO: requires gcc>=4.9 not available on Python's CI wheel builds
-zstd = "0.13.0"
-libc = { version = "0.2", optional = true }
-xz2 = { version = "0.1.7", features = ["static"] }
+libc           = { version = "0.2", optional = true }
+snap           = { version = "^1", optional = true }
+brotli         = { version = "^3", default-features = false, features = ["std", "ffi-api"], optional = true }
+bzip2          = { version = "^0.4", optional = true }
+lz4            = { version = "^1", optional = true }
+flate2         = { version = "^1", optional = true }
+libdeflater    = { version = "^1", optional = true }
+libdeflate-sys = { version = "<1.20.0", optional = true }  # TODO: requires gcc>=4.9 not available on Python's CI wheel builds
+blosc2-rs      = { git = "https://github.com/milesgranger/blosc2-rs.git", optional = true }
+zstd           = { version = "^0.13", optional = true }
+xz2            = { version = "0.1.7", features = ["static"], optional = true }
 
 [build-dependencies]
 cbindgen = "^0.24"

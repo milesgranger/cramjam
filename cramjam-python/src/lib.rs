@@ -51,15 +51,12 @@
 //! b'some bytes here'
 //! ```
 
-#[cfg(feature = "experimental")]
 pub mod blosc2;
-
 pub mod brotli;
 pub mod bzip2;
 pub mod deflate;
 pub mod exceptions;
 
-#[cfg(feature = "experimental")]
 pub mod experimental;
 
 pub mod gzip;
@@ -395,8 +392,6 @@ fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
     make_submodule!(py -> m -> deflate);
     make_submodule!(py -> m -> xz);
     make_submodule!(py -> m -> zstd);
-
-    #[cfg(feature = "experimental")]
     make_submodule!(py -> m -> experimental);
 
     Ok(())

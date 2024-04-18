@@ -1,17 +1,23 @@
 #[cfg(feature = "blosc2")]
 pub mod blosc2;
-
+#[cfg(feature = "brotli")]
 pub mod brotli;
+#[cfg(feature = "bzip2")]
 pub mod bzip2;
-pub mod deflate;
-pub mod gzip;
-pub mod lz4;
-pub mod snappy;
-pub mod xz;
-pub mod zstd;
-
 #[cfg(feature = "capi")]
 mod capi;
+#[cfg(feature = "deflate")]
+pub mod deflate;
+#[cfg(feature = "gzip")]
+pub mod gzip;
+#[cfg(feature = "lz4")]
+pub mod lz4;
+#[cfg(feature = "snappy")]
+pub mod snappy;
+#[cfg(feature = "xz")]
+pub mod xz;
+#[cfg(feature = "zstd")]
+pub mod zstd;
 
 #[cfg(test)]
 mod tests {
@@ -78,24 +84,46 @@ mod tests {
     }
 
     // Expected compressed_len, subsequent args are supplied to the variant's `compress` call.
+    #[cfg(feature = "snappy")]
     test_variant!(snappy, compressed_len = 2_572_398);
+
+    #[cfg(feature = "gzip")]
     test_variant!(gzip, compressed_len = 157_192, None);
+
+    #[cfg(feature = "brotli")]
     test_variant!(brotli, compressed_len = 128, None);
+
+    #[cfg(feature = "bzip2")]
     test_variant!(bzip2, compressed_len = 14_207, None);
+
+    #[cfg(feature = "deflate")]
     test_variant!(deflate, compressed_len = 157_174, None);
+
+    #[cfg(feature = "zstd")]
     test_variant!(zstd, compressed_len = 4990, None);
+
+    #[cfg(feature = "lz4")]
     test_variant!(lz4, compressed_len = 303_278, None);
 
     #[cfg(feature = "blosc2")]
     test_variant!(blosc2, compressed_len = 791_923);
 
+    #[cfg(feature = "xz")]
     #[allow(non_upper_case_globals)]
     const format: Option<crate::xz::Format> = None;
+
     #[allow(non_upper_case_globals)]
+    #[cfg(feature = "xz")]
     const check: Option<crate::xz::Check> = None;
+
     #[allow(non_upper_case_globals)]
+    #[cfg(feature = "xz")]
     const filters: Option<crate::xz::Filters> = None;
+
     #[allow(non_upper_case_globals)]
+    #[cfg(feature = "xz")]
     const opts: Option<crate::xz::LzmaOptions> = None;
+
+    #[cfg(feature = "xz")]
     test_variant!(xz, compressed_len = 8_020, None, format, check, filters, opts);
 }
