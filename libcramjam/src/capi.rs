@@ -236,10 +236,10 @@ pub extern "C" fn compress(
         error_to_ptr("Requires compression >= 0", error);
         return Buffer::empty();
     }
-    let level = Some(level as _);
+    let level = Some(level);
     let mut compressed = Cursor::new(vec![]);
     let mut decompressed = Cursor::new(unsafe { std::slice::from_raw_parts(input, input_len) });
-    let ret = match codec {
+    let ret: Result<usize, std::io::Error> = match codec {
         #[cfg(feature = "snappy")]
         Codec::Snappy => snappy::compress(&mut decompressed, &mut compressed),
         #[cfg(feature = "snappy")]
@@ -251,24 +251,25 @@ pub extern "C" fn compress(
             len
         }),
         #[cfg(feature = "bzip2")]
-        Codec::Bzip2 => bzip2::compress(&mut decompressed, &mut compressed, level),
+        Codec::Bzip2 => bzip2::compress(&mut decompressed, &mut compressed, level.map(|v| v as _)),
         #[cfg(feature = "brotli")]
-        Codec::Brotli => brotli::compress(&mut decompressed, &mut compressed, level),
+        Codec::Brotli => brotli::compress(&mut decompressed, &mut compressed, level.map(|v| v as _)),
         #[cfg(feature = "gzip")]
-        Codec::Gzip => gzip::compress(&mut decompressed, &mut compressed, level),
+        Codec::Gzip => gzip::compress(&mut decompressed, &mut compressed, level.map(|v| v as _)),
         #[cfg(feature = "zstd")]
         Codec::Zstd => zstd::compress(&mut decompressed, &mut compressed, level.map(|v: i32| v as i32)),
         #[cfg(feature = "lz4")]
-        Codec::Lz4 => lz4::compress(&mut decompressed, &mut compressed, level),
+        Codec::Lz4 => lz4::compress(&mut decompressed, &mut compressed, level.map(|v| v as _)),
         // TODO: Support passing acceleration
         #[cfg(feature = "lz4")]
-        Codec::Lz4Block => lz4::block::compress_vec(decompressed.get_ref(), level, None, Some(true)).map(|v| {
-            let len = v.len();
-            *compressed.get_mut() = v;
-            compressed.set_position(len as _);
-            decompressed.set_position(input_len as _);
-            len
-        }), // TODO
+        Codec::Lz4Block => lz4::block::compress_vec(decompressed.get_ref(), level.map(|v| v as _), None, Some(true))
+            .map(|v| {
+                let len = v.len();
+                *compressed.get_mut() = v;
+                compressed.set_position(len as _);
+                decompressed.set_position(input_len as _);
+                len
+            }), // TODO
     };
     match ret {
         Ok(n) => {
@@ -303,7 +304,7 @@ pub extern "C" fn decompress_into(
     let mut compressed = Cursor::new(unsafe { std::slice::from_raw_parts(input, input_len) });
     let mut decompressed = Cursor::new(unsafe { std::slice::from_raw_parts_mut(output, output_len) });
 
-    let ret = match codec {
+    let ret: Result<usize, std::io::Error> = match codec {
         #[cfg(feature = "snappy")]
         Codec::Snappy => snappy::decompress(&mut compressed, &mut decompressed),
         #[cfg(feature = "snappy")]
@@ -353,26 +354,26 @@ pub extern "C" fn compress_into(
         error_to_ptr("Requires compression >= 0", error);
         return;
     }
-    let level = Some(level as _);
+    let level = Some(level);
 
-    let ret = match codec {
+    let ret: Result<usize, std::io::Error> = match codec {
         #[cfg(feature = "snappy")]
         Codec::Snappy => snappy::compress(&mut decompressed, &mut compressed),
         #[cfg(feature = "snappy")]
         Codec::SnappyRaw => snappy::raw::compress(decompressed, &mut compressed),
         #[cfg(feature = "bzip2")]
-        Codec::Bzip2 => bzip2::compress(&mut decompressed, &mut compressed, level),
+        Codec::Bzip2 => bzip2::compress(&mut decompressed, &mut compressed, level.map(|v| v as _)),
         #[cfg(feature = "brotli")]
-        Codec::Brotli => brotli::compress(&mut decompressed, &mut compressed, level),
+        Codec::Brotli => brotli::compress(&mut decompressed, &mut compressed, level.map(|v| v as _)),
         #[cfg(feature = "gzip")]
-        Codec::Gzip => gzip::compress(&mut decompressed, &mut compressed, level),
+        Codec::Gzip => gzip::compress(&mut decompressed, &mut compressed, level.map(|v| v as _)),
         #[cfg(feature = "zstd")]
         Codec::Zstd => zstd::compress(&mut decompressed, &mut compressed, level.map(|v: i32| v as i32)),
         #[cfg(feature = "lz4")]
-        Codec::Lz4 => lz4::compress(&mut decompressed, &mut compressed, level),
+        Codec::Lz4 => lz4::compress(&mut decompressed, &mut compressed, level.map(|v| v as _)),
         // TODO: Support passing acceleration
         #[cfg(feature = "lz4")]
-        Codec::Lz4Block => lz4::block::compress_into(decompressed, compressed, level, None, Some(true)),
+        Codec::Lz4Block => lz4::block::compress_into(decompressed, compressed, level.map(|v| v as _), None, Some(true)),
     };
     match ret {
         Ok(n) => {
@@ -828,7 +829,7 @@ pub extern "C" fn decompressor_decompress(
     let mut decompressed = unsafe { Box::from_raw(*decompressor_ptr as *mut Decompressor) };
     let start_pos = decompressed.position();
     let mut compressed = Cursor::new(unsafe { std::slice::from_raw_parts(input, input_len) });
-    let ret = match codec {
+    let ret: Result<usize, std::io::Error> = match codec {
         #[cfg(feature = "bzip2")]
         StreamingCodec::StreamingBzip2 => bzip2::decompress(&mut compressed, &mut decompressed),
         #[cfg(feature = "gzip")]

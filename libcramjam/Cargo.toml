@@ -8,7 +8,7 @@ readme      = "README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
-default           = ["snappy", "lz4", "bzip2", "brotli", "xz", "gzip", "deflate", "blosc2"]
+default           = ["snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "deflate", "blosc2"]
 capi              = ["dep:libc"]
 snappy            = ["dep:snap"]
 lz4               = ["dep:lz4"]
