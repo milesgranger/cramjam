@@ -20,7 +20,7 @@ jobs:
     runs-on: ${{ matrix.conf.os }}
     name: ${{ matrix.conf.os }}-${{ matrix.conf.target }}-${{ matrix.package.name }}-${{ matrix.python-version }}-${{ matrix.conf.python-architecture }}-${{ matrix.conf.manylinux }}
     strategy:
-      fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
+      fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || !startsWith(github.ref, 'refs/tags/') ) }}
       matrix:
         python-version: 
           - '3.8' 
@@ -140,7 +140,7 @@ jobs:
             package: { name: cramjam-cli, dir: cramjam-cli }
           
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
@@ -151,11 +151,6 @@ jobs:
         with:
           target: ${{ matrix.conf.target-triple }}
 
-      - uses: Swatinem/rust-cache@v2
-        name: Rust Cache
-        with:
-          prefix-key: ${{ matrix.conf.os }}-${{ matrix.conf.manylinux }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.python-architecture }}-${{ matrix.package.name }}
-
       - name: Setup (Mac)
         if: runner.os == 'macOS'
         run: |
@@ -165,14 +160,8 @@ jobs:
           rustup target add x86_64-apple-darwin
 
           echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
-
-          # blosc2-rs has a difficult time compiling on x86_64 mac w/ missing symbol __cpu_model.
-          # and python less than 3.10 is not available on macos-14 M1. So we'll grab the already compiled one
-          # Download blosc2 2.14.3 pre-built lib
-          wget https://files.pythonhosted.org/packages/64/98/6f0e0e66f395c5123c74c7acc4626622e34fa1ddf2b45f0684d7a9c81bee/blosc2-2.6.2-cp312-cp312-macosx_10_9_x86_64.whl -O blosc2.whl
-          unzip blosc2.whl
-          echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2-2.6.2.data/data" >> $GITHUB_ENV
-          echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2-2.6.2.data/data/lib64:$(pwd)/blosc2-2.6.2.data/data/lib" >> $GITHUB_ENV
+          echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
+          echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
       - name: Setup (Windows)
         if: runner.os == 'Windows'
@@ -193,9 +182,6 @@ jobs:
           $Env:LIB += ";$Env:BLOSC2_INSTALL_PREFIX\lib;$Env:BLOSC2_INSTALL_PREFIX\lib64;$Env:BLOSC2_INSTALL_PREFIX\bin"
           echo "LIB=$Env:LIB" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
-          # Now just build blosc2-sys to ensure caching doesn't get in the way and sanity purposes
-          cargo build --release --target ${{ matrix.conf.target-triple }} --package blosc2-sys --target-dir build -vv
-
       - name: Setup (Linux)
         if: runner.os == 'Linux'
         env: 
@@ -213,14 +199,11 @@ jobs:
           # so we'll just use 'cross' to build and pass it in for the action for all archs
           # nothing special for the revision pin, just deterministic install
           cargo install cross --git https://github.com/cross-rs/cross --rev 6d097fb
-          cross build --release --target $TARGET_TRIPLE --package blosc2-sys --target-dir build
+          cross build --release --target $TARGET_TRIPLE --package blosc2-sys --target-dir build --manifest-path ${{ matrix.package.dir }}/Cargo.toml
           blosc2_sys_dir=$(ls build/$TARGET_TRIPLE/release/build/ | grep blosc2-sys)
           mv $WORKSPACE/build/$TARGET_TRIPLE/release/build/$blosc2_sys_dir/out $BLOSC2_INSTALL_PREFIX
           tree -L 2 $BLOSC2_INSTALL_PREFIX
 
-      # Redundant to do audit and tests for all python versions 
-
-      # Redundant to do audit and tests for all python versions 
       - name: Rust Tests
         if: matrix.conf.target == 'x86_64' && !startsWith(matrix.python-version, 'pypy') && matrix.python-version == '3.12'
         run: cargo test -p ${{ matrix.package.dir }}
@@ -231,61 +214,48 @@ jobs:
         with:
           target: ${{ matrix.conf.target }}
           manylinux: ${{ matrix.conf.manylinux }}
-          docker-options: -e BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/blosc2
-          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features use-system-blosc2 --features blosc2-static
+          docker-options: -e BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/blosc2 -e LD_LIBRARY_PATH=${{ github.workspace }}/blosc2/lib:${{ github.workspace }}/blosc2/lib64
+          args: -i ${{ matrix.python-version }} --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --features use-system-blosc2
           before-script-linux: ls -l $BLOSC2_INSTALL_PREFIX
 
       - name: Build wheel (Windows)
         if: runner.os == 'Windows'
+        shell: bash
         run: |
           python -m pip install maturin delvewheel
-
-          maturin build `
-            -i python `
-            --release `
-            --out wheels `
-            --target ${{ matrix.conf.target-triple }} `
-            --features blosc2-static `
-            --features blosc2-shared `
-            --features use-system-blosc2 `
-            --manifest-path ${{ matrix.package.dir }}/Cargo.toml
-
-          # Repair wheel
-          $file = Get-ChildItem -Path ".\wheels\" -Filter "*.whl" | Select-Object -First 1
-          if ($file -ne $null) {
-              & delvewheel repair -v $file.FullName -w dist
-          } else {
-              Write-Host "No .whl file found in the wheels directory."
-          }
-
-          # Remove location of blosc2 to ensure fixing wheel works
-          Remove-Item -Path $env:BLOSC2_INSTALL_PREFIX -Recurse -Force -ErrorAction SilentlyContinue
-
-      - name: Build wheel (MacOS)
-        if: runner.os == 'macOS'
-        run: |
-          python -m pip install maturin delocate
-
-          # TODO: probably remove this when cramjam-cli has blosc2 support and cramjam is released w/ blosc2
-          # so cramjam-cli can be tested against it.
-          if [ "${{ matrix.package.name }}" = "cramjam-cli" ]; then
-            export USE_BLOSC2=""
-          else
-            export USE_BLOSC2="--features use-system-blosc2"
-          fi
 
           maturin build \
             -i python \
             --release \
-            --out dist \
+            --out wheels \
             --target ${{ matrix.conf.target-triple }} \
-            --manifest-path ${{ matrix.package.dir }}/Cargo.toml $USE_BLOSC2
+            --no-default-features \
+            --features extension-module \
+            --features blosc2-static \
+            --manifest-path ${{ matrix.package.dir }}/Cargo.toml
 
+          name=$(ls -1 wheels/ | head -n 1)
+          delvewheel repair -v wheels/$name -w dist
+
+      - name: Build wheel (MacOS)
+        if: runner.os == 'macOS'
+        uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.conf.target-triple }}
+          # OSX complains with __cpu_model from blosc2 statically compiled so only enabled shared
+          args: -i python --release --out dist --manifest-path ${{ matrix.package.dir }}/Cargo.toml --no-default-features --features extension-module --features blosc2-shared
+
+      - name: Fix wheel (MacOS)
+        if: runner.os == 'macOS'
+        run: |
+          python -m pip install delocate
           delocate-wheel -v dist/*.whl
 
-          # Ensure wheel isn't linking to something we've built outside of it
+          # Remove pointers back to built lib location to ensure tests later don't link back
+          unset DYLD_FALLBACK_LIBRARY_PATH
+          unset BLOSC2_INSTALL_PREFIX
           rm -rf $BLOSC2_INSTALL_PREFIX
-
+    
       - name: Install built wheel and Test (Native)
         # TODO: I'm not sure but the actual collection of tests on windows using pypy3.10 takes forever and/or fails
         if: |
@@ -350,16 +320,18 @@ jobs:
             venv/bin/python -c 'import cramjam' || venv/bin/cramjam-cli --help
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
+        if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
         with:
           name: dist
           path: dist
+          overwrite: true
 
   build-sdist:
     name: Build sdists
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: 3.12
@@ -370,13 +342,14 @@ jobs:
       - name: Build sdist cramjam-cli
         run: python -m build --sdist cramjam-cli/ -o ./dist
       - name: Upload sdists
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dist
           path: dist
 
   pypi-publish:
     name: Upload ${{ matrix.package }} release to PyPI
+    if: startsWith(github.ref, 'refs/tags/')
     strategy:
       fail-fast: false
       matrix:
@@ -384,7 +357,6 @@ jobs:
           - cramjam
           - cramjam-cli
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/')
     needs: [build-test, build-sdist]
     environment:
       name: pypi

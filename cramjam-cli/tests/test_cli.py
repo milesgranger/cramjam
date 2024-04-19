@@ -11,6 +11,11 @@ import cramjam
 
 VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd")
 
+# TODO: after blosc2 is moved out of cramjam experimental
+if not hasattr(cramjam, "blosc2") and hasattr(cramjam, "experimental") and hasattr(cramjam.experimental, "blosc2"):
+    cramjam.blosc2 = cramjam.experimental.blosc2
+    VARIANTS = (*VARIANTS, "blosc2")
+
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile("local", deadline=timedelta(milliseconds=1000))
 settings.register_profile("CI", deadline=None, max_examples=10)
@@ -38,7 +43,8 @@ def test_cli_file_to_file(data, variant):
         run_command(cmd)
 
         expected = bytes(getattr(cramjam, variant).compress(data))
-        assert expected == compressed_file.read_bytes()
+        if variant != "blosc2":
+            assert expected == compressed_file.read_bytes()
 
         decompressed_file = pathlib.Path(tmpdir).joinpath("decompressed.txt")
         run_command(
@@ -59,7 +65,8 @@ def test_cli_file_to_stdout(data, variant):
         out = run_command(cmd)
 
         expected = bytes(getattr(cramjam, variant).compress(data))
-        assert expected == out
+        if variant != "blosc2":
+            assert expected == out
 
         compressed = pathlib.Path(tmpdir).joinpath(f"compressed.txt.{variant}")
         compressed.write_bytes(expected)
