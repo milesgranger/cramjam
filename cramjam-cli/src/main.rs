@@ -45,6 +45,7 @@ enum Codec {
     Gzip(Config),
     Deflate(Config),
     Bzip2(Config),
+    Blosc2(Config),
 }
 
 trait ReadableDowncast: Read + Any {
@@ -121,6 +122,10 @@ pub fn main() -> io::Result<()> {
 
     let start = Instant::now();
     let nbytes = match m.codec {
+        Codec::Blosc2(conf) => match conf.action {
+            Action::Compress => libcramjam::blosc2::compress(input, &mut output),
+            Action::Decompress => libcramjam::blosc2::decompress(input, &mut output),
+        },
         Codec::Snappy(conf) => match conf.action {
             Action::Compress => libcramjam::snappy::compress(input, &mut output),
             Action::Decompress => libcramjam::snappy::decompress(input, &mut output),
