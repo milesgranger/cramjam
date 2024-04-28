@@ -11,6 +11,9 @@ on:
       - released
       - prereleased
 
+permissions:
+  contents: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -320,12 +323,11 @@ jobs:
             venv/bin/python -c 'import cramjam' || venv/bin/cramjam-cli --help
 
       - name: Upload wheels
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
         with:
           name: dist
           path: dist
-          overwrite: true
 
   build-sdist:
     name: Build sdists
@@ -342,7 +344,7 @@ jobs:
       - name: Build sdist cramjam-cli
         run: python -m build --sdist cramjam-cli/ -o ./dist
       - name: Upload sdists
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: dist
           path: dist
@@ -386,3 +388,10 @@ jobs:
       with:
         skip-existing: true
         packages-dir: artifacts-${{ matrix.package }}/
+
+    - name: Upload to GitHub
+      uses: softprops/action-gh-release@v2
+      with:
+        files: artifacts-${{ matrix.package }}/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
