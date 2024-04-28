@@ -24,8 +24,7 @@ use-system-blosc2 = ["libcramjam/use-system-blosc2"]
 
 [dependencies]
 pyo3 = { version = "^0.20", default-features = false, features = ["macros"] }
-#libcramjam = { version = "^0.3" }
-libcramjam = { path = "../libcramjam" }
+libcramjam = { version = "^0.4" }
 
 [build-dependencies]
 pyo3-build-config = "^0.20"
