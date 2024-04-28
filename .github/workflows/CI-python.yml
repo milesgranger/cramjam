@@ -11,6 +11,9 @@ on:
       - released
       - prereleased
 
+permissions:
+  contents: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
@@ -385,3 +388,10 @@ jobs:
       with:
         skip-existing: true
         packages-dir: artifacts-${{ matrix.package }}/
+
+    - name: Upload to GitHub
+      uses: softprops/action-gh-release@v2
+      with:
+        files: artifacts-${{ matrix.package }}/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
