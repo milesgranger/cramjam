@@ -1,7 +1,7 @@
-# cramjam-python
+# cramjam
 
 [![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
-[![CI](https://github.com/milesgranger/cramjam/workflows/CI-python/badge.svg?branch=master)](https://github.com/milesgranger/cramjam/actions?query=branch=master)
+[![CI](https://github.com/milesgranger/cramjam/actions/workflows/CI.yml/badge.svg)](https://github.com/milesgranger/cramjam/actions/workflows/CI.yml)
 [![PyPI](https://img.shields.io/pypi/v/cramjam.svg)](https://pypi.org/project/cramjam)
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/cramjam/badges/version.svg)](https://anaconda.org/conda-forge/cramjam)
 [![Downloads](https://pepy.tech/badge/cramjam/month)](https://pepy.tech/project/cramjam)
@@ -15,15 +15,16 @@ pip install --upgrade cramjam  # Requires no Python or system dependencies!
 
 ### CLI
 
-A CLI interface is available as [`cramjam-cli`](./../cramjam-cli)
+A CLI interface is available as [`cramjam-cli`](https://github.com/cramjam/cramjam-cli)
+
+### libcramjam
+
+A Rust crate and C friendly library available at [libcramjam](https://github.com/cramjam/libcramjam)
 
 ---
 
-Extremely thin Python bindings to de/compression algorithms in Rust.
-Allows for using algorithms such as Snappy, without any system dependencies.
-
-This is handy when being used in environments like AWS Lambda, where installing
-packages like `python-snappy` becomes difficult because of system level dependencies.
+Extremely thin and easy-to-install Python bindings to de/compression algorithms in Rust.
+Allows for using algorithms such as Snappy, without any system or other python dependencies.
 
 ---
 
@@ -35,15 +36,15 @@ Some basic benchmarks are available [in the benchmarks directory](./benchmarks/R
 
 Available algorithms:
 
-- [X] Snappy    (cramjam.snappy)
-- [X] Brotli    (cramjam.brotli)
-- [X] Bzip2     (cramjam.bzip2)
-- [X] Lz4       (cramjam.lz4)
-- [X] Gzip      (cramjam.gzip)
-- [X] Deflate   (cramjam.deflate)
-- [X] ZSTD      (cramjam.zstd)
-- [X] XZ / LZMA (cramjam.xz)
-- [X] Blosc2    (cramjam.experimental.blosc2)
+- [X] Snappy&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.snappy`
+- [X] Brotli&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.brotli`
+- [X] Bzip2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.bzip2`
+- [X] Lz4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.lz4`
+- [X] Gzip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.gzip`
+- [X] Deflate&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.deflate`
+- [X] ZSTD&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.zstd`
+- [X] XZ / LZMA&nbsp;&nbsp;`cramjam.xz`
+- [X] Blosc2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.blosc2`
 
 All available for use as:
 
@@ -61,7 +62,7 @@ array([ 98, 121, 116, 101, 115,  32, 104, 101, 114, 101], dtype=uint8)
 ```
 
 Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts 
-`bytes`/`bytearray`/`numpy.array`/`cramjam.File`/`cramjam.Buffer` objects.
+`bytes`/`bytearray`/`numpy.array`/`cramjam.File`/`cramjam.Buffer` / `memoryview` objects.
 
 **de/compress_into**
 Additionally, all variants support `decompress_into` and `compress_into`. 
@@ -92,10 +93,3 @@ b'000000000000000'
 >>> decompressed
 b'some bytes here'
 ```
-
-**Special note!**  
-If you know the length of the de/compress output, you
-can provide `output_len=<<some int>>` to any `de/compress`
-to get ~1.5-3x performance increase as this allows single 
-buffer allocation; doesn't really apply if you're using `cramjam.Buffer`
-or `cramjam.File` objects.
