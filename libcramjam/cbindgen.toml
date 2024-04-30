@@ -1,4 +1,0 @@
-language = "C"
-cpp_compat = true
-include_version = true
-namespace = "cramjam"
