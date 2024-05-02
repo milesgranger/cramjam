@@ -126,32 +126,12 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install ninja
-
-          rustup target add aarch64-apple-darwin
-          rustup target add x86_64-apple-darwin
-
           echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
-          echo "BLOSC2_INSTALL_PREFIX=$(pwd)/blosc2" >> $GITHUB_ENV
-          echo "DYLD_FALLBACK_LIBRARY_PATH=$(pwd)/blosc2/lib64:$(pwd)/blosc2/lib" >> $GITHUB_ENV
 
       - name: Setup (Windows)
         if: runner.os == 'Windows'
-        env:
-          BLOSC2_INSTALL_PREFIX: ${{ github.workspace }}/blosc2
         run: |
           choco install ninja cmake
-          rustup target add i686-pc-windows-msvc
-
-          echo "BLOSC2_INSTALL_PREFIX=$Env:BLOSC2_INSTALL_PREFIX" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-
-          $Env:PATH += ";$Env:BLOSC2_INSTALL_PREFIX\lib;$Env:BLOSC2_INSTALL_PREFIX\lib64;$Env:BLOSC2_INSTALL_PREFIX\bin"
-          echo "PATH=$Env:PATH" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-
-          $Env:LIBPATH += ";$Env:BLOSC2_INSTALL_PREFIX\lib;$Env:BLOSC2_INSTALL_PREFIX\lib64;$Env:BLOSC2_INSTALL_PREFIX\bin"
-          echo "LIBPATH=$Env:LIBPATH" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
-
-          $Env:LIB += ";$Env:BLOSC2_INSTALL_PREFIX\lib;$Env:BLOSC2_INSTALL_PREFIX\lib64;$Env:BLOSC2_INSTALL_PREFIX\bin"
-          echo "LIB=$Env:LIB" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
 
       - name: Setup (Linux)
         if: runner.os == 'Linux'
@@ -199,10 +179,7 @@ jobs:
             -i python \
             --release \
             --out wheels \
-            --target ${{ matrix.conf.target-triple }} \
-            --no-default-features \
-            --features extension-module \
-            --features blosc2-static
+            --target ${{ matrix.conf.target-triple }}
 
           name=$(ls -1 wheels/ | head -n 1)
           delvewheel repair -v wheels/$name -w dist
@@ -212,19 +189,13 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.conf.target-triple }}
-          # OSX complains with __cpu_model from blosc2 statically compiled so only enabled shared
-          args: -i python --release --out dist --no-default-features --features extension-module --features blosc2-shared
+          args: -i python --release --out dist
 
       - name: Fix wheel (MacOS)
         if: runner.os == 'macOS'
         run: |
           python -m pip install delocate
           delocate-wheel -v dist/*.whl
-
-          # Remove pointers back to built lib location to ensure tests later don't link back
-          unset DYLD_FALLBACK_LIBRARY_PATH
-          unset BLOSC2_INSTALL_PREFIX
-          rm -rf $BLOSC2_INSTALL_PREFIX
     
       - name: Install built wheel and Test (Native)
         # TODO: I'm not sure but the actual collection of tests on windows using pypy3.10 takes forever and/or fails
