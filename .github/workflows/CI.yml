@@ -290,11 +290,13 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: dist
+    - name: List artifacts
+      run: ls -lhs
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         skip-existing: true
-        packages-dir: dist/
+        packages-dir: ./
 
   gh-publish:
     name: Publish artifacts to GH
@@ -307,7 +309,9 @@ jobs:
     - uses: actions/download-artifact@v3
       with:
         name: dist
+    - name: List artifacts
+      run: ls -lhs
     - name: Upload to GitHub
       uses: softprops/action-gh-release@v2
       with:
-        files: dist/*
+        files: ./*
