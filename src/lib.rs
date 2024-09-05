@@ -80,10 +80,10 @@ use std::io::{Read, Seek, SeekFrom, Write};
 pub enum BytesType<'a> {
     /// [`cramjam.Buffer`](io/struct.RustyBuffer.html)
     #[pyo3(transparent, annotation = "Buffer")]
-    RustyBuffer(&'a PyCell<RustyBuffer>),
+    RustyBuffer(Bound<'a, RustyBuffer>),
     /// [`cramjam.File`](io/struct.RustyFile.html)
     #[pyo3(transparent, annotation = "File")]
-    RustyFile(&'a PyCell<RustyFile>),
+    RustyFile(Bound<'a, RustyFile>),
     /// `object` implementing the Buffer Protocol
     #[pyo3(transparent, annotation = "pybuffer")]
     PyBuffer(PythonBuffer),
@@ -369,30 +369,48 @@ macro_rules! make_decompressor {
     };
 }
 
-macro_rules! make_submodule {
-    ($py:ident -> $parent:ident -> $submodule:ident) => {
-        let sub_mod = PyModule::new($py, stringify!($submodule))?;
-        $submodule::init_py_module(sub_mod)?;
-        $parent.add_submodule(sub_mod)?;
-    };
-}
-
 #[pymodule]
-fn cramjam(py: Python, m: &PyModule) -> PyResult<()> {
-    m.add("__version__", env!("CARGO_PKG_VERSION"))?;
-    m.add("CompressionError", py.get_type::<CompressionError>())?;
-    m.add("DecompressionError", py.get_type::<DecompressionError>())?;
-    m.add_class::<crate::io::RustyFile>()?;
-    m.add_class::<crate::io::RustyBuffer>()?;
-    make_submodule!(py -> m -> snappy);
-    make_submodule!(py -> m -> brotli);
-    make_submodule!(py -> m -> bzip2);
-    make_submodule!(py -> m -> lz4);
-    make_submodule!(py -> m -> gzip);
-    make_submodule!(py -> m -> deflate);
-    make_submodule!(py -> m -> xz);
-    make_submodule!(py -> m -> zstd);
-    make_submodule!(py -> m -> experimental);
+mod cramjam {
+    use super::*;
 
-    Ok(())
+    #[pymodule_init]
+    fn init(m: &Bound<'_, PyModule>) -> PyResult<()> {
+        m.add("__version__", env!("CARGO_PKG_VERSION"))?;
+        m.add_class::<crate::io::RustyFile>()?;
+        m.add_class::<crate::io::RustyBuffer>()?;
+        Ok(())
+    }
+
+    #[pymodule_export]
+    use crate::CompressionError;
+
+    #[pymodule_export]
+    use crate::DecompressionError;
+
+    #[pymodule_export]
+    use crate::snappy::snappy;
+
+    #[pymodule_export]
+    use crate::zstd::zstd;
+
+    #[pymodule_export]
+    use crate::lz4::lz4;
+
+    #[pymodule_export]
+    use crate::brotli::brotli;
+
+    #[pymodule_export]
+    use crate::deflate::deflate;
+
+    #[pymodule_export]
+    use crate::xz::xz;
+
+    #[pymodule_export]
+    use crate::bzip2::bzip2;
+
+    #[pymodule_export]
+    use crate::gzip::gzip;
+
+    #[pymodule_export]
+    use crate::experimental::experimental;
 }

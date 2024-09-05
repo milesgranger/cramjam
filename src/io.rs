@@ -69,6 +69,7 @@ impl RustyFile {
     /// b'tes'
     /// ```
     #[new]
+    #[pyo3(signature = (path, read = None, write = None, truncate = None, append = None))]
     pub fn __init__(
         path: &str,
         read: Option<bool>,
@@ -94,7 +95,8 @@ impl RustyFile {
     }
     /// Read from the file in its current position, returns `bytes`; optionally specify number of
     /// bytes to read.
-    pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
+    #[pyo3(signature = (n_bytes=None))]
+    pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
         read(self, py, n_bytes)
     }
     /// Read from the file in its current position, into a [`BytesType`](../enum.BytesType.html) object.
@@ -109,6 +111,7 @@ impl RustyFile {
     /// 1: from current stream position
     /// 2: from end of the stream
     /// ```
+    #[pyo3(signature = (position, whence=None))]
     pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
         let pos = match whence.unwrap_or_else(|| 0) {
             0 => SeekFrom::Start(position as u64),
@@ -208,7 +211,7 @@ impl PythonBuffer {
         {
             Python::with_gil(|py| {
                 let is_memoryview = unsafe { ffi::PyMemoryView_Check(self.owner.as_ptr()) } == 1;
-                if is_memoryview || self.owner.as_ref(py).is_instance_of::<PyBytes>() {
+                if is_memoryview || self.owner.bind(py).is_instance_of::<PyBytes>() {
                     Err(pyo3::exceptions::PyTypeError::new_err(
                         "With PyPy, an output of type `bytes` or `memoryview` does not work. See issue pypy/pypy#4918",
                     ))
@@ -252,14 +255,14 @@ impl Drop for PythonBuffer {
 }
 
 impl<'py> FromPyObject<'py> for PythonBuffer {
-    fn extract(obj: &'py PyAny) -> PyResult<Self> {
+    fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
         Self::try_from(obj)
     }
 }
 
-impl<'py> TryFrom<&'py PyAny> for PythonBuffer {
+impl<'a, 'py> TryFrom<&'a Bound<'py, PyAny>> for PythonBuffer {
     type Error = PyErr;
-    fn try_from(obj: &'py PyAny) -> Result<Self, Self::Error> {
+    fn try_from(obj: &'a Bound<'py, PyAny>) -> Result<Self, Self::Error> {
         let mut buf = Box::new(mem::MaybeUninit::uninit());
         let rc = unsafe { ffi::PyObject_GetBuffer(obj.as_ptr(), buf.as_mut_ptr(), ffi::PyBUF_CONTIG_RO) };
         if rc != 0 {
@@ -368,6 +371,7 @@ impl From<Vec<u8>> for RustyBuffer {
 impl RustyBuffer {
     /// Instantiate the object, optionally with any supported bytes-like object in [BytesType](../enum.BytesType.html)
     #[new]
+    #[pyo3(signature = (data=None))]
     pub fn __init__(mut data: Option<BytesType<'_>>) -> PyResult<Self> {
         let mut buf = vec![];
         if let Some(bytes) = data.as_mut() {
@@ -389,7 +393,8 @@ impl RustyBuffer {
         Ok(r as usize)
     }
     /// Read from the buffer in its current position, returns bytes; optionally specify number of bytes to read.
-    pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
+    #[pyo3(signature = (n_bytes=None))]
+    pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
         read(self, py, n_bytes)
     }
     /// Read from the buffer in its current position, into a [BytesType](../enum.BytesType.html) object.
@@ -403,6 +408,7 @@ impl RustyBuffer {
     /// 1: from current stream position
     /// 2: from end of the stream
     /// ```
+    #[pyo3(signature = (position, whence=None))]
     pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
         let pos = match whence.unwrap_or_else(|| 0) {
             0 => SeekFrom::Start(position as u64),
@@ -506,16 +512,16 @@ fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64
     Ok(result)
 }
 
-fn read<'a, R: Read>(reader: &mut R, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<&'a PyBytes> {
+fn read<'a, R: Read>(reader: &mut R, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
     match n_bytes {
-        Some(n) => PyBytes::new_with(py, n, |buf| {
+        Some(n) => PyBytes::new_bound_with(py, n, |buf| {
             reader.read(buf)?;
             Ok(())
         }),
         None => {
             let mut buf = vec![];
             reader.read_to_end(&mut buf)?;
-            Ok(PyBytes::new(py, buf.as_slice()))
+            Ok(PyBytes::new_bound(py, buf.as_slice()))
         }
     }
 }
