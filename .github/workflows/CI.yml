@@ -23,8 +23,8 @@ jobs:
       fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
       matrix:
         python-version: 
-          - '3.8' 
-          - '3.9' 
+          - '3.8'
+          - '3.9'
           - '3.10'
           - '3.11'
           - '3.12'
@@ -216,7 +216,8 @@ jobs:
       # Could use 'distro: alpine_latest' in 'run-on-arch-action' but seems difficult to install a specific version of python
       # so we'll just use existing python alpine images to test import and cli use w/o testing archs other than x86_64
       - name: Install built wheel and Test (musllinux)
-        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64'
+        # TODO: python:3.13-alpine doesn't exist yet
+        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64' && matrix.python-version != '3.13'
         run: |
           docker run \
             -v $(pwd)/dist:/wheels \
