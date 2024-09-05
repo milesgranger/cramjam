@@ -1,13 +1,13 @@
 //! zstd de/compression interface
 use pyo3::prelude::*;
 
+/// zstd de/compression interface
 #[pymodule]
 pub mod zstd {
     use crate::exceptions::{CompressionError, DecompressionError};
     use crate::io::RustyBuffer;
     use crate::{AsBytes, BytesType};
     use pyo3::prelude::*;
-    use pyo3::wrap_pyfunction;
     use pyo3::PyResult;
     use std::io::Cursor;
 
@@ -21,6 +21,7 @@ pub mod zstd {
     /// >>> cramjam.zstd.decompress(compressed_bytes, output_len=Optional[int])
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         crate::generic!(py, libcramjam::zstd::decompress[data], output_len = output_len)
             .map_err(DecompressionError::from_err)
@@ -34,6 +35,7 @@ pub mod zstd {
     /// >>> cramjam.zstd.compress(b'some bytes here', level=0, output_len=Optional[int])  # level defaults to 11
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, level=None, output_len=None))]
     pub fn compress(
         py: Python,
         data: BytesType,
@@ -46,6 +48,7 @@ pub mod zstd {
 
     /// Compress directly into an output buffer
     #[pyfunction]
+    #[pyo3(signature = (input, output, level=None))]
     pub fn compress_into(py: Python, input: BytesType, mut output: BytesType, level: Option<i32>) -> PyResult<usize> {
         crate::generic!(py, libcramjam::zstd::compress[input, output], level).map_err(CompressionError::from_err)
     }
@@ -66,6 +69,7 @@ pub mod zstd {
     impl Compressor {
         /// Initialize a new `Compressor` instance.
         #[new]
+        #[pyo3(signature = (level=None))]
         pub fn __init__(level: Option<i32>) -> PyResult<Self> {
             let inner = libcramjam::zstd::zstd::stream::write::Encoder::new(
                 Cursor::new(vec![]),

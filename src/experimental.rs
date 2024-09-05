@@ -3,6 +3,9 @@
 //! releases.
 use pyo3::prelude::*;
 
+/// Experimental and unstable implementations.
+/// This module makes no effort to maintain SemVer between
+/// releases.
 #[pymodule]
 pub mod experimental {
 

@@ -1,6 +1,7 @@
-//! snappy de/compression interface
+//! blosc2 de/compression interface
 use pyo3::prelude::*;
 
+/// blosc2 de/compression interface
 #[pymodule]
 pub mod blosc2 {
 
@@ -14,12 +15,12 @@ pub mod blosc2 {
     use pyo3::exceptions::{self, PyRuntimeError};
     use pyo3::prelude::*;
     use pyo3::types::PySlice;
-    use pyo3::wrap_pyfunction;
     use pyo3::PyResult;
 
     /// Compress into SChunk
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (input, output_len=None, typesize=None, clevel=None, filter=None, codec=None, nthreads=None))]
     pub fn compress(
         py: Python,
         input: BytesType,
@@ -57,6 +58,7 @@ pub mod blosc2 {
 
     /// Compress into output
     #[pyfunction]
+    #[pyo3(signature = (input, output, typesize=None, clevel=None, filter=None, codec=None, nthreads=None))]
     pub fn compress_into(
         _py: Python,
         input: BytesType,
@@ -110,6 +112,7 @@ pub mod blosc2 {
     /// Decompress a SChunk into buffer
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (input, output_len=None))]
     pub fn decompress(py: Python, input: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         if input.is_empty() {
             return Ok(RustyBuffer::from(vec![]));
@@ -136,6 +139,7 @@ pub mod blosc2 {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn decompress_chunk(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
         let buf = py
@@ -162,6 +166,7 @@ pub mod blosc2 {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (data, typesize=None, clevel=None, filter=None, codec=None))]
     pub fn compress_chunk(
         py: Python,
         data: BytesType,
@@ -183,6 +188,7 @@ pub mod blosc2 {
 
     /// Compress a Chunk into output
     #[pyfunction]
+    #[pyo3(signature = (input, output, typesize=None, clevel=None, filter=None, codec=None))]
     pub fn compress_chunk_into(
         py: Python,
         input: BytesType,
@@ -214,6 +220,7 @@ pub mod blosc2 {
     impl Compressor {
         /// Initialize a new `Compressor` instance.
         #[new]
+        #[pyo3(signature = (path=None, typesize=None, clevel=None, filter=None, codec=None, nthreads=None))]
         pub fn __init__(
             path: Option<String>,
             typesize: Option<usize>,
@@ -292,6 +299,7 @@ pub mod blosc2 {
     impl PyChunk {
         /// Construct a Chunk from compressing
         #[classmethod]
+        #[pyo3(signature = (src, typesize=None, clevel=None, filter=None, codec=None))]
         pub fn compress(
             _cls: &Bound<'_, pyo3::types::PyType>,
             src: BytesType,
@@ -385,6 +393,16 @@ pub mod blosc2 {
     impl PySChunk {
         /// Construct a new SChunk
         #[new]
+        #[pyo3(signature = (
+            path=None, 
+            typesize=None, 
+            clevel=None, 
+            filter=None, 
+            codec=None, 
+            nthreads=None, 
+            from_bytes_cb=None, 
+            to_bytes_cb=None,
+        ))]
         pub fn __init__(
             path: Option<String>,
             typesize: Option<usize>,
@@ -571,9 +589,9 @@ pub mod blosc2 {
         }
     }
 
-    #[pyclass(name = "Filter")]
+    #[pyclass(name = "Filter", eq, eq_int)]
     #[allow(missing_docs)]
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq)]
     pub enum PyFilter {
         NoFilter,
         Shuffle,
@@ -599,9 +617,9 @@ pub mod blosc2 {
         }
     }
 
-    #[pyclass(name = "CLevel")]
+    #[pyclass(name = "CLevel", eq, eq_int)]
     #[allow(missing_docs)]
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq)]
     pub enum PyCLevel {
         Zero,
         One,
@@ -633,9 +651,9 @@ pub mod blosc2 {
         }
     }
 
-    #[pyclass(name = "Codec")]
+    #[pyclass(name = "Codec", eq, eq_int)]
     #[allow(missing_docs)]
-    #[derive(Clone)]
+    #[derive(Clone, PartialEq)]
     pub enum PyCodec {
         BloscLz,
         LZ4,

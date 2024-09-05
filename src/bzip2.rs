@@ -1,6 +1,7 @@
 //! bzip2 de/compression interface
 use pyo3::prelude::*;
 
+/// bzip2 de/compression interface
 #[pymodule]
 pub mod bzip2 {
 
@@ -8,7 +9,6 @@ pub mod bzip2 {
     use crate::io::RustyBuffer;
     use crate::{AsBytes, BytesType};
     use pyo3::prelude::*;
-    use pyo3::wrap_pyfunction;
     use pyo3::PyResult;
     use std::io::Cursor;
 
@@ -22,6 +22,7 @@ pub mod bzip2 {
     /// >>> cramjam.bzip2.decompress(compressed_bytes, output_len=Optional[int])
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         crate::generic!(py, libcramjam::bzip2::decompress[data], output_len = output_len)
             .map_err(DecompressionError::from_err)
@@ -35,6 +36,7 @@ pub mod bzip2 {
     /// >>> cramjam.bzip2.compress(b'some bytes here', level=6, output_len=Option[int])  # level defaults to 6
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, level=None, output_len=None))]
     pub fn compress(
         py: Python,
         data: BytesType,
@@ -47,6 +49,7 @@ pub mod bzip2 {
 
     /// Compress directly into an output buffer
     #[pyfunction]
+    #[pyo3(signature = (input, output, level=None))]
     pub fn compress_into(py: Python, input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
         crate::generic!(py, libcramjam::bzip2::compress[input, output], level).map_err(CompressionError::from_err)
     }
@@ -67,6 +70,7 @@ pub mod bzip2 {
     impl Compressor {
         /// Initialize a new `Compressor` instance.
         #[new]
+        #[pyo3(signature = (level=None))]
         pub fn __init__(level: Option<u32>) -> PyResult<Self> {
             let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
             let comp = libcramjam::bzip2::bzip2::Compression::new(level);

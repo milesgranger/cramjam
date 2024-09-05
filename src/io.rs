@@ -14,7 +14,6 @@ use pyo3::exceptions::{self, PyBufferError};
 use pyo3::ffi;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
-use pyo3::AsPyPointer;
 use std::path::PathBuf;
 
 pub(crate) trait AsBytes {
@@ -70,6 +69,7 @@ impl RustyFile {
     /// b'tes'
     /// ```
     #[new]
+    #[pyo3(signature = (path, read = None, write = None, truncate = None, append = None))]
     pub fn __init__(
         path: &str,
         read: Option<bool>,
@@ -95,6 +95,7 @@ impl RustyFile {
     }
     /// Read from the file in its current position, returns `bytes`; optionally specify number of
     /// bytes to read.
+    #[pyo3(signature = (n_bytes=None))]
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
         read(self, py, n_bytes)
     }
@@ -110,6 +111,7 @@ impl RustyFile {
     /// 1: from current stream position
     /// 2: from end of the stream
     /// ```
+    #[pyo3(signature = (position, whence=None))]
     pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
         let pos = match whence.unwrap_or_else(|| 0) {
             0 => SeekFrom::Start(position as u64),
@@ -369,6 +371,7 @@ impl From<Vec<u8>> for RustyBuffer {
 impl RustyBuffer {
     /// Instantiate the object, optionally with any supported bytes-like object in [BytesType](../enum.BytesType.html)
     #[new]
+    #[pyo3(signature = (data=None))]
     pub fn __init__(mut data: Option<BytesType<'_>>) -> PyResult<Self> {
         let mut buf = vec![];
         if let Some(bytes) = data.as_mut() {
@@ -390,6 +393,7 @@ impl RustyBuffer {
         Ok(r as usize)
     }
     /// Read from the buffer in its current position, returns bytes; optionally specify number of bytes to read.
+    #[pyo3(signature = (n_bytes=None))]
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
         read(self, py, n_bytes)
     }
@@ -404,6 +408,7 @@ impl RustyBuffer {
     /// 1: from current stream position
     /// 2: from end of the stream
     /// ```
+    #[pyo3(signature = (position, whence=None))]
     pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
         let pos = match whence.unwrap_or_else(|| 0) {
             0 => SeekFrom::Start(position as u64),

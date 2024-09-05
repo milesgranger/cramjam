@@ -1,6 +1,7 @@
 //! xz and lzma de/compression interface
 use pyo3::prelude::*;
 
+/// xz and lzma de/compression interface
 #[pymodule]
 pub mod xz {
 
@@ -11,7 +12,6 @@ pub mod xz {
     use crate::io::{AsBytes, RustyBuffer};
     use crate::BytesType;
     use pyo3::exceptions::PyNotImplementedError;
-    use pyo3::wrap_pyfunction;
     use std::io::Cursor;
 
     /// LZMA compression.
@@ -24,6 +24,7 @@ pub mod xz {
     /// >>> _ = cramjam.xz.compress(b'some bytes here', format=cramjam.xz.Format.ALONE)
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, preset=None, format=None, check=None, filters=None, options=None, output_len=None))]
     pub fn compress(
         py: Python,
         data: BytesType,
@@ -49,6 +50,7 @@ pub mod xz {
 
     /// Compress directly into an output buffer
     #[pyfunction]
+    #[pyo3(signature = (input, output, preset=None, format=None, check=None, filters=None, options=None))]
     pub fn compress_into(
         py: Python,
         input: BytesType,
@@ -72,6 +74,7 @@ pub mod xz {
     /// >>> cramjam.xz.decompress(compressed_bytes, output_len=Optional[None])
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         crate::generic!(py, libcramjam::xz::decompress[data], output_len = output_len)
             .map_err(DecompressionError::from_err)
@@ -92,6 +95,7 @@ pub mod xz {
     impl Compressor {
         /// Initialize a new `Compressor` instance.
         #[new]
+        #[pyo3(signature = (preset=None))]
         pub fn __init__(preset: Option<u32>) -> PyResult<Self> {
             let preset = preset.unwrap_or(5);
             let inner = libcramjam::xz::xz2::write::XzEncoder::new(Cursor::new(vec![]), preset);
@@ -125,8 +129,8 @@ pub mod xz {
     use _decompressor::Decompressor;
 
     /// Available Filter IDs
-    #[derive(Clone, Debug)]
-    #[pyclass]
+    #[derive(Clone, Debug, PartialEq)]
+    #[pyclass(eq, eq_int)]
     #[allow(missing_docs)]
     pub enum Filter {
         Arm,
@@ -145,8 +149,8 @@ pub mod xz {
     }
 
     /// MatchFinder, used with Options.mf attribute
-    #[derive(Clone, Debug)]
-    #[pyclass]
+    #[derive(Clone, Debug, PartialEq)]
+    #[pyclass(eq, eq_int)]
     #[allow(missing_docs)]
     pub enum MatchFinder {
         HashChain3,
@@ -169,8 +173,8 @@ pub mod xz {
     }
 
     /// MatchFinder, used with Options.mode attribute
-    #[derive(Clone, Debug)]
-    #[pyclass]
+    #[derive(Clone, Debug, PartialEq)]
+    #[pyclass(eq, eq_int)]
     #[allow(missing_docs)]
     pub enum Mode {
         Fast,
@@ -235,6 +239,7 @@ pub mod xz {
     impl FilterChainItem {
         #[new]
         #[allow(missing_docs)]
+        #[pyo3(signature = (filter, options=None))]
         pub fn __init__(filter: Filter, options: Option<Options>) -> Self {
             Self {
                 filter,
@@ -325,8 +330,8 @@ pub mod xz {
     }
 
     /// Possible formats
-    #[derive(Clone, Debug)]
-    #[pyclass]
+    #[derive(Clone, Debug, PartialEq)]
+    #[pyclass(eq, eq_int)]
     pub enum Format {
         /// Auto select the format, for compression this is XZ,
         /// for decompression it will be determined by the compressed input.
@@ -356,8 +361,8 @@ pub mod xz {
     }
 
     /// Possible Check configurations
-    #[derive(Debug, Clone)]
-    #[pyclass]
+    #[derive(Debug, Clone, PartialEq)]
+    #[pyclass(eq, eq_int)]
     #[allow(missing_docs)]
     pub enum Check {
         Crc64,

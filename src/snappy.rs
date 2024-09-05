@@ -1,6 +1,7 @@
 //! snappy de/compression interface
 use pyo3::prelude::*;
 
+/// snappy de/compression interface
 #[pymodule]
 pub mod snappy {
     use crate::exceptions::{CompressionError, DecompressionError};
@@ -19,6 +20,7 @@ pub mod snappy {
     /// >>> cramjam.snappy.decompress(compressed_bytes, output_len=Optional[None])
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         crate::generic!(py, libcramjam::snappy::decompress[data], output_len = output_len)
             .map_err(DecompressionError::from_err)
@@ -33,6 +35,7 @@ pub mod snappy {
     /// >>> _ = cramjam.snappy.compress(bytearray(b'this avoids double allocation in rust side, and thus faster!'))  # <- use bytearray where possible
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn compress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         crate::generic!(py, libcramjam::snappy::compress[data], output_len = output_len)
             .map_err(CompressionError::from_err)
@@ -48,6 +51,7 @@ pub mod snappy {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
         py.allow_threads(|| libcramjam::snappy::raw::decompress_vec(bytes))
@@ -65,6 +69,7 @@ pub mod snappy {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn compress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
         py.allow_threads(|| libcramjam::snappy::raw::compress_vec(bytes))

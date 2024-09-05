@@ -1,6 +1,7 @@
 //! LZ4 de/compression interface
 use pyo3::prelude::*;
 
+/// LZ4 de/compression interface
 #[pymodule]
 pub mod lz4 {
 
@@ -9,7 +10,6 @@ pub mod lz4 {
     use crate::BytesType;
     use libcramjam::lz4::lz4::{BlockMode, ContentChecksum};
     use pyo3::prelude::*;
-    use pyo3::wrap_pyfunction;
     use pyo3::PyResult;
     use std::io::Cursor;
 
@@ -24,6 +24,7 @@ pub mod lz4 {
     /// >>> cramjam.lz4.decompress(compressed_bytes, output_len=Optional[int])
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         crate::generic!(py, libcramjam::lz4::decompress[data], output_len = output_len)
             .map_err(DecompressionError::from_err)
@@ -38,6 +39,7 @@ pub mod lz4 {
     /// >>> cramjam.lz4.compress(b'some bytes here', output_len=Optional[int])
     /// ```
     #[pyfunction]
+    #[pyo3(signature = (data, level=None, output_len=None))]
     pub fn compress(
         py: Python,
         data: BytesType,
@@ -50,6 +52,7 @@ pub mod lz4 {
 
     /// Compress directly into an output buffer
     #[pyfunction]
+    #[pyo3(signature = (input, output, level=None))]
     pub fn compress_into(py: Python, input: BytesType, mut output: BytesType, level: Option<u32>) -> PyResult<usize> {
         crate::generic!(py, libcramjam::lz4::compress[input, output], level).map_err(CompressionError::from_err)
     }
@@ -73,6 +76,7 @@ pub mod lz4 {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (data, output_len=None))]
     pub fn decompress_block(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
 
@@ -107,6 +111,7 @@ pub mod lz4 {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (data, output_len=None, mode=None, acceleration=None, compression=None, store_size=None))]
     pub fn compress_block(
         py: Python,
         data: BytesType,
@@ -158,6 +163,7 @@ pub mod lz4 {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
+    #[pyo3(signature = (data, output, mode=None, acceleration=None, compression=None, store_size=None))]
     pub fn compress_block_into(
         py: Python,
         data: BytesType,
@@ -205,6 +211,7 @@ pub mod lz4 {
     impl Compressor {
         /// Initialize a new `Compressor` instance.
         #[new]
+        #[pyo3(signature = (level=None, content_checksum=None, block_linked=None))]
         pub fn __init__(
             level: Option<u32>,
             content_checksum: Option<bool>,
