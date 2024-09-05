@@ -318,7 +318,7 @@ impl PyChunk {
     /// Construct a Chunk from compressing
     #[classmethod]
     pub fn compress(
-        _cls: &PyAny,
+        _cls: &Bound<'_, pyo3::types::PyType>,
         src: BytesType,
         typesize: Option<usize>,
         clevel: Option<PyCLevel>,
@@ -446,7 +446,10 @@ impl PySChunk {
 
     /// Create a `SChunk` from `Compressor`
     #[classmethod]
-    pub fn from_compressor(_cls: &PyAny, compressor: &PyAny) -> PyResult<Self> {
+    pub fn from_compressor(
+        _cls: &Bound<'_, pyo3::types::PyType>,
+        compressor: &Bound<'_, pyo3::types::PyType>,
+    ) -> PyResult<Self> {
         let compressor: Compressor = compressor.extract()?;
         match compressor.0.as_ref() {
             Some(inner) => Ok(Self {

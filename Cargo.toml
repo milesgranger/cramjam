@@ -20,11 +20,11 @@ use-system-blosc2 = ["libcramjam/use-system-blosc2"]
 
 
 [dependencies]
-pyo3 = { version = "^0.20", default-features = false, features = ["macros"] }
+pyo3 = { version = "^0.21", default-features = false, features = ["macros"] }
 libcramjam = { version = "0.4.2" }
 
 [build-dependencies]
-pyo3-build-config = "^0.20"
+pyo3-build-config = "^0.21"
 
 [profile.release]
 strip = true
