@@ -9,6 +9,7 @@ use pyo3::prelude::*;
 #[pymodule]
 pub mod experimental {
 
+    #[cfg(any(feature = "blosc2", feature = "blosc2-static", feature = "blosc2-shared"))]
     #[pymodule_export]
     use crate::blosc2::blosc2;
 }
