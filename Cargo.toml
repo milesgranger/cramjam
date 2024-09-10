@@ -1,6 +1,6 @@
 [package]
 name = "cramjam-python"
-version = "2.8.4-rc3"
+version = "2.8.4-rc4"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -13,26 +13,38 @@ name = "cramjam"
 crate-type = ["cdylib"]
 
 [features]
-default = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "deflate", "blosc2"]
-extension-module = ["pyo3/extension-module"]
-generate-import-lib = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
+default                  = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "deflate", "blosc2"]
+extension-module         = ["pyo3/extension-module"]
+generate-import-lib      = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
 
-snappy = ["libcramjam/snappy"]
-lz4 = ["libcramjam/lz4"]
-bzip2 = ["libcramjam/bzip2"]
-brotli = ["libcramjam/brotli"]
-xz = ["libcramjam/xz"]
-zstd = ["libcramjam/zstd"]
-gzip = ["libcramjam/gzip"]
-deflate = ["libcramjam/deflate"]
-blosc2 = ["libcramjam/blosc2"]
+snappy                   = ["libcramjam/snappy"]
+lz4                      = ["libcramjam/lz4"]
+bzip2                    = ["libcramjam/bzip2"]
+brotli                   = ["libcramjam/brotli"]
+zstd                     = ["libcramjam/zstd"]
+
+xz                       = ["xz-static"]
+xz-static                = ["libcramjam/xz-static"]
+xz-shared                = ["libcramjam/xz-shared"]
+
+gzip                     = ["gzip-static"]
+gzip-static              = ["libcramjam/gzip-static"]
+gzip-shared              = ["libcramjam/gzip-shared"]
+
+deflate                  = ["deflate-static"]
+deflate-static           = ["libcramjam/deflate-static"]
+deflate-shared           = ["libcramjam/deflate-shared"]
+
+blosc2                   = ["blosc2-static"]
+blosc2-static            = ["libcramjam/blosc2-static"]
+blosc2-shared            = ["libcramjam/blosc2-shared"]
 use-system-blosc2-static = ["libcramjam/use-system-blosc2", "libcramjam/blosc2-static"]
 use-system-blosc2-shared = ["libcramjam/use-system-blosc2", "libcramjam/blosc2-shared"]
 
 
 [dependencies]
 pyo3 = { version = "^0.22", default-features = false, features = ["macros"] }
-libcramjam = { version = "0.4.2", default-features = false }
+libcramjam = { version = "0.4.5", default-features = false }
 
 [build-dependencies]
 pyo3-build-config = "^0.22"
