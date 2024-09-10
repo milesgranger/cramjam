@@ -13,15 +13,26 @@ name = "cramjam"
 crate-type = ["cdylib"]
 
 [features]
-default = ["extension-module"]
+default = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "deflate", "blosc2"]
 extension-module = ["pyo3/extension-module"]
 generate-import-lib = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
-use-system-blosc2 = ["libcramjam/use-system-blosc2"]
+
+snappy = ["libcramjam/snappy"]
+lz4 = ["libcramjam/lz4"]
+bzip2 = ["libcramjam/bzip2"]
+brotli = ["libcramjam/brotli"]
+xz = ["libcramjam/xz"]
+zstd = ["libcramjam/zstd"]
+gzip = ["libcramjam/gzip"]
+deflate = ["libcramjam/deflate"]
+blosc2 = ["libcramjam/blosc2"]
+use-system-blosc2-static = ["libcramjam/use-system-blosc2", "libcramjam/blosc2-static"]
+use-system-blosc2-shared = ["libcramjam/use-system-blosc2", "libcramjam/blosc2-shared"]
 
 
 [dependencies]
 pyo3 = { version = "^0.22", default-features = false, features = ["macros"] }
-libcramjam = { version = "0.4.2" }
+libcramjam = { version = "0.4.2", default-features = false }
 
 [build-dependencies]
 pyo3-build-config = "^0.22"
