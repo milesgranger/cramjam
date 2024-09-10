@@ -144,7 +144,7 @@ jobs:
           target: ${{ matrix.conf.target }}
           manylinux: ${{ matrix.conf.manylinux }}
           docker-options: -e BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/blosc2 -e LD_LIBRARY_PATH=${{ github.workspace }}/blosc2/lib:${{ github.workspace }}/blosc2/lib64
-          args: -i ${{ matrix.python-version }} --release --out dist --features use-system-blosc2
+          args: -i ${{ matrix.python-version }} --release --out dist --features use-system-blosc2-static
           before-script-linux: ls -l $BLOSC2_INSTALL_PREFIX
 
       - name: Build wheel (Windows)
