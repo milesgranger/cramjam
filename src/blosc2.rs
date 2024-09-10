@@ -35,18 +35,18 @@ pub mod blosc2 {
             return Ok(RustyBuffer::from(vec![]));
         }
 
-        let mut cparams = CParams::from_typesize(typesize.unwrap_or_else(|| input.itemsize()))
+        let cparams = CParams::from_typesize(typesize.unwrap_or_else(|| input.itemsize()))
             .set_codec(codec.map_or_else(Codec::default, Into::into))
             .set_clevel(clevel.map_or_else(CLevel::default, Into::into))
             .set_filter(filter.map_or_else(Filter::default, Into::into))
             .set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
-        let mut dparams =
+        let dparams =
             DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
 
         let storage = Storage::default()
             .set_contiguous(true)
-            .set_cparams(&mut cparams)
-            .set_dparams(&mut dparams);
+            .set_cparams(cparams)
+            .set_dparams(dparams);
 
         let mut schunk = SChunk::new(storage);
         io::copy(&mut BufReader::new(input), &mut schunk)?;
@@ -73,18 +73,18 @@ pub mod blosc2 {
             return Ok(0);
         }
 
-        let mut cparams = CParams::from_typesize(typesize.unwrap_or_else(|| input.itemsize()))
+        let cparams = CParams::from_typesize(typesize.unwrap_or_else(|| input.itemsize()))
             .set_codec(codec.map_or_else(Codec::default, Into::into))
             .set_clevel(clevel.map_or_else(CLevel::default, Into::into))
             .set_filter(filter.map_or_else(Filter::default, Into::into))
             .set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
-        let mut dparams =
+        let dparams =
             DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
 
         let storage = Storage::default()
             .set_contiguous(true)
-            .set_cparams(&mut cparams)
-            .set_dparams(&mut dparams);
+            .set_cparams(cparams)
+            .set_dparams(dparams);
 
         if let BytesType::RustyFile(_file) = output {
             return Err(pyo3::exceptions::PyNotImplementedError::new_err(
@@ -229,18 +229,18 @@ pub mod blosc2 {
             codec: Option<PyCodec>,
             nthreads: Option<usize>,
         ) -> PyResult<Self> {
-            let mut cparams = CParams::from_typesize(typesize.unwrap_or(1))
+            let cparams = CParams::from_typesize(typesize.unwrap_or(1))
                 .set_codec(codec.map_or_else(Codec::default, Into::into))
                 .set_clevel(clevel.map_or_else(CLevel::default, Into::into))
                 .set_filter(filter.map_or_else(Filter::default, Into::into))
                 .set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
-            let mut dparams =
+            let dparams =
                 DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
 
             let mut storage = Storage::default()
                 .set_contiguous(true)
-                .set_cparams(&mut cparams)
-                .set_dparams(&mut dparams);
+                .set_cparams(cparams)
+                .set_dparams(dparams);
             if let Some(pth) = path {
                 storage = storage.set_urlpath(pth).map_err(CompressionError::from_err)?;
             }
@@ -413,18 +413,18 @@ pub mod blosc2 {
             from_bytes_cb: Option<PyObject>,
             to_bytes_cb: Option<PyObject>,
         ) -> PyResult<Self> {
-            let mut cparams = CParams::from_typesize(typesize.unwrap_or(1))
+            let cparams = CParams::from_typesize(typesize.unwrap_or(1))
                 .set_codec(codec.map_or_else(Codec::default, Into::into))
                 .set_clevel(clevel.map_or_else(CLevel::default, Into::into))
                 .set_filter(filter.map_or_else(Filter::default, Into::into))
                 .set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
-            let mut dparams =
+            let dparams =
                 DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
 
             let mut storage = Storage::default()
                 .set_contiguous(true)
-                .set_cparams(&mut cparams)
-                .set_dparams(&mut dparams);
+                .set_cparams(cparams)
+                .set_dparams(dparams);
             if let Some(pth) = path {
                 storage = storage.set_urlpath(pth).map_err(CompressionError::from_err)?;
             }
