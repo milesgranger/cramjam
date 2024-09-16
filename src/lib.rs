@@ -407,6 +407,7 @@ mod cramjam {
     #[pymodule_export]
     use crate::lz4::lz4;
 
+    #[cfg(any(feature = "brotli"))]
     #[pymodule_export]
     use crate::brotli::brotli;
 
