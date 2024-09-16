@@ -6,6 +6,7 @@ edition = "2021"
 license = "MIT"
 description = "Thin Python bindings to de/compression algorithms in Rust"
 readme = "README.md"
+exclude = ["benchmarks/", "benchmark-requirements.txt"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
