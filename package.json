@@ -1,0 +1,26 @@
+{
+  "name": "cramjam",
+  "version": "1.0.0",
+  "description": "for running wasm tests.",
+  "author": "Miles Granger",
+  "license": "MIT",
+  "homepage": "https://github.com/milesgranger/cramjam#readme",
+  "main": "tests/test_cramjam_pyodide.js",
+  "dependencies": {
+    "prettier": "^2.7.1",
+    "pyodide": "^0.26.2"
+  },
+  "scripts": {
+    "test": "node tests/test_cramjam_pyodide.js",
+    "format": "prettier --write 'tests/test_cramjam_pyodide.js'",
+    "lint": "prettier --check 'tests/test_cramjam_pyodide.js'"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all",
+    "tabWidth": 2,
+    "printWidth": 119,
+    "bracketSpacing": false,
+    "arrowParens": "avoid"
+  }
+}
