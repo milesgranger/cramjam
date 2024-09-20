@@ -61,6 +61,8 @@ pub mod blosc2;
 pub mod brotli;
 #[cfg(feature = "bzip2")]
 pub mod bzip2;
+#[cfg(feature = "igzip")]
+pub mod igzip;
 #[cfg(any(feature = "deflate", feature = "deflate-static", feature = "deflate-shared"))]
 pub mod deflate;
 #[cfg(any(feature = "gzip", feature = "gzip-static", feature = "gzip-shared"))]

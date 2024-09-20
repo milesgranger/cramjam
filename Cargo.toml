@@ -14,7 +14,7 @@ name = "cramjam"
 crate-type = ["cdylib"]
 
 [features]
-default                  = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "deflate", "blosc2"]
+default                  = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "deflate", "blosc2", "igzip"]
 extension-module         = ["pyo3/extension-module"]
 generate-import-lib      = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
 
@@ -28,6 +28,7 @@ xz                       = ["xz-static"]
 xz-static                = ["libcramjam/xz-static"]
 xz-shared                = ["libcramjam/xz-shared"]
 
+igzip                    = ["libcramjam/igzip"]
 gzip                     = ["gzip-static"]
 gzip-static              = ["libcramjam/gzip-static"]
 gzip-shared              = ["libcramjam/gzip-shared"]
@@ -47,7 +48,8 @@ wasm32-compat            = ["libcramjam/wasm32-compat"]
 
 [dependencies]
 pyo3 = { version = "^0.22", default-features = false, features = ["macros"] }
-libcramjam = { version = "0.4.6", default-features = false }
+# libcramjam = { version = "0.4.6", default-features = false }
+libcramjam = { git = "https://github.com/cramjam/libcramjam.git", branch = "add-igzip" }
 
 [build-dependencies]
 pyo3-build-config = "^0.22"

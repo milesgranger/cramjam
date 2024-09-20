@@ -12,4 +12,8 @@ pub mod experimental {
     #[cfg(any(feature = "blosc2", feature = "blosc2-static", feature = "blosc2-shared"))]
     #[pymodule_export]
     use crate::blosc2::blosc2;
+
+    #[cfg(feature = "igzip")]
+    #[pymodule_export]
+    use crate::igzip::igzip;
 }

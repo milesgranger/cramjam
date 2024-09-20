@@ -5,7 +5,7 @@ import pathlib
 import numpy as np
 
 
-if hasattr(cramjam, 'experimental') and not hasattr(cramjam, 'blosc2'):
+if hasattr(cramjam, "experimental") and not hasattr(cramjam, "blosc2"):
     cramjam.blosc2 = cramjam.experimental.blosc2
 
 
@@ -15,12 +15,13 @@ class Bzip2CompressedFile:
 
     Simple wrapper to decompress benchmark file on read_bytes()
     """
-    def __init__(self, path: pathlib.Path ):
+
+    def __init__(self, path: pathlib.Path):
         self.path = path
 
     @property
     def name(self):
-        return self.path.name.replace('.bz2', '')
+        return self.path.name.replace(".bz2", "")
 
     def read_bytes(self):
         return cramjam.bzip2.decompress(self.path.read_bytes()).read()
@@ -61,6 +62,7 @@ FILES.extend([FiftyFourMbRepeating(), FiftyFourMbRandom()])
 def round_trip(compress, decompress, data, **kwargs):
     return decompress(compress(data, **kwargs))
 
+
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "blosc2"
 )
@@ -86,6 +88,7 @@ def test_blosc2(benchmark, file, use_cramjam: bool):
             decompress=blosc2.decompress,
             data=data,
         )
+
 
 @pytest.mark.parametrize(
     "use_cramjam", (True, False), ids=lambda val: "cramjam" if val else "snappy"
@@ -167,17 +170,27 @@ def test_cramjam_snappy_de_compress_into(benchmark, op, file):
     )
 
 
-@pytest.mark.parametrize("lib", ("gzip", "cramjam", "isal"), ids=lambda val: val)
+@pytest.mark.parametrize(
+    "lib", ("gzip", "cramjam-gzip", "cramjam-igzip", "isal"), ids=lambda val: val
+)
 @pytest.mark.parametrize("file", FILES, ids=lambda val: val.name)
 def test_gzip(benchmark, file, lib):
     from isal import igzip
 
     data = file.read_bytes()
-    if lib == "cramjam":
+    if lib == "cramjam-gzip":
         benchmark(
             round_trip,
             compress=cramjam.gzip.compress,
             decompress=cramjam.gzip.decompress,
+            data=data,
+            level=3,
+        )
+    elif lib == "cramjam-isal":
+        benchmark(
+            round_trip,
+            compress=cramjam.experimental.igzip.compress,
+            decompress=cramjam.experimental.igzip.decompress,
             data=data,
             level=3,
         )
