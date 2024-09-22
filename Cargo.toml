@@ -49,6 +49,7 @@ wasm32-compat            = ["libcramjam/wasm32-compat"]
 [dependencies]
 pyo3 = { version = "^0.22", default-features = false, features = ["macros"] }
 # libcramjam = { version = "0.4.6", default-features = false }
+# libcramjam = { path = "../libcramjam", default-features = false }
 libcramjam = { git = "https://github.com/cramjam/libcramjam.git", branch = "add-igzip" }
 
 [build-dependencies]
