@@ -13,7 +13,7 @@ pub mod experimental {
     #[pymodule_export]
     use crate::blosc2::blosc2;
 
-    #[cfg(feature = "igzip")]
+    #[cfg(any(feature = "igzip", feature = "isal-static", feature = "isal-shared"))]
     #[pymodule_export]
     use crate::igzip::igzip;
 }

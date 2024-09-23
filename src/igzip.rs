@@ -2,6 +2,7 @@
 use pyo3::prelude::*;
 
 /// igzip de/compression interface
+#[cfg(any(feature = "igzip", feature = "isal-static", feature = "isal-shared"))]
 #[pymodule]
 pub mod igzip {
 
