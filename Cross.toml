@@ -3,12 +3,47 @@ pre-build = [
   "apt update",
   "apt install -y nasm"
 ]
+[target.x86_64-unknown-linux-gnu]
+pre-build = [
+  "apt update",
+  "apt install -y nasm"
+]
 [target.s390x-unknown-linux-gnu]
 pre-build = [
   "apt update",
   "apt install -y nasm"
 ]
 [target.aarch64-unknown-linux-musl]
+pre-build = [
+  "apt update",
+  "apt install -y nasm"
+]
+[target.aarch64-unknown-linux-gnu]
+pre-build = [
+  "apt update",
+  "apt install -y nasm"
+]
+[target.powerpc64le-unknown-linux-gnu]
+pre-build = [
+  "apt update",
+  "apt install -y nasm"
+]
+[target.armv7-unknown-linux-musleabihf]
+pre-build = [
+  "apt update",
+  "apt install -y nasm"
+]
+[target.armv7-unknown-linux-gnueabihf]
+pre-build = [
+  "apt update",
+  "apt install -y nasm"
+]
+[target.i686-unknown-linux-musl]
+pre-build = [
+  "apt update",
+  "apt install -y nasm"
+]
+[target.i686-unknown-linux-gnu]
 pre-build = [
   "apt update",
   "apt install -y nasm"
