@@ -151,8 +151,8 @@ jobs:
           target: ${{ matrix.conf.target }}
           manylinux: ${{ matrix.conf.manylinux }}
           docker-options: |
-            -e BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/blosc2 \
-            -e ISAL_INSTALL_PREFIX=${{ github.workspace }}/isal \
+            -e BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/blosc2
+            -e ISAL_INSTALL_PREFIX=${{ github.workspace }}/isal
             -e LD_LIBRARY_PATH=${{ github.workspace }}/blosc2/lib:${{ github.workspace }}/blosc2/lib64:${{ github.workspace }}/isal/lib:${{ github.workspace }}/isal/lib64
           args: -i ${{ matrix.python-version }} --release --out dist --features use-system-blosc2-static
           before-script-linux: |
