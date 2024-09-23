@@ -156,6 +156,8 @@ jobs:
             -e LD_LIBRARY_PATH=${{ github.workspace }}/blosc2/lib:${{ github.workspace }}/blosc2/lib64:${{ github.workspace }}/isal/lib:${{ github.workspace }}/isal/lib64
           args: -i ${{ matrix.python-version }} --release --out dist --features use-system-blosc2-static
           before-script-linux: |
+            apt update
+            apt install -y nasm libtool autotools-dev autoconf
             ls -l $BLOSC2_INSTALL_PREFIX
             ls -l $ISAL_INSTALL_PREFIX
 
