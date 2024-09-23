@@ -88,19 +88,19 @@ jobs:
         with:
           target: ${{ matrix.conf.target-triple }}
 
-      - name: Setup (Mac)
-        if: runner.os == 'macOS'
-        run: |
-          brew install ninja automake autoconf coreutils libtool nasm
-          echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
-
       - name: Install nasm (Windows / Linux)
         if: runner.os != 'macOS'
         uses: ilammy/setup-nasm@v1
 
       - name: Set MSVC developer prompt
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1.6.0
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup (Mac)
+        if: runner.os == 'macOS'
+        run: |
+          brew install ninja automake autoconf coreutils libtool nasm
+          echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
 
       - name: Setup (Windows)
         if: runner.os == 'Windows'
