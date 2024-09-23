@@ -4,18 +4,28 @@ import pytest
 import numpy as np
 import cramjam
 import hashlib
-from datetime import timedelta
 from hypothesis import strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
 
 
-VARIANTS = ("snappy", "brotli", "bzip2", "lz4", "gzip", "deflate", "zstd", "xz")
+VARIANTS = (
+    "snappy",
+    "brotli",
+    "bzip2",
+    "lz4",
+    "gzip",
+    "deflate",
+    "zstd",
+    "xz",
+)
 
-if not hasattr(cramjam, "blosc2") and hasattr(cramjam, "experimental"):
-    cramjam.blosc2 = cramjam.experimental.blosc2
+for experimental_feat in ("blosc2", "igzip"):
+    if not hasattr(cramjam, experimental_feat) and hasattr(cramjam, "experimental"):
+        mod = getattr(cramjam.experimental, experimental_feat)
+        setattr(cramjam, experimental_feat, mod)
 
-if hasattr(cramjam, 'blosc2'):
-    VARIANTS = (*VARIANTS, "blosc2")
+    if hasattr(cramjam, experimental_feat):
+        VARIANTS = (*VARIANTS, experimental_feat)
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile("local", deadline=None, max_examples=20)
@@ -52,7 +62,9 @@ def test_variants_different_dtypes(variant_str, arr, is_pypy):
             try:
                 compressed = variant.compress(arr)
             except:
-                pytest.xfail(reason="PyPy struggles w/ multidim buffer views depending on dtype ie datetime[64]")
+                pytest.xfail(
+                    reason="PyPy struggles w/ multidim buffer views depending on dtype ie datetime[64]"
+                )
         else:
             compressed = variant.compress(arr)
         decompressed = variant.decompress(compressed)
@@ -100,7 +112,7 @@ def test_variants_compress_into(
     #       decompress_into appears to work fine.
     # Further todo is finding out why with pytest.raises(...) is delayed in
     # detecting the raised error. :S
-    if variant_str == 'blosc2' and output_type == cramjam.File:
+    if variant_str == "blosc2" and output_type == cramjam.File:
         pytest.skip("NotImplementedError for blosc2 into File")
 
     variant = getattr(cramjam, variant_str)
@@ -137,7 +149,9 @@ def test_variants_compress_into(
         output = output_type(b"0" * compressed_len)
 
     if is_pypy and isinstance(output, (bytes, memoryview)):
-        pytest.xfail(reason="PyPy de/compress_into w/ bytes or memoryview is a bit flaky behavior")
+        pytest.xfail(
+            reason="PyPy de/compress_into w/ bytes or memoryview is a bit flaky behavior"
+        )
 
     n_bytes = variant.compress_into(input, output)
     assert n_bytes == compressed_len
@@ -196,7 +210,9 @@ def test_variants_decompress_into(
         output = output_type(b"0" * len(raw_data))
 
     if is_pypy and isinstance(output, (bytes, memoryview)):
-        pytest.xfail(reason="PyPy de/compress_into w/ bytes or memoryview is a bit flaky behavior")
+        pytest.xfail(
+            reason="PyPy de/compress_into w/ bytes or memoryview is a bit flaky behavior"
+        )
 
     n_bytes = variant.decompress_into(input, output)
     assert n_bytes == len(raw_data)

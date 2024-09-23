@@ -60,4 +60,49 @@ pub mod igzip {
         crate::generic!(py, libcramjam::igzip::decompress[input, output]).map_err(DecompressionError::from_err)
     }
 
+    /// IGZIP Compressor object for streaming compression
+    #[pyclass(unsendable)] // TODO: make sendable
+    pub struct Compressor {
+        inner: Option<libcramjam::igzip::isal::igzip::write::Encoder<Cursor<Vec<u8>>>>,
+    }
+
+    #[pymethods]
+    impl Compressor {
+        /// Initialize a new `Compressor` instance.
+        #[new]
+        #[pyo3(signature = (level=None))]
+        pub fn __init__(level: Option<u32>) -> PyResult<Self> {
+            let level = level.unwrap_or(DEFAULT_COMPRESSION_LEVEL);
+            let inner = libcramjam::igzip::isal::igzip::write::Encoder::new(
+                Cursor::new(vec![]),
+                libcramjam::igzip::isal::igzip::CompressionLevel::try_from(level as isize)
+                    .map_err(CompressionError::from_err)?,
+                true,
+            );
+            Ok(Self { inner: Some(inner) })
+        }
+
+        /// Compress input into the current compressor's stream.
+        pub fn compress(&mut self, input: &[u8]) -> PyResult<usize> {
+            crate::io::stream_compress(&mut self.inner, input)
+        }
+
+        /// Flush and return current compressed stream
+        pub fn flush(&mut self) -> PyResult<RustyBuffer> {
+            crate::io::stream_flush(&mut self.inner, |e| e.get_ref_mut())
+        }
+
+        /// Consume the current compressor state and return the compressed stream
+        /// **NB** The compressor will not be usable after this method is called.
+        pub fn finish(&mut self) -> PyResult<RustyBuffer> {
+            crate::io::stream_finish(&mut self.inner, |inner| inner.finish().map(|c| c.into_inner()))
+        }
+    }
+
+    mod _decompressor {
+        use super::*;
+        crate::make_decompressor!(gzip);
+    }
+    #[pymodule_export]
+    use _decompressor::Decompressor;
 }
