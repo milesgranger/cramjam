@@ -137,6 +137,7 @@ jobs:
           # Build isal
           if [[ "$TARGET_TRIPLE" == armv7* || "$TARGET_TRIPLE" == i686* ]]; then
             echo "Not building ISA-L on 32 bit target"
+            mkdir -p $ISAL_INSTALL_PREFIX
           else
             cross build --release --target $TARGET_TRIPLE --package isal-sys --target-dir build
             isal_sys_dir=$(ls build/$TARGET_TRIPLE/release/build/ | grep isal-sys)
