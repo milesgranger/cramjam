@@ -37,7 +37,7 @@ we automatically estimate the buffer size and can resize the `bytearray` after.
 
 `make bench-gzip`
 
-Since v2.8.4, cramjam supports isa-l's igzip in `cramjam.experimental.igzip`; the performance appears to be pretty much on par with [`python-isal`](https://github.com/pycompression/python-isal) in performance. 
+Since v2.8.4, cramjam supports isa-l's igzip in `cramjam.experimental.igzip`; the performance appears to be pretty much on par with [`python-isal`](https://github.com/pycompression/python-isal). 
 However, at the time of this writing, `python-isal` is more feature-rich and a larger adoption. I encourage you to give cramjam's implementation a shot and provide feedback, thank you.
 
 _Don't forget cramjam offers the `de/compress_into` functions to re-use buffers as well which will further improve performance!_
