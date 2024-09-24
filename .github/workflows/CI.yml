@@ -135,10 +135,14 @@ jobs:
           tree -L 2 $BLOSC2_INSTALL_PREFIX
 
           # Build isal
-          cross build --release --target $TARGET_TRIPLE --package isal-sys --target-dir build
-          isal_sys_dir=$(ls build/$TARGET_TRIPLE/release/build/ | grep isal-sys)
-          mv $WORKSPACE/build/$TARGET_TRIPLE/release/build/$isal_sys_dir/out $ISAL_INSTALL_PREFIX
-          tree -L 2 $ISAL_INSTALL_PREFIX
+          if [[ "$TARGET_TRIPLE" == armv7* || "$TARGET_TRIPLE" == i686* ]]; then
+            echo "Not building ISA-L on 32 bit target"
+          else
+            cross build --release --target $TARGET_TRIPLE --package isal-sys --target-dir build
+            isal_sys_dir=$(ls build/$TARGET_TRIPLE/release/build/ | grep isal-sys)
+            mv $WORKSPACE/build/$TARGET_TRIPLE/release/build/$isal_sys_dir/out $ISAL_INSTALL_PREFIX
+            tree -L 2 $ISAL_INSTALL_PREFIX
+          fi
 
       - name: Rust Tests
         if: matrix.conf.target == 'x86_64' && !startsWith(matrix.python-version, 'pypy') && matrix.python-version == '3.12'
