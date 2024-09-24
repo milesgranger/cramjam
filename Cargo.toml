@@ -50,9 +50,6 @@ use-system-blosc2-shared = ["libcramjam/use-system-blosc2", "libcramjam/blosc2-s
 
 wasm32-compat            = ["libcramjam/wasm32-compat"]
 
-# isa-l not supported on 32-bit arch
-[target.'cfg(target_pointer_width = "32")'.features]
-default = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "deflate", "blosc2"]
 
 [dependencies]
 pyo3 = { version = "^0.22", default-features = false, features = ["macros"] }
