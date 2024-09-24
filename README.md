@@ -45,7 +45,7 @@ Available algorithms:
 - [X] ZSTD&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.zstd`
 - [X] XZ / LZMA&nbsp;&nbsp;`cramjam.xz`
 - [X] Blosc2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.blosc2`
-- [X] IGzip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.igzip` (only on 64-bit systems)
+- [X] IGzip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.igzip` (only on 64-bit targets)
 
 All available for use as:
 
