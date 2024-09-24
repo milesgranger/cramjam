@@ -53,9 +53,7 @@ wasm32-compat            = ["libcramjam/wasm32-compat"]
 
 [dependencies]
 pyo3 = { version = "^0.22", default-features = false, features = ["macros"] }
-# libcramjam = { version = "0.5.0", default-features = false }
-libcramjam = { git = "https://github.com/cramjam/libcramjam.git", branch = "bump-isal", default-features = false }
-# libcramjam = { path = "../libcramjam", default-features = false }
+libcramjam = { version = "0.5.1", default-features = false }
 
 [build-dependencies]
 pyo3-build-config = "^0.22"
