@@ -28,11 +28,11 @@ xz                       = ["xz-static"]
 xz-static                = ["libcramjam/xz-static"]
 xz-shared                = ["libcramjam/xz-shared"]
 
-igzip                    = ["isal-static"]
-isal-static              = ["libcramjam/isal-static"]
-isal-shared              = ["libcramjam/isal-shared"]
-use-system-isal-static   = ["libcramjam/use-system-isal", "libcramjam/isal-static"]
-use-system-isal-shared   = ["libcramjam/use-system-isal", "libcramjam/isal-shared"]
+igzip                    = ["igzip-static"]
+igzip-static             = ["libcramjam/igzip-static"]
+igzip-shared             = ["libcramjam/igzip-shared"]
+use-system-isal-static   = ["libcramjam/use-system-isal", "libcramjam/igzip-static"]
+use-system-isal-shared   = ["libcramjam/use-system-isal", "libcramjam/igzip-shared"]
 
 gzip                     = ["gzip-static"]
 gzip-static              = ["libcramjam/gzip-static"]
@@ -54,8 +54,8 @@ wasm32-compat            = ["libcramjam/wasm32-compat"]
 [dependencies]
 pyo3 = { version = "^0.22", default-features = false, features = ["macros"] }
 # libcramjam = { version = "0.5.0", default-features = false }
-# libcramjam = { git = "https://github.com/cramjam/libcramjam.git", branch = "bump-isal", default-features = false }
-libcramjam = { path = "../libcramjam", default-features = false }
+libcramjam = { git = "https://github.com/cramjam/libcramjam.git", branch = "bump-isal", default-features = false }
+# libcramjam = { path = "../libcramjam", default-features = false }
 
 [build-dependencies]
 pyo3-build-config = "^0.22"

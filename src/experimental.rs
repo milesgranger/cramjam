@@ -13,7 +13,10 @@ pub mod experimental {
     #[pymodule_export]
     use crate::blosc2::blosc2;
 
-    #[cfg(all(feature = "igzip", target_pointer_width = "64"))]
+    #[cfg(all(
+        any(feature = "igzip", feature = "igzip-static", feature = "igzip-shared"),
+        target_pointer_width = "64"
+    ))]
     #[pymodule_export]
     use crate::igzip::igzip;
 }
