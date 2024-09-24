@@ -1,0 +1,50 @@
+[target.x86_64-unknown-linux-musl]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.x86_64-unknown-linux-gnu]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.s390x-unknown-linux-gnu]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.aarch64-unknown-linux-musl]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.aarch64-unknown-linux-gnu]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.powerpc64le-unknown-linux-gnu]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.armv7-unknown-linux-musleabihf]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.armv7-unknown-linux-gnueabihf]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.i686-unknown-linux-musl]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]
+[target.i686-unknown-linux-gnu]
+pre-build = [
+  "apt update",
+  "apt install -y nasm libtool autotools-dev autoconf"
+]

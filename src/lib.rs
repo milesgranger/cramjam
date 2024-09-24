@@ -65,6 +65,11 @@ pub mod bzip2;
 pub mod deflate;
 #[cfg(any(feature = "gzip", feature = "gzip-static", feature = "gzip-shared"))]
 pub mod gzip;
+#[cfg(all(
+    any(feature = "igzip", feature = "igzip-static", feature = "igzip-shared"),
+    target_pointer_width = "64"
+))]
+pub mod igzip;
 #[cfg(feature = "lz4")]
 pub mod lz4;
 #[cfg(feature = "snappy")]
