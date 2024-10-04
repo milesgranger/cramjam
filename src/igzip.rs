@@ -63,7 +63,7 @@ pub mod igzip {
     /// IGZIP Compressor object for streaming compression
     #[pyclass(unsendable)] // TODO: make sendable
     pub struct Compressor {
-        inner: Option<libcramjam::igzip::isal::igzip::write::Encoder<Cursor<Vec<u8>>>>,
+        inner: Option<libcramjam::igzip::isal::write::GzipEncoder<Cursor<Vec<u8>>>>,
     }
 
     #[pymethods]
@@ -73,11 +73,10 @@ pub mod igzip {
         #[pyo3(signature = (level=None))]
         pub fn __init__(level: Option<u32>) -> PyResult<Self> {
             let level = level.unwrap_or(DEFAULT_COMPRESSION_LEVEL);
-            let inner = libcramjam::igzip::isal::igzip::write::Encoder::new(
+            let inner = libcramjam::igzip::isal::write::GzipEncoder::new(
                 Cursor::new(vec![]),
-                libcramjam::igzip::isal::igzip::CompressionLevel::try_from(level as isize)
+                libcramjam::igzip::isal::CompressionLevel::try_from(level as isize)
                     .map_err(CompressionError::from_err)?,
-                true,
             );
             Ok(Self { inner: Some(inner) })
         }
