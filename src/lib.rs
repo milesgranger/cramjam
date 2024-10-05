@@ -66,16 +66,28 @@ pub mod deflate;
 #[cfg(any(feature = "gzip", feature = "gzip-static", feature = "gzip-shared"))]
 pub mod gzip;
 #[cfg(all(
+    any(feature = "ideflate", feature = "ideflate-static", feature = "ideflate-shared"),
+    target_pointer_width = "64"
+))]
+pub mod ideflate;
+#[cfg(all(
     any(feature = "igzip", feature = "igzip-static", feature = "igzip-shared"),
     target_pointer_width = "64"
 ))]
 pub mod igzip;
+#[cfg(all(
+    any(feature = "izlib", feature = "izlib-static", feature = "izlib-shared"),
+    target_pointer_width = "64"
+))]
+pub mod izlib;
 #[cfg(feature = "lz4")]
 pub mod lz4;
 #[cfg(feature = "snappy")]
 pub mod snappy;
 #[cfg(any(feature = "xz", feature = "xz-static", feature = "xz-shared"))]
 pub mod xz;
+#[cfg(any(feature = "zlib", feature = "zlib-static", feature = "zlib-shared"))]
+pub mod zlib;
 #[cfg(feature = "zstd")]
 pub mod zstd;
 
@@ -416,10 +428,6 @@ mod cramjam {
     #[pymodule_export]
     use crate::brotli::brotli;
 
-    #[cfg(any(feature = "deflate", feature = "deflate-static", feature = "deflate-shared"))]
-    #[pymodule_export]
-    use crate::deflate::deflate;
-
     #[cfg(any(feature = "xz", feature = "xz-static", feature = "xz-shared"))]
     #[pymodule_export]
     use crate::xz::xz;
@@ -431,6 +439,14 @@ mod cramjam {
     #[cfg(any(feature = "gzip", feature = "gzip-static", feature = "gzip-shared"))]
     #[pymodule_export]
     use crate::gzip::gzip;
+
+    #[cfg(any(feature = "zlib", feature = "zlib-static", feature = "zlib-shared"))]
+    #[pymodule_export]
+    use crate::zlib::zlib;
+
+    #[cfg(any(feature = "deflate", feature = "deflate-static", feature = "deflate-shared"))]
+    #[pymodule_export]
+    use crate::deflate::deflate;
 
     #[pymodule_export]
     use crate::experimental::experimental;

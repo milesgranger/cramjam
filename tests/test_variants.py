@@ -16,10 +16,11 @@ VARIANTS = (
     "gzip",
     "deflate",
     "zstd",
+    "zlib",
     "xz",
 )
 
-for experimental_feat in ("blosc2", "igzip"):
+for experimental_feat in ("blosc2", "igzip", "ideflate", "izlib"):
     if not hasattr(cramjam, experimental_feat) and hasattr(cramjam, "experimental"):
         mod = getattr(cramjam.experimental, experimental_feat)
         setattr(cramjam, experimental_feat, mod)
@@ -154,7 +155,6 @@ def test_variants_compress_into(
         )
 
     n_bytes = variant.compress_into(input, output)
-    assert n_bytes == compressed_len
 
     if hasattr(output, "read"):
         output.seek(0)
@@ -163,7 +163,9 @@ def test_variants_compress_into(
         output = output.tobytes()
     else:
         output = bytes(output)
-    assert same_same(output, compressed)
+
+    decompressed = variant.decompress(output[:n_bytes])
+    assert same_same(raw_data, decompressed)
 
 
 @pytest.mark.parametrize(

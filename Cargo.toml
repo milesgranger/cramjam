@@ -1,6 +1,6 @@
 [package]
 name = "cramjam-python"
-version = "2.8.5-rc1"
+version = "2.9.0-rc1"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -14,7 +14,7 @@ name = "cramjam"
 crate-type = ["cdylib"]
 
 [features]
-default                  = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "deflate", "blosc2", "igzip"]
+default                  = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "zlib", "deflate", "blosc2", "igzip", "ideflate", "izlib"]
 extension-module         = ["pyo3/extension-module"]
 generate-import-lib      = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
 
@@ -28,15 +28,26 @@ xz                       = ["xz-static"]
 xz-static                = ["libcramjam/xz-static"]
 xz-shared                = ["libcramjam/xz-shared"]
 
+# ISA-L stuff
 igzip                    = ["igzip-static"]
 igzip-static             = ["libcramjam/igzip-static"]
 igzip-shared             = ["libcramjam/igzip-shared"]
+ideflate                 = ["ideflate-static"]
+ideflate-static          = ["libcramjam/ideflate-static"]
+ideflate-shared          = ["libcramjam/ideflate-shared"]
+izlib                    = ["izlib-static"]
+izlib-static             = ["libcramjam/izlib-static"]
+izlib-shared             = ["libcramjam/izlib-shared"]
 use-system-isal-static   = ["libcramjam/use-system-isal", "libcramjam/igzip-static"]
 use-system-isal-shared   = ["libcramjam/use-system-isal", "libcramjam/igzip-shared"]
 
 gzip                     = ["gzip-static"]
 gzip-static              = ["libcramjam/gzip-static"]
 gzip-shared              = ["libcramjam/gzip-shared"]
+
+zlib                     = ["zlib-static"]
+zlib-static              = ["libcramjam/zlib-static"]
+zlib-shared              = ["libcramjam/zlib-shared"]
 
 deflate                  = ["deflate-static"]
 deflate-static           = ["libcramjam/deflate-static"]
@@ -53,7 +64,7 @@ wasm32-compat            = ["libcramjam/wasm32-compat"]
 
 [dependencies]
 pyo3 = { version = "^0.22", default-features = false, features = ["macros"] }
-libcramjam = { version = "^0.5", default-features = false }
+libcramjam = { version = "^0.6", default-features = false }
 
 [build-dependencies]
 pyo3-build-config = "^0.22"
