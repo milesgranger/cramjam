@@ -14,9 +14,23 @@ pub mod experimental {
     use crate::blosc2::blosc2;
 
     #[cfg(all(
+        any(feature = "ideflate", feature = "ideflate-static", feature = "ideflate-shared"),
+        target_pointer_width = "64"
+    ))]
+    #[pymodule_export]
+    use crate::ideflate::ideflate;
+
+    #[cfg(all(
         any(feature = "igzip", feature = "igzip-static", feature = "igzip-shared"),
         target_pointer_width = "64"
     ))]
     #[pymodule_export]
     use crate::igzip::igzip;
+
+    #[cfg(all(
+        any(feature = "izlib", feature = "izlib-static", feature = "izlib-shared"),
+        target_pointer_width = "64"
+    ))]
+    #[pymodule_export]
+    use crate::izlib::izlib;
 }
