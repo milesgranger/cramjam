@@ -22,11 +22,10 @@ VARIANTS = (
 
 for experimental_feat in ("blosc2", "igzip", "ideflate", "izlib"):
     if not hasattr(cramjam, experimental_feat) and hasattr(cramjam, "experimental"):
-        mod = getattr(cramjam.experimental, experimental_feat)
-        setattr(cramjam, experimental_feat, mod)
-
-    if hasattr(cramjam, experimental_feat):
-        VARIANTS = (*VARIANTS, experimental_feat)
+        mod = getattr(cramjam.experimental, experimental_feat, None)
+        if mod:
+            setattr(cramjam, experimental_feat, mod)
+            VARIANTS = (*VARIANTS, experimental_feat)
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile("local", deadline=None, max_examples=20)
