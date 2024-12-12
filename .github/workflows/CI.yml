@@ -104,8 +104,7 @@ jobs:
 
       - name: Setup (Windows)
         if: runner.os == 'Windows'
-        run: |
-          choco install ninja cmake
+        uses: lukka/get-cmake@latest
 
       - name: Setup (Linux)
         if: runner.os == 'Linux'
