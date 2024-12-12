@@ -211,10 +211,10 @@ jobs:
               -c "pip install cramjam --no-index --find-links /wheels && python -c 'import cramjam'"
 
       - name: Install built wheel and Test (Cross)
-        continue-on-error: true
         if: |
           !startsWith(matrix.conf.manylinux, 'musl') && 
           runner.os == 'Linux' &&
+          contains(fromJson('["3.9", "3.11", "3.13"]'), matrix.python-version ) &&
           !startsWith(matrix.python-version, 'pypy')  &&
           contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.conf.target) 
         uses: uraimo/run-on-arch-action@v2
