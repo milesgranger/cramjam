@@ -178,7 +178,7 @@ def test_variants_compress_into(
 def test_variants_decompress_into(
     variant_str, input_type, output_type, tmp_path_factory, raw_data, is_pypy
 ):
-    if variant_str == "izlib" && output_type == "memoryview":
+    if variant_str == "izlib" and output_type == "memoryview":
         pytest.skip("See issue https://github.com/milesgranger/cramjam/issues/193")
 
     variant = getattr(cramjam, variant_str)
