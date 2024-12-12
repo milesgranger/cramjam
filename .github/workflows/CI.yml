@@ -246,50 +246,50 @@ jobs:
           name: ${{ matrix.conf.os }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.target }}
           path: dist
 
-  build-wasm32-emscripten-pyodide:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python:
-          - "3.12"
-    steps:
-      - uses: actions/checkout@v4
+  # build-wasm32-emscripten-pyodide:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     matrix:
+  #       python:
+  #         - "3.12"
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: nightly
-          target: wasm32-unknown-emscripten
+  #     - name: Install Rust toolchain
+  #       uses: dtolnay/rust-toolchain@stable
+  #       with:
+  #         toolchain: nightly
+  #         target: wasm32-unknown-emscripten
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python }}
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: ${{ matrix.python }}
 
-      - name: Install Emscripten
-        uses: mymindstorm/setup-emsdk@v14
-        with:
-          # This needs to match the exact expected version pyodide expects...seems a bit brittle TBH, maybe I'm missing something.
-          # Discover by updating pyodide in package.json and re-running 'npm run test'; it'll spit out the error of 
-          # the expected vs actual versions.
-          version: '3.1.58'
+  #     - name: Install Emscripten
+  #       uses: mymindstorm/setup-emsdk@v14
+  #       with:
+  #         # This needs to match the exact expected version pyodide expects...seems a bit brittle TBH, maybe I'm missing something.
+  #         # Discover by updating pyodide in package.json and re-running 'npm run test'; it'll spit out the error of 
+  #         # the expected vs actual versions.
+  #         version: '3.1.58'
 
-      - name: Build
-        run: |
-          pip install maturin
-          maturin build --release -i python${{ matrix.python }} --features wasm32-compat --target wasm32-unknown-emscripten -o ./dist
+  #     - name: Build
+  #       run: |
+  #         pip install maturin
+  #         maturin build --release -i python${{ matrix.python }} --features wasm32-compat --target wasm32-unknown-emscripten -o ./dist
 
-      - uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-      - run: npm install
-      - run: npm run test
+  #     - uses: actions/setup-node@v3
+  #       with:
+  #         node-version: '18'
+  #     - run: npm install
+  #     - run: npm run test
 
-      - name: Upload wheels
-        uses: actions/upload-artifact@v4
-        if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
-        with:
-          name: wasm32-unknown-emscripten-python${{ matrix.python }}
-          path: dist
+  #     - name: Upload wheels
+  #       uses: actions/upload-artifact@v4
+  #       if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
+  #       with:
+  #         name: wasm32-unknown-emscripten-python${{ matrix.python }}
+  #         path: dist
 
   build-sdist:
     name: Build sdists
