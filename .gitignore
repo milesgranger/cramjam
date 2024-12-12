@@ -13,9 +13,6 @@ __pycache__/
 benchenv/
 cramjam-python/_build
 
-Cargo.lock
-
-
 # Distribution / packaging
 .Python
 build/
