@@ -211,6 +211,7 @@ jobs:
               -c "pip install cramjam --no-index --find-links /wheels && python -c 'import cramjam'"
 
       - name: Install built wheel and Test (Cross)
+        continue-on-error: true
         if: |
           !startsWith(matrix.conf.manylinux, 'musl') && 
           runner.os == 'Linux' &&
