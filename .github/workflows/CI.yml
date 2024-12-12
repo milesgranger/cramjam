@@ -328,7 +328,7 @@ jobs:
     - name: List artifacts
       run: ls -lhs
     - name: Remove wasm32 wheels  # TODO: https://discuss.python.org/t/support-wasm-wheels-on-pypi/21924
-      run: rm ./*wasm32.whl
+      run: rm -f ./*wasm32.whl
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
