@@ -22,11 +22,10 @@ VARIANTS = (
 
 for experimental_feat in ("blosc2", "igzip", "ideflate", "izlib"):
     if not hasattr(cramjam, experimental_feat) and hasattr(cramjam, "experimental"):
-        mod = getattr(cramjam.experimental, experimental_feat)
-        setattr(cramjam, experimental_feat, mod)
-
-    if hasattr(cramjam, experimental_feat):
-        VARIANTS = (*VARIANTS, experimental_feat)
+        mod = getattr(cramjam.experimental, experimental_feat, None)
+        if mod:
+            setattr(cramjam, experimental_feat, mod)
+            VARIANTS = (*VARIANTS, experimental_feat)
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile("local", deadline=None, max_examples=20)
@@ -179,6 +178,9 @@ def test_variants_compress_into(
 def test_variants_decompress_into(
     variant_str, input_type, output_type, tmp_path_factory, raw_data, is_pypy
 ):
+    if variant_str == "izlib" and output_type == "memoryview":
+        pytest.skip("See issue https://github.com/milesgranger/cramjam/issues/193")
+
     variant = getattr(cramjam, variant_str)
 
     compressed = variant.compress(raw_data)
