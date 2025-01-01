@@ -10,7 +10,8 @@ try:
 except ImportError:
     pytest.skip("experimental module not built", allow_module_level=True)
 else:
-    blosc2 = experimental.blosc2
+    if hasattr(experimental, "blosc2"):
+        blosc2 = experimental.blosc2
 
 
 settings.register_profile("local", max_examples=10)
@@ -25,7 +26,7 @@ else:
 def variants(e):
     for attr in dir(e):
         # TODO: LastCodec, LastFilter, LastRegisteredCodec/Filter not supported
-        if not attr.startswith('_') and not attr.lower().startswith('last'):
+        if not attr.startswith("_") and not attr.lower().startswith("last"):
             yield getattr(e, attr)
 
 
@@ -47,7 +48,9 @@ def test_roundtrip_chunk_into(data, codec, filter, clevel):
     kwargs = dict(clevel=clevel, filter=filter, codec=codec)
     nbytes_compressed = len(blosc2.compress_chunk(data, **kwargs))
 
-    compressed = np.empty(blosc2.max_compressed_len(len(data.tobytes())), dtype=np.uint8)
+    compressed = np.empty(
+        blosc2.max_compressed_len(len(data.tobytes())), dtype=np.uint8
+    )
     nbytes = blosc2.compress_chunk_into(data, compressed, **kwargs)
 
     decompressed = np.empty(len(data.tobytes()) * 2, dtype=np.uint8)
