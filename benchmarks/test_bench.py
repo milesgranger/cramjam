@@ -6,7 +6,8 @@ import numpy as np
 
 
 if hasattr(cramjam, "experimental") and not hasattr(cramjam, "blosc2"):
-    cramjam.blosc2 = cramjam.experimental.blosc2
+    if hasattr(cramjam.experimental, "blosc2"):
+        cramjam.blosc2 = cramjam.experimental.blosc2
 
 
 class Bzip2CompressedFile:
@@ -72,6 +73,9 @@ def test_blosc2(benchmark, file, use_cramjam: bool):
     Uses snappy compression raw
     """
     import blosc2
+
+    if not hasattr(cramjam, "blosc2"):
+        pytest.skip("blosc2 not built")
 
     data = file.read_bytes()
     if use_cramjam:
