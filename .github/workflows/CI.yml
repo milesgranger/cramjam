@@ -88,6 +88,10 @@ jobs:
         with:
           target: ${{ matrix.conf.target-triple }}
 
+      - name: Set MSVC developer prompt
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v
+
       - name: Rust Tests
         if: matrix.conf.target == 'x86_64' && !startsWith(matrix.python-version, 'pypy') && matrix.python-version == '3.12'
         run: cargo test
