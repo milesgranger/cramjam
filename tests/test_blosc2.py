@@ -12,6 +12,10 @@ except ImportError:
 else:
     if hasattr(experimental, "blosc2"):
         blosc2 = experimental.blosc2
+    else:
+        pytest.skip(
+            "experimental module doesn't contain blosc2", allow_module_level=True
+        )
 
 
 settings.register_profile("local", max_examples=10)
