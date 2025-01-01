@@ -88,102 +88,16 @@ jobs:
         with:
           target: ${{ matrix.conf.target-triple }}
 
-      - name: Install nasm (Windows / Linux)
-        if: runner.os != 'macOS'
-        uses: ilammy/setup-nasm@v1
-
-      - name: Set MSVC developer prompt
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Setup (Mac)
-        if: runner.os == 'macOS'
-        run: |
-          brew install ninja automake autoconf coreutils libtool nasm
-          echo "MACOSX_DEPLOYMENT_TARGET=10.12" >> $GITHUB_ENV
-
-      - name: Setup (Windows)
-        if: runner.os == 'Windows'
-        uses: lukka/get-cmake@latest
-
-      - name: Setup (Linux)
-        if: runner.os == 'Linux'
-        env: 
-          TARGET_TRIPLE: ${{ matrix.conf.target-triple }}
-          WORKSPACE: ${{ github.workspace }}
-          BLOSC2_INSTALL_PREFIX: ${{ github.workspace }}/blosc2
-          ISAL_INSTALL_PREFIX: ${{ github.workspace }}/isal
-        run: |
-          sudo apt update
-          sudo apt install ninja-build -y
-
-          echo "BLOSC2_INSTALL_PREFIX=$BLOSC2_INSTALL_PREFIX" >> $GITHUB_ENV
-          echo "ISAL_INSTALL_PREFIX=$ISAL_INSTALL_PREFIX" >> $GITHUB_ENV
-
-          echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$BLOSC2_INSTALL_PREFIX/lib:$BLOSC2_INSTALL_PREFIX/lib64:$ISAL_INSTALL_PREFIX/lib:$ISAL_INSTALL_PREFIX/lib64" >> $GITHUB_ENV
-
-          # so we'll just use 'cross' to build and pass it in for the action for all archs
-          # nothing special for the revision pin, just deterministic install
-          cargo install cross --git https://github.com/cross-rs/cross --rev 6d097fb
-
-          # Build blosc2
-          cross build --release --target $TARGET_TRIPLE --package blosc2-sys --target-dir build
-          blosc2_sys_dir=$(ls build/$TARGET_TRIPLE/release/build/ | grep blosc2-sys)
-          mv $WORKSPACE/build/$TARGET_TRIPLE/release/build/$blosc2_sys_dir/out $BLOSC2_INSTALL_PREFIX
-          tree -L 2 $BLOSC2_INSTALL_PREFIX
-
-          # Build isal only on 64-bit systems
-          # At the time of this writing, it technically builds for all unix 32-bit systems
-          # but ISA-L has explicitly stated they're dropping support.
-          if [[ "$TARGET_TRIPLE" == armv7* || "$TARGET_TRIPLE" == i686* ]]; then
-            echo "Not building ISA-L on 32 bit target"
-            mkdir -p $ISAL_INSTALL_PREFIX
-          else
-            cross build --release --target $TARGET_TRIPLE --package isal-sys --target-dir build
-            isal_sys_dir=$(ls build/$TARGET_TRIPLE/release/build/ | grep isal-sys)
-            mv $WORKSPACE/build/$TARGET_TRIPLE/release/build/$isal_sys_dir/out $ISAL_INSTALL_PREFIX
-            tree -L 2 $ISAL_INSTALL_PREFIX
-          fi
-
       - name: Rust Tests
         if: matrix.conf.target == 'x86_64' && !startsWith(matrix.python-version, 'pypy') && matrix.python-version == '3.12'
         run: cargo test
 
-      - name: Build wheel (Linux)
-        if: runner.os == 'Linux'
+      - name: Build wheel
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.conf.target }}
           manylinux: ${{ matrix.conf.manylinux }}
-          docker-options: |
-            -e BLOSC2_INSTALL_PREFIX=${{ github.workspace }}/blosc2
-            -e ISAL_INSTALL_PREFIX=${{ github.workspace }}/isal
-            -e LD_LIBRARY_PATH=${{ github.workspace }}/blosc2/lib:${{ github.workspace }}/blosc2/lib64:${{ github.workspace }}/isal/lib:${{ github.workspace }}/isal/lib64
-          args: -i ${{ matrix.python-version }} --release --out dist --features use-system-blosc2-static --features use-system-isal-static
-          before-script-linux: |
-            ls -l $BLOSC2_INSTALL_PREFIX
-            ls -l $ISAL_INSTALL_PREFIX
-
-      - name: Build wheel (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          python -m pip install maturin delvewheel
-          maturin build -i python --release --out wheels --target ${{ matrix.conf.target-triple }}
-          $file = Get-ChildItem -Path "wheels" | Select-Object -First 1
-          delvewheel repair -v "wheels\$($file.Name)" -w "dist"
-
-      - name: Build wheel (MacOS)
-        if: runner.os == 'macOS'
-        uses: PyO3/maturin-action@v1
-        with:
-          target: ${{ matrix.conf.target-triple }}
-          args: -i python --release --out dist
-
-      - name: Fix wheel (MacOS)
-        if: runner.os == 'macOS'
-        run: |
-          python -m pip install delocate
-          delocate-wheel -v dist/*.whl
+          args: -i ${{ matrix.python-version }} --release --out dist
     
       - name: Install built wheel and Test (Native)
         # TODO: I'm not sure but the actual collection of tests on windows using pypy3.10 takes forever and/or fails
