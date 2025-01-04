@@ -1,6 +1,6 @@
 [package]
 name = "cramjam-python"
-version = "2.9.1"
+version = "2.10.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
 license = "MIT"
