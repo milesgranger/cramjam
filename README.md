@@ -45,6 +45,10 @@ Available algorithms:
 - [X] Deflate&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.deflate`
 - [X] ZSTD&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.zstd`
 - [X] XZ / LZMA&nbsp;&nbsp;`cramjam.xz`
+
+
+Experimental (Requires build from source enabling each feature):
+
 - [X] Blosc2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.blosc2`
 - [X] ISA-L backend  _(only on 64-bit targets)_
   - [X] igzip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.igzip`

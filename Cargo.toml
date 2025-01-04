@@ -1,6 +1,6 @@
 [package]
 name = "cramjam-python"
-version = "2.9.1"
+version = "2.10.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -14,7 +14,9 @@ name = "cramjam"
 crate-type = ["cdylib"]
 
 [features]
-default                  = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "zlib", "deflate", "blosc2", "igzip", "ideflate", "izlib"]
+default                  = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "zlib", "deflate"]
+experimental             = ["blosc2", "igzip", "ideflate", "izlib"]
+
 extension-module         = ["pyo3/extension-module"]
 generate-import-lib      = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
 
