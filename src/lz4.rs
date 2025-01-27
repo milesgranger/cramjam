@@ -12,6 +12,7 @@ pub mod lz4 {
     use pyo3::prelude::*;
     use pyo3::PyResult;
     use std::io::Cursor;
+    use std::sync::Mutex;
 
     const DEFAULT_COMPRESSION_LEVEL: u32 = 4;
 
@@ -204,7 +205,7 @@ pub mod lz4 {
     /// lz4 Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Option<libcramjam::lz4::lz4::Encoder<Cursor<Vec<u8>>>>,
+        inner: Mutex<Option<libcramjam::lz4::lz4::Encoder<Cursor<Vec<u8>>>>>,
     }
 
     #[pymethods]
@@ -229,18 +230,20 @@ pub mod lz4 {
                     _ => BlockMode::Linked,
                 })
                 .build(Cursor::new(vec![]))?;
-            Ok(Self { inner: Some(inner) })
+            Ok(Self {
+                inner: Mutex::new(Some(inner)),
+            })
         }
 
         /// Compress input into the current compressor's stream.
         pub fn compress(&mut self, input: &[u8]) -> PyResult<usize> {
-            crate::io::stream_compress(&mut self.inner, input)
+            crate::io::stream_compress(&mut self.inner.lock().unwrap(), input)
         }
 
         /// Flush and return current compressed stream
         #[allow(mutable_transmutes)] // TODO: feature req to lz4 to get mut ref to writer
         pub fn flush(&mut self) -> PyResult<RustyBuffer> {
-            crate::io::stream_flush(&mut self.inner, |e| {
+            crate::io::stream_flush(&mut self.inner.lock().unwrap(), |e| {
                 let writer = e.writer();
                 // no other mutations to buf b/c it'll be truncated and return immediately after this
                 unsafe { std::mem::transmute::<&Cursor<Vec<u8>>, &mut Cursor<Vec<u8>>>(writer) }
@@ -250,7 +253,7 @@ pub mod lz4 {
         /// Consume the current compressor state and return the compressed stream
         /// **NB** The compressor will not be usable after this method is called.
         pub fn finish(&mut self) -> PyResult<RustyBuffer> {
-            crate::io::stream_finish(&mut self.inner, |inner| {
+            crate::io::stream_finish(&mut self.inner.lock().unwrap(), |inner| {
                 let (cursor, result) = inner.finish();
                 result.map(|_| cursor.into_inner())
             })
