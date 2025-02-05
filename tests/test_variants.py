@@ -174,7 +174,7 @@ def test_variants_compress_into(
     "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize("variant_str", VARIANTS)
-@given(raw_data=st.binary(max_size=100_000))
+@given(raw_data=st.binary(max_size=1_000_000))
 def test_variants_decompress_into(
     variant_str, input_type, output_type, tmp_path_factory, raw_data, is_pypy
 ):
