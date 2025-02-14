@@ -514,14 +514,14 @@ fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64
 
 fn read<'a, R: Read>(reader: &mut R, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
     match n_bytes {
-        Some(n) => PyBytes::new_bound_with(py, n, |buf| {
+        Some(n) => PyBytes::new_with(py, n, |buf| {
             reader.read(buf)?;
             Ok(())
         }),
         None => {
             let mut buf = vec![];
             reader.read_to_end(&mut buf)?;
-            Ok(PyBytes::new_bound(py, buf.as_slice()))
+            Ok(PyBytes::new(py, buf.as_slice()))
         }
     }
 }
