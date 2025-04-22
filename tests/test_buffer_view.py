@@ -4,11 +4,9 @@ import pytest
 from cramjam import Buffer
 
 
+@pytest.mark.skip_pypy
 @pytest.mark.parametrize("copy", (None, True, False))
-def test_buffer_view(copy, is_pypy):
-    if is_pypy:
-        pytest.skip("Zero-copy Buffer not supported on PyPy")
-
+def test_buffer_view(copy):
     kwargs = dict()
     if copy is not None:
         kwargs["copy"] = copy
@@ -25,10 +23,8 @@ def test_buffer_view(copy, is_pypy):
         assert data == b"bytes"
 
 
-def test_buffer_view_raises_when_writing_past_data_length_at_once(is_pypy):
-    if is_pypy:
-        pytest.skip("Zero-copy Buffer not supported on PyPy")
-
+@pytest.mark.skip_pypy
+def test_buffer_view_raises_when_writing_past_data_length_at_once():
     data = b"bytes"
     buf = Buffer(data, copy=False)
 
@@ -38,10 +34,8 @@ def test_buffer_view_raises_when_writing_past_data_length_at_once(is_pypy):
     assert data == b"bytes"
 
 
-def test_buffer_view_raises_when_writing_past_data_length_incrementally(is_pypy):
-    if is_pypy:
-        pytest.skip("Zero-copy Buffer not supported on PyPy")
-
+@pytest.mark.skip_pypy
+def test_buffer_view_raises_when_writing_past_data_length_incrementally():
     data = b"bytes"
     buf = Buffer(data, copy=False)
 
@@ -55,11 +49,9 @@ def test_buffer_view_raises_when_writing_past_data_length_incrementally(is_pypy)
     assert data == b"00000"
 
 
+@pytest.mark.skip_pypy
 @pytest.mark.parametrize("len", range(0, 7))
-def test_buffer_view_raises_when_setting_length(len, is_pypy):
-    if is_pypy:
-        pytest.skip("Zero-copy Buffer not supported on PyPy")
-
+def test_buffer_view_raises_when_setting_length(len):
     data = b"bytes"
     buf = Buffer(data, copy=False)
 
@@ -68,10 +60,8 @@ def test_buffer_view_raises_when_setting_length(len, is_pypy):
     assert data == b"bytes"
 
 
-def test_buffer_view_raises_when_truncating(is_pypy):
-    if is_pypy:
-        pytest.skip("Zero-copy Buffer not supported on PyPy")
-
+@pytest.mark.skip_pypy
+def test_buffer_view_raises_when_truncating():
     data = b"bytes"
     buf = Buffer(data, copy=False)
 
@@ -80,11 +70,9 @@ def test_buffer_view_raises_when_truncating(is_pypy):
     assert data == b"bytes"
 
 
+@pytest.mark.skip_pypy
 @pytest.mark.parametrize("whence", (0, 1, 2))
-def test_buffer_view_raises_when_write_after_bad_seek(whence, is_pypy):
-    if is_pypy:
-        pytest.skip("Zero-copy Buffer not supported on PyPy")
-
+def test_buffer_view_raises_when_write_after_bad_seek(whence):
     buf = Buffer(b"bytes", copy=False)
 
     buf.seek(2, whence=0)  # Seek forward 2 from start, also okay
@@ -105,10 +93,8 @@ def test_buffer_view_not_supported_on_pypy(is_pypy):
             Buffer(b"bytes", copy=False)
 
 
-def test_buffer_view_cleanup(is_pypy):
-    if is_pypy:
-        pytest.skip("Zero-copy Buffer not supported on PyPy")
-
+@pytest.mark.skip_pypy
+def test_buffer_view_cleanup():
     def get_buffer():
         data = b"bytes"
         return Buffer(data, copy=False)
