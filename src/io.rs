@@ -324,6 +324,17 @@ impl Write for PythonBuffer {
     }
 }
 
+pub(crate) enum BufferInner {
+    Owned,
+    View(Py<PyAny>),
+}
+
+impl Default for BufferInner {
+    fn default() -> Self {
+        BufferInner::Owned
+    }
+}
+
 /// A native Rust file-like object. Reading and writing takes place
 /// through the Rust implementation, allowing access to the underlying
 /// bytes in Python.
@@ -340,6 +351,19 @@ impl Write for PythonBuffer {
 #[derive(Default)]
 pub struct RustyBuffer {
     pub(crate) inner: Cursor<Vec<u8>>,
+    pub(crate) ownership: BufferInner,
+}
+
+impl Drop for RustyBuffer {
+    fn drop(&mut self) {
+        if let BufferInner::View(_) = &mut self.ownership {
+            let mut cursor = Cursor::new(vec![]);
+            mem::swap(&mut self.inner, &mut cursor);
+
+            let buf = cursor.into_inner();
+            mem::forget(buf);
+        }
+    }
 }
 
 impl AsBytes for RustyBuffer {
@@ -354,7 +378,10 @@ impl AsBytes for RustyBuffer {
 
 impl From<Vec<u8>> for RustyBuffer {
     fn from(v: Vec<u8>) -> Self {
-        Self { inner: Cursor::new(v) }
+        Self {
+            inner: Cursor::new(v),
+            ownership: BufferInner::Owned,
+        }
     }
 }
 
@@ -371,15 +398,31 @@ impl From<Vec<u8>> for RustyBuffer {
 impl RustyBuffer {
     /// Instantiate the object, optionally with any supported bytes-like object in [BytesType](../enum.BytesType.html)
     #[new]
-    #[pyo3(signature = (data=None))]
-    pub fn __init__(mut data: Option<BytesType<'_>>) -> PyResult<Self> {
-        let mut buf = vec![];
-        if let Some(bytes) = data.as_mut() {
-            bytes.read_to_end(&mut buf)?;
+    #[pyo3(signature = (data=None, copy=None))]
+    pub fn __init__(py: Python, mut data: Option<Py<PyAny>>, copy: Option<bool>) -> PyResult<Self> {
+        if let Some(Ok(ref mut bytestype)) = data.as_mut().map(|obj| obj.extract::<BytesType<'_>>(py)) {
+            if copy.unwrap_or(true) {
+                let mut buf = vec![];
+                bytestype.read_to_end(&mut buf)?;
+                Ok(Self {
+                    inner: Cursor::new(buf),
+                    ownership: BufferInner::Owned,
+                })
+            } else {
+                let reference = data.as_ref().unwrap().clone_ref(py);
+                let bytes = bytestype.as_bytes();
+                let buf = unsafe { Vec::from_raw_parts(bytes.as_ptr() as *mut _, bytes.len(), bytes.len()) };
+                Ok(Self {
+                    inner: Cursor::new(buf),
+                    ownership: BufferInner::View(reference),
+                })
+            }
+        } else {
+            Ok(Self {
+                inner: Cursor::new(vec![]),
+                ownership: BufferInner::Owned,
+            })
         }
-        Ok(Self {
-            inner: Cursor::new(buf),
-        })
     }
 
     /// Length of the underlying buffer
@@ -389,6 +432,12 @@ impl RustyBuffer {
 
     /// Write some bytes to the buffer, where input data can be anything in [BytesType](../enum.BytesType.html)
     pub fn write(&mut self, mut input: BytesType) -> PyResult<usize> {
+        // TODO: combining conditions is unstable with if let
+        if let BufferInner::View(_) = self.ownership {
+            if input.len() > self.inner.get_ref().len() - self.inner.position() as usize {
+                return Err(exceptions::PyIOError::new_err("Too much to write on view"));
+            }
+        }
         let r = write(&mut input, self)?;
         Ok(r as usize)
     }
@@ -411,9 +460,44 @@ impl RustyBuffer {
     #[pyo3(signature = (position, whence=None))]
     pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
         let pos = match whence.unwrap_or_else(|| 0) {
-            0 => SeekFrom::Start(position as u64),
-            1 => SeekFrom::Current(position as i64),
-            2 => SeekFrom::End(position as i64),
+            0 => {
+                if let BufferInner::View(_) = self.ownership {
+                    let buf_len = self.inner.get_ref().len() as isize;
+                    let desired_idx = position;
+                    if desired_idx > buf_len || desired_idx < 0 {
+                        return Err(exceptions::PyIOError::new_err(
+                            "Bad seek: cannot seek outside bounds of unowned buffer",
+                        ));
+                    }
+                }
+                SeekFrom::Start(position as u64)
+            }
+            1 => {
+                if let BufferInner::View(_) = self.ownership {
+                    let buf_len = self.inner.get_ref().len() as isize;
+                    let current_position = self.inner.position() as isize;
+                    let desired_idx = current_position + position;
+                    if desired_idx > buf_len || desired_idx < 0 {
+                        return Err(exceptions::PyIOError::new_err(
+                            "Bad seek: cannot seek outside bounds of unowned buffer",
+                        ));
+                    }
+                }
+                SeekFrom::Current(position as i64)
+            }
+            2 => {
+                if let BufferInner::View(_) = self.ownership {
+                    let buf_len = self.inner.get_ref().len() as isize;
+                    let desired_idx = buf_len + position;
+                    if desired_idx > buf_len || desired_idx < 0 {
+                        return Err(exceptions::PyIOError::new_err(
+                            "Bad seek: cannot seek outside bounds of unowned buffer",
+                        ));
+                    }
+                }
+
+                SeekFrom::End(position as i64)
+            }
             _ => {
                 return Err(pyo3::exceptions::PyValueError::new_err(
                     "whence should be one of 0: seek from start, 1: seek from current, or 2: seek from end",
@@ -434,11 +518,17 @@ impl RustyBuffer {
     /// Set the length of the buffer. If less than current length, it will truncate to the size given;
     /// otherwise will be null byte filled to the size.
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
+        if let BufferInner::View(_) = self.ownership {
+            return Err(exceptions::PyIOError::new_err("Cannot set length on unowned buffer"));
+        }
         self.inner.get_mut().resize(size, 0);
         Ok(())
     }
     /// Truncate the buffer
     pub fn truncate(&mut self) -> PyResult<()> {
+        if let BufferInner::View(_) = self.ownership {
+            return Err(exceptions::PyIOError::new_err("Cannot truncate unowned buffer"));
+        }
         self.inner.get_mut().truncate(0);
         self.inner.set_position(0);
         Ok(())
