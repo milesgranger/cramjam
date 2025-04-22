@@ -1,3 +1,5 @@
+import gc
+
 import pytest
 from cramjam import Buffer
 
@@ -101,3 +103,18 @@ def test_buffer_view_not_supported_on_pypy(is_pypy):
     if is_pypy:
         with pytest.raises(RuntimeError, match="copy=False not supported on PyPy"):
             Buffer(b"bytes", copy=False)
+
+
+def test_buffer_view_cleanup(is_pypy):
+    if is_pypy:
+        pytest.skip("Zero-copy Buffer not supported on PyPy")
+
+    def get_buffer():
+        data = b"bytes"
+        return Buffer(data, copy=False)
+
+    buf = get_buffer()
+    gc.collect()
+
+    # Data kept alive due to internal reference
+    assert buf.read() == b"bytes"
