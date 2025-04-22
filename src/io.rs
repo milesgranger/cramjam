@@ -352,6 +352,8 @@ impl Default for BufferInner {
 /// and will read/write without any locks during the Buffer's lifetime,
 /// therefore the underlying buffer should outlive this Buffer and one should
 /// also consider using locks if neccessary.
+///
+/// `copy=False` is not supported on PyPy distributions
 #[pyclass(subclass, name = "Buffer")]
 #[derive(Default)]
 pub struct RustyBuffer {
@@ -414,6 +416,9 @@ impl RustyBuffer {
                     ownership: BufferInner::Owned,
                 })
             } else {
+                if cfg!(PyPy) {
+                    return Err(exceptions::PyRuntimeError::new_err("copy=False not supported on PyPy"));
+                }
                 let reference = data.as_ref().unwrap().clone_ref(py);
                 let bytes = bytestype.as_bytes();
                 let buf = unsafe { Vec::from_raw_parts(bytes.as_ptr() as *mut _, bytes.len(), bytes.len()) };
