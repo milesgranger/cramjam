@@ -476,9 +476,8 @@ impl RustyBuffer {
                     let buf_len = self.inner.get_ref().len() as isize;
                     let desired_idx = position;
                     if desired_idx > buf_len || desired_idx < 0 {
-                        return Err(exceptions::PyIOError::new_err(
-                            "Bad seek: cannot seek outside bounds of unowned buffer",
-                        ));
+                        let msg = format!("Bad seek: cannot seek outside bounds of unowned buffer, tried to seek from start by {} which would place it outside of the buffer which has length of {}.", desired_idx, buf_len);
+                        return Err(exceptions::PyIOError::new_err(msg));
                     }
                 }
                 SeekFrom::Start(position as u64)
@@ -489,9 +488,8 @@ impl RustyBuffer {
                     let current_position = self.inner.position() as isize;
                     let desired_idx = current_position + position;
                     if desired_idx > buf_len || desired_idx < 0 {
-                        return Err(exceptions::PyIOError::new_err(
-                            "Bad seek: cannot seek outside bounds of unowned buffer",
-                        ));
+                        let msg = format!("Bad seek: cannot seek outside bounds of unowned buffer, tried to seek from current position {} by {} which would place it outside of the buffer which has length of {}.", current_position, desired_idx, buf_len);
+                        return Err(exceptions::PyIOError::new_err(msg));
                     }
                 }
                 SeekFrom::Current(position as i64)
@@ -501,9 +499,8 @@ impl RustyBuffer {
                     let buf_len = self.inner.get_ref().len() as isize;
                     let desired_idx = buf_len + position;
                     if desired_idx > buf_len || desired_idx < 0 {
-                        return Err(exceptions::PyIOError::new_err(
-                            "Bad seek: cannot seek outside bounds of unowned buffer",
-                        ));
+                        let msg = format!("Bad seek: cannot seek outside bounds of unowned buffer, tried to seek from end position by {} which would place it outside of the buffer which has length of {}.", position, buf_len);
+                        return Err(exceptions::PyIOError::new_err(msg));
                     }
                 }
 
