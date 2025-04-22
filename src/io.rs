@@ -347,6 +347,11 @@ impl Default for BufferInner {
 /// b'bytes'
 /// ```
 ///
+/// NOTE: Use `copy=False` responsibly! That is to say, it will not
+/// copy the data, and will only check the buffer length on initialization
+/// and will read/write without any locks during the Buffer's lifetime,
+/// therefore the underlying buffer should outlive this Buffer and one should
+/// also consider using locks if neccessary.
 #[pyclass(subclass, name = "Buffer")]
 #[derive(Default)]
 pub struct RustyBuffer {
