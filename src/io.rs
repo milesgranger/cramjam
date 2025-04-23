@@ -424,7 +424,7 @@ impl RustyBuffer {
                 if cfg!(PyPy) {
                     return Err(exceptions::PyRuntimeError::new_err("copy=False not supported on PyPy"));
                 }
-                let reference = data.as_ref().unwrap().clone_ref(py);
+                let reference = maybe_bytestype.clone_ref(py);
                 let bytes = bytestype.as_bytes();
                 let buf = unsafe { Vec::from_raw_parts(bytes.as_ptr() as *mut _, bytes.len(), bytes.len()) };
                 Ok(Self {
