@@ -436,13 +436,42 @@ impl RustyBuffer {
         }
     }
 
+    #[inline(always)]
+    pub(crate) fn ensure_aligned_view(&mut self, py: Python) -> PyResult<()> {
+        match &mut self.ownership {
+            BufferOwnership::Owned => Ok(()),
+            BufferOwnership::View(obj) => {
+                let bytestype = obj.extract::<BytesType<'_>>(py)?;
+                let bytes = bytestype.as_bytes();
+
+                // if the pointer has changed or the length, we need to realign our buffer view
+                if bytes.as_ptr() != self.inner.get_ref().as_ptr() || bytes.len() != self.inner.get_ref().len() {
+                    // updated view of buffer
+                    let buf = unsafe { Vec::from_raw_parts(bytes.as_ptr() as *mut _, bytes.len(), bytes.len()) };
+
+                    // swap out inner cursor
+                    let mut cursor = Cursor::new(buf);
+                    cursor.set_position(self.inner.position());
+                    mem::swap(&mut cursor, &mut self.inner);
+
+                    // forget the inner buffer, it was not managed by us.
+                    let old_inner_buf = cursor.into_inner();
+                    mem::forget(old_inner_buf);
+                }
+                Ok(())
+            }
+        }
+    }
+
     /// Length of the underlying buffer
     pub fn len(&self) -> usize {
         self.inner.get_ref().len()
     }
 
     /// Write some bytes to the buffer, where input data can be anything in [BytesType](../enum.BytesType.html)
-    pub fn write(&mut self, mut input: BytesType) -> PyResult<usize> {
+    pub fn write(&mut self, py: Python, mut input: BytesType) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+
         // TODO: combining conditions is unstable with if let
         if let BufferOwnership::View(_) = self.ownership {
             if input.len() > self.inner.get_ref().len() - self.inner.position() as usize {
@@ -455,10 +484,14 @@ impl RustyBuffer {
     /// Read from the buffer in its current position, returns bytes; optionally specify number of bytes to read.
     #[pyo3(signature = (n_bytes=None))]
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
+        self.ensure_aligned_view(py)?;
+
         read(self, py, n_bytes)
     }
     /// Read from the buffer in its current position, into a [BytesType](../enum.BytesType.html) object.
-    pub fn readinto(&mut self, mut output: BytesType) -> PyResult<usize> {
+    pub fn readinto(&mut self, py: Python, mut output: BytesType) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+
         let r = copy(self, &mut output)?;
         Ok(r as usize)
     }
@@ -469,7 +502,9 @@ impl RustyBuffer {
     /// 2: from end of the stream
     /// ```
     #[pyo3(signature = (position, whence=None))]
-    pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
+    pub fn seek(&mut self, py: Python, position: isize, whence: Option<usize>) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+
         let pos = match whence.unwrap_or_else(|| 0) {
             0 => {
                 if let BufferOwnership::View(_) = self.ownership {

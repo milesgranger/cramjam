@@ -104,3 +104,8 @@ def test_buffer_view_cleanup():
 
     # Data kept alive due to internal reference
     assert buf.read() == b"bytes"
+
+
+@pytest.mark.skip_pypy
+def test_buffer_view_underlying_changes():
+    pass
