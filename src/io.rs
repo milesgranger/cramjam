@@ -349,10 +349,12 @@ impl Default for BufferOwnership {
 /// ```
 ///
 /// NOTE: Use `copy=False` responsibly! That is to say, it will not
-/// copy the data, and will only check the buffer length on initialization
-/// and will read/write without any locks during the Buffer's lifetime,
-/// therefore the underlying buffer should outlive this Buffer and one should
-/// also consider using locks if neccessary.
+/// copy the data, and will be referencing the underlying buffer during this
+/// Buffer's lifetime. We make an attempt to realign each time when accessing
+/// the buffer, but one should broadly take care to use locks where neccessary.
+/// Internally we increment the PyObject ref count, so it **should** be free
+/// from said buffer being garbage collected out from under us, but do try to
+/// avoid any funny business. :)
 ///
 /// `copy=False` is not supported on PyPy distributions
 #[pyclass(subclass, name = "Buffer")]
@@ -455,9 +457,11 @@ impl RustyBuffer {
                     // updated view of buffer
                     let buf = unsafe { Vec::from_raw_parts(bytes.as_ptr() as *mut _, bytes.len(), bytes.len()) };
 
-                    // swap out inner cursor
+                    // swap out inner cursor, ensuring position isn't outside bounds of
+                    // a potentially shortened new buffer
                     let mut cursor = Cursor::new(buf);
-                    cursor.set_position(self.inner.position());
+                    let pos = std::cmp::min(bytes.len() as u64, self.inner.position());
+                    cursor.set_position(pos);
                     mem::swap(&mut cursor, &mut self.inner);
 
                     // forget the inner buffer, it was not managed by us.
@@ -485,8 +489,9 @@ impl RustyBuffer {
     }
 
     /// Length of the underlying buffer
-    pub fn len(&self) -> usize {
-        self.inner.get_ref().len()
+    pub fn len(&mut self, py: Python) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+        Ok(self.inner.get_ref().len())
     }
 
     /// Write some bytes to the buffer, where input data can be anything in [BytesType](../enum.BytesType.html)
@@ -576,8 +581,9 @@ impl RustyBuffer {
         true
     }
     /// Give the current position of the buffer.
-    pub fn tell(&self) -> usize {
-        self.inner.position() as usize
+    pub fn tell(&mut self, py: Python) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+        Ok(self.inner.position() as usize)
     }
     /// Set the length of the buffer. If less than current length, it will truncate to the size given;
     /// otherwise will be null byte filled to the size.
@@ -598,21 +604,21 @@ impl RustyBuffer {
         Ok(())
     }
 
-    fn __len__(&self) -> usize {
-        self.len()
+    fn __len__(&mut self, py: Python) -> PyResult<usize> {
+        self.len(py)
     }
     fn __contains__(&self, py: Python, x: BytesType) -> bool {
         let bytes = x.as_bytes();
         py.allow_threads(|| self.inner.get_ref().windows(bytes.len()).any(|w| w == bytes))
     }
-    fn __repr__(&self) -> String {
-        format!("cramjam.Buffer<len={:?}>", self.len())
+    fn __repr__(&mut self, py: Python) -> PyResult<String> {
+        Ok(format!("cramjam.Buffer<len={:?}>", self.len(py)?))
     }
     fn __eq__(&self, other: &Self) -> bool {
         self.inner == other.inner
     }
-    fn __bool__(&self) -> bool {
-        self.len() > 0
+    fn __bool__(&mut self, py: Python) -> PyResult<bool> {
+        Ok(self.len(py)? > 0)
     }
     unsafe fn __getbuffer__(slf: PyRefMut<Self>, view: *mut ffi::Py_buffer, flags: c_int) -> PyResult<()> {
         if view.is_null() {

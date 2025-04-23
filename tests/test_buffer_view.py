@@ -114,3 +114,43 @@ def test_buffer_view_cleanup():
 
     # Data kept alive due to internal reference
     assert buf.read() == b"bytes"
+
+
+@pytest.mark.skip_pypy
+def test_buffer_view_changing_underlying_buffer_size():
+    # A buffer owning it's data
+    data = Buffer()
+    data.write(b"bytes")
+
+    # Our reference buffer
+    buf = Buffer(data, copy=False)
+
+    # Can write 5 bytes, no problem.
+    buf.write(b"12345")
+
+    # 6th is an issue
+    with pytest.raises(IOError, match="Too much to write on view"):
+        buf.write(b"6")
+
+    # buf if we extend our data, then we can
+    assert len(buf) == 5
+    data.write(b"s")
+    assert len(buf) == 6  # Length sync'd with underlying buffer
+
+    assert buf.tell() == 5
+    buf.write(b"6")
+    assert buf.tell() == 6
+
+    # Now, shrink the underlying data
+    data.set_len(2)
+    assert buf.tell() == 2  # updated to end of buffer
+
+    # Writing fails b/c the underlying is at 2 in length now
+    with pytest.raises(IOError, match="Too much to write on view"):
+        buf.write(b"6")
+
+    # Seek to 1 and write one byte
+    buf.seek(1)
+    buf.write(b"1")
+    assert buf.tell() == 2  # back at 2
+    assert len(buf) == 2
