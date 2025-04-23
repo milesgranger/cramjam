@@ -1,5 +1,6 @@
 import gc
 
+import cramjam
 import pytest
 from cramjam import Buffer
 
@@ -95,17 +96,21 @@ def test_buffer_view_not_supported_on_pypy(is_pypy):
 
 @pytest.mark.skip_pypy
 def test_buffer_view_cleanup():
+    n_refs = 0
+
     def get_buffer():
         data = b"bytes"
-        return Buffer(data, copy=False)
+        buf = cramjam.Buffer(data, copy=False)
+
+        nonlocal n_refs
+        n_refs = buf.get_view_reference_count()
+
+        return buf
 
     buf = get_buffer()
     gc.collect()
 
+    assert 0 < buf.get_view_reference_count() < n_refs
+
     # Data kept alive due to internal reference
     assert buf.read() == b"bytes"
-
-
-@pytest.mark.skip_pypy
-def test_buffer_view_underlying_changes():
-    pass

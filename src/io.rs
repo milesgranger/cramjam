@@ -408,7 +408,9 @@ impl RustyBuffer {
     #[new]
     #[pyo3(signature = (data=None, copy=None))]
     pub fn __init__(py: Python, mut data: Option<Py<PyAny>>, copy: Option<bool>) -> PyResult<Self> {
-        if let Some(Ok(ref mut bytestype)) = data.as_mut().map(|obj| obj.extract::<BytesType<'_>>(py)) {
+        if let Some(maybe_bytestype) = data.as_mut() {
+            let mut bytestype = maybe_bytestype.extract::<BytesType<'_>>(py)?;
+
             if copy.unwrap_or(true) {
                 let mut buf = vec![];
                 bytestype.read_to_end(&mut buf)?;
@@ -436,6 +438,10 @@ impl RustyBuffer {
         }
     }
 
+    /// When the underlying buffer view has maybe changed, call this to
+    /// realign it according to the object we're referencing.
+    /// Has no effect if Buffer has owned data or if it's determined no
+    /// change has occurred, by comparing pointer and length.
     #[inline(always)]
     pub(crate) fn ensure_aligned_view(&mut self, py: Python) -> PyResult<()> {
         match &mut self.ownership {
@@ -461,6 +467,21 @@ impl RustyBuffer {
                 Ok(())
             }
         }
+    }
+
+    /// Get the PyObject this Buffer is referencing as its view,
+    /// returns None if this Buffer owns its data.
+    pub fn get_view_reference(&self) -> Option<&Py<PyAny>> {
+        match self.ownership {
+            BufferOwnership::Owned => None,
+            BufferOwnership::View(ref obj) => Some(obj),
+        }
+    }
+
+    /// Get the PyObject reference count this Buffer is referencing as its view,
+    /// returns None if this Buffer owns its data.
+    pub fn get_view_reference_count(&self, py: Python) -> Option<isize> {
+        self.get_view_reference().map(|obj| obj.get_refcnt(py))
     }
 
     /// Length of the underlying buffer
