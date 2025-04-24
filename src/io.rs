@@ -324,6 +324,18 @@ impl Write for PythonBuffer {
     }
 }
 
+pub(crate) enum BufferOwnership {
+    Owned,
+    #[allow(dead_code)]
+    View(Py<PyAny>),
+}
+
+impl Default for BufferOwnership {
+    fn default() -> Self {
+        BufferOwnership::Owned
+    }
+}
+
 /// A native Rust file-like object. Reading and writing takes place
 /// through the Rust implementation, allowing access to the underlying
 /// bytes in Python.
@@ -336,10 +348,32 @@ impl Write for PythonBuffer {
 /// b'bytes'
 /// ```
 ///
+/// NOTE: Use `copy=False` responsibly! That is to say, it will not
+/// copy the data, and will be referencing the underlying buffer during this
+/// Buffer's lifetime. We make an attempt to realign each time when accessing
+/// the buffer, but one should broadly take care to use locks where neccessary.
+/// Internally we increment the PyObject ref count, so it **should** be free
+/// from said buffer being garbage collected out from under us, but do try to
+/// avoid any funny business. :)
+///
+/// `copy=False` is not supported on PyPy distributions
 #[pyclass(subclass, name = "Buffer")]
 #[derive(Default)]
 pub struct RustyBuffer {
     pub(crate) inner: Cursor<Vec<u8>>,
+    pub(crate) ownership: BufferOwnership,
+}
+
+impl Drop for RustyBuffer {
+    fn drop(&mut self) {
+        if let BufferOwnership::View(_) = &mut self.ownership {
+            let mut cursor = Cursor::new(vec![]);
+            mem::swap(&mut self.inner, &mut cursor);
+
+            let buf = cursor.into_inner();
+            mem::forget(buf);
+        }
+    }
 }
 
 impl AsBytes for RustyBuffer {
@@ -354,7 +388,10 @@ impl AsBytes for RustyBuffer {
 
 impl From<Vec<u8>> for RustyBuffer {
     fn from(v: Vec<u8>) -> Self {
-        Self { inner: Cursor::new(v) }
+        Self {
+            inner: Cursor::new(v),
+            ownership: BufferOwnership::Owned,
+        }
     }
 }
 
@@ -371,34 +408,116 @@ impl From<Vec<u8>> for RustyBuffer {
 impl RustyBuffer {
     /// Instantiate the object, optionally with any supported bytes-like object in [BytesType](../enum.BytesType.html)
     #[new]
-    #[pyo3(signature = (data=None))]
-    pub fn __init__(mut data: Option<BytesType<'_>>) -> PyResult<Self> {
-        let mut buf = vec![];
-        if let Some(bytes) = data.as_mut() {
-            bytes.read_to_end(&mut buf)?;
+    #[pyo3(signature = (data=None, copy=None))]
+    pub fn __init__(py: Python, mut data: Option<Py<PyAny>>, copy: Option<bool>) -> PyResult<Self> {
+        if let Some(maybe_bytestype) = data.as_mut() {
+            let mut bytestype = maybe_bytestype.extract::<BytesType<'_>>(py)?;
+
+            if copy.unwrap_or(true) {
+                let mut buf = vec![];
+                bytestype.read_to_end(&mut buf)?;
+                Ok(Self {
+                    inner: Cursor::new(buf),
+                    ownership: BufferOwnership::Owned,
+                })
+            } else {
+                if cfg!(PyPy) {
+                    return Err(exceptions::PyRuntimeError::new_err("copy=False not supported on PyPy"));
+                }
+                let reference = maybe_bytestype.clone_ref(py);
+                let bytes = bytestype.as_bytes();
+                let buf = unsafe { Vec::from_raw_parts(bytes.as_ptr() as *mut _, bytes.len(), bytes.len()) };
+                Ok(Self {
+                    inner: Cursor::new(buf),
+                    ownership: BufferOwnership::View(reference),
+                })
+            }
+        } else {
+            Ok(Self {
+                inner: Cursor::new(vec![]),
+                ownership: BufferOwnership::Owned,
+            })
         }
-        Ok(Self {
-            inner: Cursor::new(buf),
-        })
+    }
+
+    /// When the underlying buffer view has maybe changed, call this to
+    /// realign it according to the object we're referencing.
+    /// Has no effect if Buffer has owned data or if it's determined no
+    /// change has occurred, by comparing pointer and length.
+    #[inline(always)]
+    pub(crate) fn ensure_aligned_view(&mut self, py: Python) -> PyResult<()> {
+        match &mut self.ownership {
+            BufferOwnership::Owned => Ok(()),
+            BufferOwnership::View(obj) => {
+                let bytestype = obj.extract::<BytesType<'_>>(py)?;
+                let bytes = bytestype.as_bytes();
+
+                // if the pointer has changed or the length, we need to realign our buffer view
+                if bytes.as_ptr() != self.inner.get_ref().as_ptr() || bytes.len() != self.inner.get_ref().len() {
+                    // updated view of buffer
+                    let buf = unsafe { Vec::from_raw_parts(bytes.as_ptr() as *mut _, bytes.len(), bytes.len()) };
+
+                    // swap out inner cursor, ensuring position isn't outside bounds of
+                    // a potentially shortened new buffer
+                    let mut cursor = Cursor::new(buf);
+                    let pos = std::cmp::min(bytes.len() as u64, self.inner.position());
+                    cursor.set_position(pos);
+                    mem::swap(&mut cursor, &mut self.inner);
+
+                    // forget the inner buffer, it was not managed by us.
+                    let old_inner_buf = cursor.into_inner();
+                    mem::forget(old_inner_buf);
+                }
+                Ok(())
+            }
+        }
+    }
+
+    /// Get the PyObject this Buffer is referencing as its view,
+    /// returns None if this Buffer owns its data.
+    pub fn get_view_reference(&self) -> Option<&Py<PyAny>> {
+        match self.ownership {
+            BufferOwnership::Owned => None,
+            BufferOwnership::View(ref obj) => Some(obj),
+        }
+    }
+
+    /// Get the PyObject reference count this Buffer is referencing as its view,
+    /// returns None if this Buffer owns its data.
+    pub fn get_view_reference_count(&self, py: Python) -> Option<isize> {
+        self.get_view_reference().map(|obj| obj.get_refcnt(py))
     }
 
     /// Length of the underlying buffer
-    pub fn len(&self) -> usize {
-        self.inner.get_ref().len()
+    pub fn len(&mut self, py: Python) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+        Ok(self.inner.get_ref().len())
     }
 
     /// Write some bytes to the buffer, where input data can be anything in [BytesType](../enum.BytesType.html)
-    pub fn write(&mut self, mut input: BytesType) -> PyResult<usize> {
+    pub fn write(&mut self, py: Python, mut input: BytesType) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+
+        // TODO: combining conditions is unstable with if let
+        if let BufferOwnership::View(_) = self.ownership {
+            if input.len() > self.inner.get_ref().len() - self.inner.position() as usize {
+                return Err(exceptions::PyIOError::new_err("Too much to write on view"));
+            }
+        }
         let r = write(&mut input, self)?;
         Ok(r as usize)
     }
     /// Read from the buffer in its current position, returns bytes; optionally specify number of bytes to read.
     #[pyo3(signature = (n_bytes=None))]
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
+        self.ensure_aligned_view(py)?;
+
         read(self, py, n_bytes)
     }
     /// Read from the buffer in its current position, into a [BytesType](../enum.BytesType.html) object.
-    pub fn readinto(&mut self, mut output: BytesType) -> PyResult<usize> {
+    pub fn readinto(&mut self, py: Python, mut output: BytesType) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+
         let r = copy(self, &mut output)?;
         Ok(r as usize)
     }
@@ -409,11 +528,45 @@ impl RustyBuffer {
     /// 2: from end of the stream
     /// ```
     #[pyo3(signature = (position, whence=None))]
-    pub fn seek(&mut self, position: isize, whence: Option<usize>) -> PyResult<usize> {
+    pub fn seek(&mut self, py: Python, position: isize, whence: Option<usize>) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+
         let pos = match whence.unwrap_or_else(|| 0) {
-            0 => SeekFrom::Start(position as u64),
-            1 => SeekFrom::Current(position as i64),
-            2 => SeekFrom::End(position as i64),
+            0 => {
+                if let BufferOwnership::View(_) = self.ownership {
+                    let buf_len = self.inner.get_ref().len() as isize;
+                    let desired_idx = position;
+                    if desired_idx > buf_len || desired_idx < 0 {
+                        let msg = format!("Bad seek: cannot seek outside bounds of unowned buffer, tried to seek from start by {} which would place it outside of the buffer which has length of {}.", desired_idx, buf_len);
+                        return Err(exceptions::PyIOError::new_err(msg));
+                    }
+                }
+                SeekFrom::Start(position as u64)
+            }
+            1 => {
+                if let BufferOwnership::View(_) = self.ownership {
+                    let buf_len = self.inner.get_ref().len() as isize;
+                    let current_position = self.inner.position() as isize;
+                    let desired_idx = current_position + position;
+                    if desired_idx > buf_len || desired_idx < 0 {
+                        let msg = format!("Bad seek: cannot seek outside bounds of unowned buffer, tried to seek from current position {} by {} which would place it outside of the buffer which has length of {}.", current_position, desired_idx, buf_len);
+                        return Err(exceptions::PyIOError::new_err(msg));
+                    }
+                }
+                SeekFrom::Current(position as i64)
+            }
+            2 => {
+                if let BufferOwnership::View(_) = self.ownership {
+                    let buf_len = self.inner.get_ref().len() as isize;
+                    let desired_idx = buf_len + position;
+                    if desired_idx > buf_len || desired_idx < 0 {
+                        let msg = format!("Bad seek: cannot seek outside bounds of unowned buffer, tried to seek from end position by {} which would place it outside of the buffer which has length of {}.", position, buf_len);
+                        return Err(exceptions::PyIOError::new_err(msg));
+                    }
+                }
+
+                SeekFrom::End(position as i64)
+            }
             _ => {
                 return Err(pyo3::exceptions::PyValueError::new_err(
                     "whence should be one of 0: seek from start, 1: seek from current, or 2: seek from end",
@@ -428,37 +581,44 @@ impl RustyBuffer {
         true
     }
     /// Give the current position of the buffer.
-    pub fn tell(&self) -> usize {
-        self.inner.position() as usize
+    pub fn tell(&mut self, py: Python) -> PyResult<usize> {
+        self.ensure_aligned_view(py)?;
+        Ok(self.inner.position() as usize)
     }
     /// Set the length of the buffer. If less than current length, it will truncate to the size given;
     /// otherwise will be null byte filled to the size.
     pub fn set_len(&mut self, size: usize) -> PyResult<()> {
+        if let BufferOwnership::View(_) = self.ownership {
+            return Err(exceptions::PyIOError::new_err("Cannot set length on unowned buffer"));
+        }
         self.inner.get_mut().resize(size, 0);
         Ok(())
     }
     /// Truncate the buffer
     pub fn truncate(&mut self) -> PyResult<()> {
+        if let BufferOwnership::View(_) = self.ownership {
+            return Err(exceptions::PyIOError::new_err("Cannot truncate unowned buffer"));
+        }
         self.inner.get_mut().truncate(0);
         self.inner.set_position(0);
         Ok(())
     }
 
-    fn __len__(&self) -> usize {
-        self.len()
+    fn __len__(&mut self, py: Python) -> PyResult<usize> {
+        self.len(py)
     }
     fn __contains__(&self, py: Python, x: BytesType) -> bool {
         let bytes = x.as_bytes();
         py.allow_threads(|| self.inner.get_ref().windows(bytes.len()).any(|w| w == bytes))
     }
-    fn __repr__(&self) -> String {
-        format!("cramjam.Buffer<len={:?}>", self.len())
+    fn __repr__(&mut self, py: Python) -> PyResult<String> {
+        Ok(format!("cramjam.Buffer<len={:?}>", self.len(py)?))
     }
     fn __eq__(&self, other: &Self) -> bool {
         self.inner == other.inner
     }
-    fn __bool__(&self) -> bool {
-        self.len() > 0
+    fn __bool__(&mut self, py: Python) -> PyResult<bool> {
+        Ok(self.len(py)? > 0)
     }
     unsafe fn __getbuffer__(slf: PyRefMut<Self>, view: *mut ffi::Py_buffer, flags: c_int) -> PyResult<()> {
         if view.is_null() {
