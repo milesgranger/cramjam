@@ -512,6 +512,8 @@ impl RustyBuffer {
     pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
         self.ensure_aligned_view(py)?;
 
+        let n_bytes = n_bytes.map(|n| std::cmp::min(n, self.inner.get_ref().len() - self.inner.position() as usize));
+
         read(self, py, n_bytes)
     }
     /// Read from the buffer in its current position, into a [BytesType](../enum.BytesType.html) object.
