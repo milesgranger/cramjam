@@ -154,3 +154,20 @@ def test_buffer_view_changing_underlying_buffer_size():
     buf.write(b"1")
     assert buf.tell() == 2  # back at 2
     assert len(buf) == 2
+
+
+@pytest.mark.skip_pypy
+def test_buffer_view_cannot_read_passed():
+    data = b"bytes"
+    buf = cramjam.Buffer(data, copy=False)
+
+    # Cannot read pass length of underlying buffer
+    # matches read behavior of io.BytesIO
+    assert buf.read(len(data) * 2) == data
+
+    # Cannot read pass incrementally either
+    b = b""
+    buf.seek(0)
+    for i in range(0, 10):
+        b += buf.read(i)
+    assert b == data

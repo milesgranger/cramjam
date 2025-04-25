@@ -509,8 +509,19 @@ impl RustyBuffer {
     }
     /// Read from the buffer in its current position, returns bytes; optionally specify number of bytes to read.
     #[pyo3(signature = (n_bytes=None))]
-    pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<usize>) -> PyResult<Bound<'a, PyBytes>> {
+    pub fn read<'a>(&mut self, py: Python<'a>, n_bytes: Option<isize>) -> PyResult<Bound<'a, PyBytes>> {
         self.ensure_aligned_view(py)?;
+
+        let n_bytes = n_bytes.map(|n| {
+            let remaining_bytes = self.inner.get_ref().len() - self.inner.position() as usize;
+            if n < 0 {
+                // negative, read all remaining bytes
+                remaining_bytes
+            } else {
+                // can cast to usize, as n is > 0 here
+                std::cmp::min(n as usize, remaining_bytes)
+            }
+        });
 
         read(self, py, n_bytes)
     }
