@@ -99,7 +99,7 @@ def test_buffer_view_cleanup():
     n_refs = 0
 
     def get_buffer():
-        data = b"bytes"
+        data = bytearray(b"bytes")
         buf = cramjam.Buffer(data, copy=False)
 
         nonlocal n_refs
