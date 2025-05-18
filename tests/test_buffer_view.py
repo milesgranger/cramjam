@@ -37,7 +37,7 @@ def test_buffer_view_raises_when_writing_past_data_length_at_once():
 
 @pytest.mark.skip_pypy
 def test_buffer_view_raises_when_writing_past_data_length_incrementally():
-    data = b"bytes"
+    data = bytearray(b"bytes")
     buf = Buffer(data, copy=False)
 
     # This is okay, up to length of underlying buffer
