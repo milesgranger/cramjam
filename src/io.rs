@@ -657,7 +657,6 @@ impl RustyBuffer {
         (*view).buf = bytes.as_ptr() as *mut std::os::raw::c_void;
         (*view).len = bytes.len() as isize;
         (*view).readonly = 0;
-        (*view).itemsize = 1;
 
         (*view).format = std::ptr::null_mut();
         if (flags & ffi::PyBUF_FORMAT) == ffi::PyBUF_FORMAT {

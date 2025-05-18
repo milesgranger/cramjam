@@ -33,7 +33,8 @@ def test_obj_api(tmpdir, Obj, is_pypy, is_free_threaded):
         buf.seek(0)
 
         if isinstance(out, bytes) and (
-                is_pypy or (is_free_threaded and sys.version_info >= (3, 14))):
+            is_pypy or (is_free_threaded and sys.version_info >= (3, 14))
+        ):
             with pytest.raises(OSError):
                 buf.readinto(out)
             continue
