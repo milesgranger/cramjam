@@ -65,11 +65,11 @@ wasm32-compat            = ["libcramjam/wasm32-compat"]
 
 
 [dependencies]
-pyo3 = { version = "^0.24", default-features = false, features = ["macros"] }
+pyo3 = { version = "^0.25", default-features = false, features = ["macros"] }
 libcramjam = { version = "^0.7", default-features = false }
 
 [build-dependencies]
-pyo3-build-config = "^0.24"
+pyo3-build-config = "^0.25"
 
 [profile.release]
 strip = true

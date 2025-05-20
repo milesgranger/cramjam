@@ -1,4 +1,5 @@
 import platform
+import sysconfig
 
 import pytest
 
@@ -7,6 +8,10 @@ import pytest
 def is_pypy():
     impl = platform.python_implementation()
     return impl.lower() == "pypy"
+
+@pytest.fixture(scope="session")
+def is_free_threaded():
+    return bool(sysconfig.get_config_var("Py_GIL_DISABLED"))
 
 
 def pytest_configure(config):
