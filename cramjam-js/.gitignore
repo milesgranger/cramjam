@@ -1,7 +1,3 @@
-cramjam-js/node_modules/
-cramjam-js/target/
-cramjam-js/pkg/
-
 node_modules/
 package-lock.json
 

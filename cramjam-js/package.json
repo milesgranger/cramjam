@@ -1,0 +1,36 @@
+{
+  "name": "cramjam",
+  "version": "0.1.0",
+  "description": "De/Compression algorithms",
+  "main": "./pkg/cramjam.js",
+  "module": "./pkg/cramjam.js",
+  "types": "./pkg/cramjam.d.ts",
+  "exports": {
+    "import": "./pkg/cramjam.js",
+    "require": "./pkg/cramjam.js"
+  },
+  "scripts": {
+    "build": "wasm-pack build --no-opt --release --target bundler",
+    "dev": "npm install ./pkg",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "cramjam": "file:pkg",
+    "jsdom": "^26.1.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5",
+    "vite-plugin-wasm": "^3.4.1",
+    "vitest": "^3.1.4"
+  },
+  "keywords": [
+    "wasm",
+    "webassembly",
+    "compression",
+    "decompression",
+    "brotli",
+    "snappy",
+    "lz4",
+    "rust"
+  ],
+  "license": "MIT"
+}
