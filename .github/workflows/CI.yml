@@ -136,6 +136,7 @@ jobs:
           python -m pip install cramjam[dev] --pre --find-links dist --force-reinstall
           python -m pip install cramjam --pre --no-index --find-links dist --force-reinstall
 
+          python -m pip install pytest-rerunfailures
           python -m pytest -vs --benchmark-skip --reruns 3
 
       # Could use 'distro: alpine_latest' in 'run-on-arch-action' but seems difficult to install a specific version of python
