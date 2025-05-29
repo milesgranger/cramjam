@@ -5,12 +5,20 @@
 [![PyPI](https://img.shields.io/pypi/v/cramjam.svg)](https://pypi.org/project/cramjam)
 [![Anaconda-Server Badge](https://anaconda.org/conda-forge/cramjam/badges/version.svg)](https://anaconda.org/conda-forge/cramjam)
 [![Downloads](https://pepy.tech/badge/cramjam/month)](https://pepy.tech/project/cramjam)
+[![NPM Version](https://img.shields.io/npm/v/cramjam)](https://www.npmjs.com/package/cramjam)
+
 
 [API Documentation](https://docs.rs/cramjam)
 
-### Install
+### Install (Python)
 ```commandline
 pip install --upgrade cramjam  # Requires no Python or system dependencies!
+```
+
+
+### Install (JavaScript / TypeScript)
+```commandline
+npm install cramjam
 ```
 
 ### CLI
@@ -101,4 +109,25 @@ b'000000000000000'
 15  # 15 bytes written to decompressed
 >>> decompressed
 b'some bytes here'
+```
+
+
+[TypeScript](./cramjam-js/README.md):
+
+
+```typescript
+
+import {Compress, Decompress} from 'cramjam';
+
+const decoder = new TextDecoder();
+const encoder = new TextEncoder();
+
+const str = 'hello, world';
+const encoded = encoder.encode(str);
+
+const compressed = Compress.brotli(encoded);
+const decompressed = Decompress.brotli(compressed);
+
+const decoded = decoder.decode(decompressed);
+
 ```

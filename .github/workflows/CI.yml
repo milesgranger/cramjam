@@ -16,6 +16,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  cramjam-js:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: cramjam-js
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-node@v4
+      - name: Install WASM Pack
+        run: |
+          curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
+          cargo-binstall wasm-pack
+      - name: Install Deps
+        run: npm install -D
+      - name: Build
+        run: npm run build
+      - name: Install Build
+        run: npm run dev
+      - name: Test
+        run: npm run test
+    
   build-test:
     runs-on: ${{ matrix.conf.os }}
     name: ${{ matrix.conf.os }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.target }}
