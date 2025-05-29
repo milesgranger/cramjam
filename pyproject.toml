@@ -21,6 +21,7 @@ strip = true
 dev = [
     "ipython>=8.12.3",
     "pyright>=1.1.399",
+    "pytest-rerunfailures>=14.0",
     "ruff-lsp>=0.0.62",
 ]
 

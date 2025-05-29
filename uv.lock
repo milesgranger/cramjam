@@ -123,13 +123,14 @@ dev = [
 dev = [
     { name = "ipython" },
     { name = "pyright" },
+    { name = "pytest-rerunfailures" },
     { name = "ruff-lsp" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = "==22.3.0" },
-    { name = "hypothesis", marker = "extra == 'dev'", specifier = "<6.123.0" },
+    { name = "hypothesis", marker = "extra == 'dev'" },
     { name = "numpy", marker = "extra == 'dev'" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=5.30" },
     { name = "pytest-benchmark", marker = "extra == 'dev'" },
@@ -140,6 +141,7 @@ requires-dist = [
 dev = [
     { name = "ipython", specifier = ">=8.12.3" },
     { name = "pyright", specifier = ">=1.1.399" },
+    { name = "pytest-rerunfailures", specifier = ">=14.0" },
     { name = "ruff-lsp", specifier = ">=0.0.62" },
 ]
 
@@ -484,6 +486,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/28/08/e6b0067efa9a1f2a1eb3043ecd8a0c48bfeb60d3255006dcc829d72d5da2/pytest-benchmark-4.0.0.tar.gz", hash = "sha256:fb0785b83efe599a6a956361c0691ae1dbb5318018561af10f3e915caa0048d1", size = 334641 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/4d/a1/3b70862b5b3f830f0422844f25a823d0470739d994466be9dbbbb414d85a/pytest_benchmark-4.0.0-py3-none-any.whl", hash = "sha256:fdb7db64e31c8b277dff9850d2a2556d8b60bcb0ea6524e36e28ffd7c87f71d6", size = 43951 },
+]
+
+[[package]]
+name = "pytest-rerunfailures"
+version = "14.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "packaging" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cc/a4/6de45fe850759e94aa9a55cda807c76245af1941047294df26c851dfb4a9/pytest-rerunfailures-14.0.tar.gz", hash = "sha256:4a400bcbcd3c7a4ad151ab8afac123d90eca3abe27f98725dc4d9702887d2e92", size = 21350 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/dc/e7/e75bd157331aecc190f5f8950d7ea3d2cf56c3c57fb44da70e60b221133f/pytest_rerunfailures-14.0-py3-none-any.whl", hash = "sha256:4197bdd2eaeffdbf50b5ea6e7236f47ff0e44d1def8dae08e409f536d84e7b32", size = 12709 },
 ]
 
 [[package]]

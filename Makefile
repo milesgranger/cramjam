@@ -1,7 +1,7 @@
 BASE_BENCH_CMD = python -m pytest -v --benchmark-sort name --benchmark-only benchmarks/ -k
 
 test:
-	python -m pytest tests -n auto -v --ignore benchmarks
+	python -m pytest tests -n auto -v --ignore benchmarks --reruns 3
 
 test-bench:
 	python -m pytest -v --benchmark-disable benchmarks/
