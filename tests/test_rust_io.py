@@ -1,10 +1,12 @@
+import sys
+
 import pytest
 
 from cramjam import File, Buffer
 
 
 @pytest.mark.parametrize("Obj", (File, Buffer))
-def test_obj_api(tmpdir, Obj, is_pypy):
+def test_obj_api(tmpdir, Obj, is_pypy, is_free_threaded):
     if isinstance(Obj, File):
         buf = File(str(tmpdir.join("file.txt")))
     else:
@@ -30,7 +32,8 @@ def test_obj_api(tmpdir, Obj, is_pypy):
     ):
         buf.seek(0)
 
-        if isinstance(out, bytes) and is_pypy:
+        if isinstance(out, bytes) and (
+                is_pypy or (is_free_threaded and sys.version_info >= (3, 14))):
             with pytest.raises(OSError):
                 buf.readinto(out)
             continue

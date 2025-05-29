@@ -12,7 +12,7 @@ def test_buffer_view(copy):
     if copy is not None:
         kwargs["copy"] = copy
 
-    data = b"bytes"
+    data = bytearray(b"bytes")
     buf = Buffer(data, **kwargs)
     buf.write(b"0")
 
@@ -26,7 +26,7 @@ def test_buffer_view(copy):
 
 @pytest.mark.skip_pypy
 def test_buffer_view_raises_when_writing_past_data_length_at_once():
-    data = b"bytes"
+    data = bytearray(b"bytes")
     buf = Buffer(data, copy=False)
 
     # Won't write pasted underlying buffer if passed data all at once
@@ -37,7 +37,7 @@ def test_buffer_view_raises_when_writing_past_data_length_at_once():
 
 @pytest.mark.skip_pypy
 def test_buffer_view_raises_when_writing_past_data_length_incrementally():
-    data = b"bytes"
+    data = bytearray(b"bytes")
     buf = Buffer(data, copy=False)
 
     # This is okay, up to length of underlying buffer
@@ -74,7 +74,7 @@ def test_buffer_view_raises_when_truncating():
 @pytest.mark.skip_pypy
 @pytest.mark.parametrize("whence", (0, 1, 2))
 def test_buffer_view_raises_when_write_after_bad_seek(whence):
-    buf = Buffer(b"bytes", copy=False)
+    buf = Buffer(bytearray(b"bytes"), copy=False)
 
     buf.seek(2, whence=0)  # Seek forward 2 from start, also okay
     buf.seek(2, whence=1)  # Seek forward 2 from current position, okay
@@ -99,7 +99,7 @@ def test_buffer_view_cleanup():
     n_refs = 0
 
     def get_buffer():
-        data = b"bytes"
+        data = bytearray(b"bytes")
         buf = cramjam.Buffer(data, copy=False)
 
         nonlocal n_refs
