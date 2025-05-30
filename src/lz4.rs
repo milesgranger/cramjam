@@ -138,12 +138,38 @@ pub mod lz4 {
     /// >>> cramjam.lz4.decompress_block_into(compressed_bytes, output_buffer)
     /// ```
     #[pyfunction]
-    pub fn decompress_block_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
+    #[pyo3(signature = (input, output, output_len=None))]
+    pub fn decompress_block_into(
+        py: Python,
+        input: BytesType,
+        mut output: BytesType,
+        output_len: Option<usize>,
+    ) -> PyResult<usize> {
         let bytes = input.as_bytes();
+
+        // If output_len is not set, we assume size is stored in block
+        let size_stored = output_len.is_none();
+
+        // If we have output_len set, but the actual length of output
+        // is less than output_len, we'll let the user know.
+        if let Some(size) = output_len {
+            if output.len() < size {
+                let msg = format!("output_len set to {}, but output is less. ({})", size, output.len());
+                return Err(DecompressionError::new_err(msg));
+            }
+        }
+
         let out_bytes = output.as_bytes_mut()?;
-        py.allow_threads(|| libcramjam::lz4::block::decompress_into(bytes, out_bytes, Some(true)))
-            .map_err(DecompressionError::from_err)
-            .map(|v| v as _)
+        py.allow_threads(
+            || match libcramjam::lz4::block::decompress_into(bytes, out_bytes, Some(size_stored)) {
+                Ok(r) => Ok(r),
+                // Fallback and try negation of stored size, incase we/they got it wrong;
+                // giving back original error if this also fails.
+                Err(e) => libcramjam::lz4::block::decompress_into(bytes, out_bytes, Some(!size_stored)).map_err(|_| e),
+            },
+        )
+        .map_err(DecompressionError::from_err)
+        .map(|v| v as _)
     }
 
     /// LZ4 _block_ compression into pre-allocated buffer.
