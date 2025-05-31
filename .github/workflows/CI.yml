@@ -27,7 +27,9 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
       - name: Install cramjam
-        run: pip install -e .[dev]
+        run: |
+          pip install -e .[dev]
+          maturin develop
       - name: Build docs
         run: |
           pip install pdoc
