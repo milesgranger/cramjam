@@ -63,7 +63,7 @@ jobs:
         run: npm run test
     
   build-test:
-    skip: true
+    if: false
     runs-on: ${{ matrix.conf.os }}
     name: ${{ matrix.conf.os }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.target }}
     strategy:
