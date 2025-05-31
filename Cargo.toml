@@ -8,6 +8,9 @@ description = "Thin Python bindings to de/compression algorithms in Rust"
 readme = "README.md"
 exclude = ["benchmarks/", "benchmark-requirements.txt"]
 
+[[metadata.maturin]]
+python-source = "src/cramjam"
+
 [workspace]
 resolver = "3"
 members = ["cramjam-js", "."]
