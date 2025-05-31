@@ -1,5 +1,6 @@
 import os
 import gzip
+from typing import Union
 import pytest
 import numpy as np
 import cramjam
@@ -19,7 +20,6 @@ VARIANTS = (
     "zlib",
     "xz",
 )
-
 for experimental_feat in ("blosc2", "igzip", "ideflate", "izlib"):
     if not hasattr(cramjam, experimental_feat) and hasattr(cramjam, "experimental"):
         mod = getattr(cramjam.experimental, experimental_feat, None)
@@ -74,7 +74,7 @@ def test_variants_different_dtypes(variant_str, arr, is_pypy):
 @pytest.mark.parametrize("is_bytearray", (True, False))
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(uncompressed=st.binary(min_size=1))
-def test_variants_simple(variant_str, is_bytearray, uncompressed: bytes):
+def test_variants_simple(variant_str, is_bytearray, uncompressed):
     variant = getattr(cramjam, variant_str)
 
     if is_bytearray:
@@ -137,6 +137,7 @@ def test_variants_compress_into(
     compressed_len = len(compressed)
 
     # Setup output buffer
+    output: Union[np.ndarray, cramjam.File, cramjam.Buffer]
     if output_type == "numpy":
         output = np.zeros(compressed_len, dtype=np.uint8)
     elif output_type == cramjam.File:
