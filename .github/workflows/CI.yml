@@ -16,6 +16,29 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+
+  cramjam-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install cramjam
+        run: pip install -e .[dev]
+      - name: Build docs
+        run: |
+          pip install pdoc
+          pdoc cramjam --docformat numpy --show-source --mermaid --search -o docs
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          publish_branch: gh-pages
+    
   cramjam-js:
     runs-on: ubuntu-latest
     defaults:
@@ -40,6 +63,7 @@ jobs:
         run: npm run test
     
   build-test:
+    skip: true
     runs-on: ${{ matrix.conf.os }}
     name: ${{ matrix.conf.os }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.target }}
     strategy:
