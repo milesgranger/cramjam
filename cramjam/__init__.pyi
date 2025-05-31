@@ -1,5 +1,5 @@
 from _typeshed import ReadableBuffer, WriteableBuffer
-from typing import Any, TypeVar, Union
+from typing import Any, Union
 from . import lz4, snappy, deflate, gzip, zstd, xz, zlib, brotli, bzip2, experimental
 
 

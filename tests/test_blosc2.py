@@ -11,7 +11,7 @@ except ImportError:
     pytest.skip("experimental module not built", allow_module_level=True)
 else:
     if hasattr(experimental, "blosc2"):
-        blosc2 = experimental.blosc2
+        blosc2 = experimental.blosc2  # type: ignore
     else:
         pytest.skip(
             "experimental module doesn't contain blosc2", allow_module_level=True
