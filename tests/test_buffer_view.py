@@ -110,7 +110,9 @@ def test_buffer_view_cleanup():
     buf = get_buffer()
     gc.collect()
 
-    assert 0 < buf.get_view_reference_count() < n_refs
+    ref_count = buf.get_view_reference_count()
+    assert ref_count is not None
+    assert 0 < ref_count < n_refs
 
     # Data kept alive due to internal reference
     assert buf.read() == b"bytes"

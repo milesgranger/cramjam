@@ -1,4 +1,5 @@
-from typing import Any, TypeVar
+from _typeshed import ReadableBuffer, WriteableBuffer
+from typing import Any, TypeVar, Union
 from . import lz4, snappy, deflate, gzip, zstd, xz, zlib, brotli, bzip2, experimental
 
 
@@ -24,7 +25,7 @@ class DecompressionError(Exception):
     ...
 
 
-class Buffer[BufferProtocol]:
+class Buffer(Union[ReadableBuffer, WriteableBuffer]):
     def __init__(
         self, data: BufferProtocol | None = None, copy: bool | None = True
     ) -> None:

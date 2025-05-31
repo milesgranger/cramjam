@@ -137,7 +137,7 @@ def test_variants_compress_into(
     compressed_len = len(compressed)
 
     # Setup output buffer
-    output: Union[np.ndarray, cramjam.File, cramjam.Buffer]
+    output: Union[np.ndarray, cramjam.File, cramjam.Buffer, bytes]
     if output_type == "numpy":
         output = np.zeros(compressed_len, dtype=np.uint8)
     elif output_type == cramjam.File:
@@ -156,10 +156,10 @@ def test_variants_compress_into(
 
     n_bytes = variant.compress_into(input, output)
 
-    if hasattr(output, "read"):
+    if isinstance(output, (cramjam.File, cramjam.Buffer)):
         output.seek(0)
         output = output.read()
-    elif hasattr(output, "tobytes"):
+    elif isinstance(output, np.ndarray):
         output = output.tobytes()
     else:
         output = bytes(output)
@@ -222,7 +222,7 @@ def test_variants_decompress_into(
     n_bytes = variant.decompress_into(input, output)
     assert n_bytes == len(raw_data)
 
-    if hasattr(output, "read"):
+    if isinstance(output, (cramjam.File, cramjam.Buffer)):
         output.seek(0)
         output = output.read()
     elif hasattr(output, "tobytes"):
@@ -280,6 +280,7 @@ def test_variant_lz4_block_into(data):
 @pytest.mark.parametrize("Obj", (cramjam.File, cramjam.Buffer))
 @given(data=st.binary())
 def test_dunders(Obj, tmp_path_factory, data):
+    path = None
     if Obj == cramjam.File:
         path = tmp_path_factory.mktemp("tmp").joinpath("tmp.txt")
         path.touch()
@@ -308,7 +309,7 @@ def test_dunders(Obj, tmp_path_factory, data):
     ),
 )
 def test_lz4_block(compress_kwargs):
-    from cramjam import lz4
+    lz4 = cramjam.lz4
 
     data = b"howdy neighbor"
 
