@@ -28,7 +28,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install cramjam
         run: |
-          pip install -e .[dev]
+          pip install maturin
           maturin develop
       - name: Build docs
         run: |
