@@ -28,6 +28,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Install cramjam
         run: |
+          python -m venv .venv
+          source .venv/bin/activate
           pip install maturin
           maturin develop
       - name: Build docs
