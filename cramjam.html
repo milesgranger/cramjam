@@ -40,17 +40,16 @@
 
             <h2>Submodules</h2>
             <ul>
-                    <li><a href="cramjam/cramjam.html">cramjam</a></li>
+                    <li><a href="cramjam/snappy.html">snappy</a></li>
+                    <li><a href="cramjam/zstd.html">zstd</a></li>
+                    <li><a href="cramjam/lz4.html">lz4</a></li>
                     <li><a href="cramjam/brotli.html">brotli</a></li>
+                    <li><a href="cramjam/xz.html">xz</a></li>
                     <li><a href="cramjam/bzip2.html">bzip2</a></li>
+                    <li><a href="cramjam/gzip.html">gzip</a></li>
+                    <li><a href="cramjam/zlib.html">zlib</a></li>
                     <li><a href="cramjam/deflate.html">deflate</a></li>
                     <li><a href="cramjam/experimental.html">experimental</a></li>
-                    <li><a href="cramjam/gzip.html">gzip</a></li>
-                    <li><a href="cramjam/lz4.html">lz4</a></li>
-                    <li><a href="cramjam/snappy.html">snappy</a></li>
-                    <li><a href="cramjam/xz.html">xz</a></li>
-                    <li><a href="cramjam/zlib.html">zlib</a></li>
-                    <li><a href="cramjam/zstd.html">zstd</a></li>
             </ul>
 
             <h2>API Documentation</h2>
@@ -64,6 +63,84 @@
             <li>
                     <a class="class" href="#DecompressionError">DecompressionError</a>
                             <ul class="memberlist">
+                </ul>
+
+            </li>
+            <li>
+                    <a class="variable" href="#__version__">__version__</a>
+            </li>
+            <li>
+                    <a class="class" href="#File">File</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#File.write">write</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#File.read">read</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#File.readinto">readinto</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#File.seek">seek</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#File.seekable">seekable</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#File.tell">tell</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#File.set_len">set_len</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#File.truncate">truncate</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#File.len">len</a>
+                        </li>
+                </ul>
+
+            </li>
+            <li>
+                    <a class="class" href="#Buffer">Buffer</a>
+                            <ul class="memberlist">
+                        <li>
+                                <a class="function" href="#Buffer.ensure_aligned_view">ensure_aligned_view</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.get_view_reference">get_view_reference</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.get_view_reference_count">get_view_reference_count</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.len">len</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.write">write</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.read">read</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.readinto">readinto</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.seek">seek</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.seekable">seekable</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.tell">tell</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.set_len">set_len</a>
+                        </li>
+                        <li>
+                                <a class="function" href="#Buffer.truncate">truncate</a>
+                        </li>
                 </ul>
 
             </li>
@@ -89,6 +166,10 @@ cramjam    </h1>
                         <label class="view-source-button" for="mod-cramjam-view-source"><span>View Source</span></label>
 
                         <div class="pdoc-code codehilite"><pre><span></span><span id="L-1"><a href="#L-1"><span class="linenos">1</span></a><span class="kn">from</span><span class="w"> </span><span class="nn">.cramjam</span><span class="w"> </span><span class="kn">import</span> <span class="o">*</span>
+</span><span id="L-2"><a href="#L-2"><span class="linenos">2</span></a>
+</span><span id="L-3"><a href="#L-3"><span class="linenos">3</span></a><span class="vm">__doc__</span> <span class="o">=</span> <span class="n">cramjam</span><span class="o">.</span><span class="vm">__doc__</span>
+</span><span id="L-4"><a href="#L-4"><span class="linenos">4</span></a><span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">cramjam</span><span class="p">,</span> <span class="s2">&quot;__all__&quot;</span><span class="p">):</span>
+</span><span id="L-5"><a href="#L-5"><span class="linenos">5</span></a>    <span class="n">__all__</span> <span class="o">=</span> <span class="n">cramjam</span><span class="o">.</span><span class="n">__all__</span>
 </span></pre></div>
 
 
@@ -122,6 +203,424 @@ cramjam    </h1>
 </div>
 
 
+                </section>
+                <section id="__version__">
+                    <div class="attr variable">
+            <span class="name">__version__</span>        =
+<span class="default_value">&#39;2.11.0-rc2&#39;</span>
+
+        
+    </div>
+    <a class="headerlink" href="#__version__"></a>
+    
+    
+
+                </section>
+                <section id="File">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">File</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#File"></a>
+    
+            <div class="docstring"><p>A native Rust file-like object. Reading and writing takes place
+through the Rust implementation, allowing access to the underlying
+bytes in Python.</p>
+
+<h3 id="python-example">Python Example</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="kn">from</span><span class="w"> </span><span class="nn">cramjam</span><span class="w"> </span><span class="kn">import</span> <span class="n">File</span>
+<span class="n">file</span> <span class="o">=</span> <span class="n">File</span><span class="p">(</span><span class="s2">&quot;/tmp/file.txt&quot;</span><span class="p">)</span>
+<span class="n">file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;bytes&quot;</span><span class="p">)</span>
+</code></pre>
+</div>
+
+<h3 id="notes">Notes</h3>
+
+<p>Presently, the file's handle is managed by Rust's lifetime rules, in that
+once it's garbage collected from Python's side, it will be closed.</p>
+</div>
+
+
+                            <div id="File.write" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">write</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="nb">input</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.write"></a>
+    
+            <div class="docstring"><p>Write some bytes to the file, where input data can be anything in <a href="../enum.BytesType.html"><code>BytesType</code></a></p>
+</div>
+
+
+                            </div>
+                            <div id="File.read" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">read</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">n_bytes</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.read"></a>
+    
+            <div class="docstring"><p>Read from the file in its current position, returns <code>bytes</code>; optionally specify number of
+bytes to read.</p>
+</div>
+
+
+                            </div>
+                            <div id="File.readinto" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">readinto</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">output</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.readinto"></a>
+    
+            <div class="docstring"><p>Read from the file in its current position, into a <a href="../enum.BytesType.html"><code>BytesType</code></a> object.</p>
+</div>
+
+
+                            </div>
+                            <div id="File.seek" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">seek</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">position</span>, </span><span class="param"><span class="n">whence</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.seek"></a>
+    
+            <div class="docstring"><p>Seek to a position within the file. <code>whence</code> follows the same values as <a href="https://docs.python.org/3/library/io.html#io.IOBase.seek">IOBase.seek</a>
+where:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="m">0</span>:<span class="w"> </span>from<span class="w"> </span>start<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>stream
+<span class="m">1</span>:<span class="w"> </span>from<span class="w"> </span>current<span class="w"> </span>stream<span class="w"> </span>position
+<span class="m">2</span>:<span class="w"> </span>from<span class="w"> </span>end<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>stream
+</code></pre>
+</div>
+</div>
+
+
+                            </div>
+                            <div id="File.seekable" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">seekable</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.seekable"></a>
+    
+            <div class="docstring"><p>Whether the file is seekable; here just for compatibility, it always returns True.</p>
+</div>
+
+
+                            </div>
+                            <div id="File.tell" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tell</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.tell"></a>
+    
+            <div class="docstring"><p>Give the current position of the file.</p>
+</div>
+
+
+                            </div>
+                            <div id="File.set_len" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">set_len</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">size</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.set_len"></a>
+    
+            <div class="docstring"><p>Set the length of the file. If less than current length, it will truncate to the size given;
+otherwise will be null byte filled to the size.</p>
+</div>
+
+
+                            </div>
+                            <div id="File.truncate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">truncate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.truncate"></a>
+    
+            <div class="docstring"><p>Truncate the file.</p>
+</div>
+
+
+                            </div>
+                            <div id="File.len" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">len</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#File.len"></a>
+    
+            <div class="docstring"><p>Length of the file in bytes</p>
+</div>
+
+
+                            </div>
+                </section>
+                <section id="Buffer">
+                    <div class="attr class">
+            
+    <span class="def">class</span>
+    <span class="name">Buffer</span>:
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer"></a>
+    
+            <div class="docstring"><p>A native Rust file-like object. Reading and writing takes place
+through the Rust implementation, allowing access to the underlying
+bytes in Python.</p>
+
+<h3 id="python-example">Python Example</h3>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="kn">from</span><span class="w"> </span><span class="nn">cramjam</span><span class="w"> </span><span class="kn">import</span> <span class="n">Buffer</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">buf</span> <span class="o">=</span> <span class="n">Buffer</span><span class="p">(</span><span class="sa">b</span><span class="s2">&quot;bytes&quot;</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">buf</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+<span class="sa">b</span><span class="s1">&#39;bytes&#39;</span>
+</code></pre>
+</div>
+
+<p>NOTE: Use <code>copy=False</code> responsibly! That is to say, it will not
+copy the data, and will be referencing the underlying buffer during this
+Buffer's lifetime. We make an attempt to realign each time when accessing
+the buffer, but one should broadly take care to use locks where neccessary.
+Internally we increment the PyObject ref count, so it <strong>should</strong> be free
+from said buffer being garbage collected out from under us, but do try to
+avoid any funny business. :)</p>
+
+<p><code>copy=False</code> is not supported on PyPy distributions</p>
+</div>
+
+
+                            <div id="Buffer.ensure_aligned_view" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">ensure_aligned_view</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.ensure_aligned_view"></a>
+    
+            <div class="docstring"><p>When the underlying buffer view has maybe changed, call this to
+realign it according to the object we're referencing.
+Has no effect if Buffer has owned data or if it's determined no
+change has occurred, by comparing pointer and length.</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.get_view_reference" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_view_reference</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.get_view_reference"></a>
+    
+            <div class="docstring"><p>Get the PyObject this Buffer is referencing as its view,
+returns None if this Buffer owns its data.</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.get_view_reference_count" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">get_view_reference_count</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.get_view_reference_count"></a>
+    
+            <div class="docstring"><p>Get the PyObject reference count this Buffer is referencing as its view,
+returns None if this Buffer owns its data.</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.len" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">len</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.len"></a>
+    
+            <div class="docstring"><p>Length of the underlying buffer</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.write" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">write</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="nb">input</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.write"></a>
+    
+            <div class="docstring"><p>Write some bytes to the buffer, where input data can be anything in <a href="../enum.BytesType.html">BytesType</a></p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.read" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">read</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">n_bytes</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.read"></a>
+    
+            <div class="docstring"><p>Read from the buffer in its current position, returns bytes; optionally specify number of bytes to read.</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.readinto" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">readinto</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">output</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.readinto"></a>
+    
+            <div class="docstring"><p>Read from the buffer in its current position, into a <a href="../enum.BytesType.html">BytesType</a> object.</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.seek" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">seek</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">position</span>, </span><span class="param"><span class="n">whence</span><span class="o">=</span><span class="kc">None</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.seek"></a>
+    
+            <div class="docstring"><p>Seek to a position within the buffer. whence follows the same values as IOBase.seek where:</p>
+
+<div class="pdoc-code codehilite">
+<pre><span></span><code><span class="m">0</span>:<span class="w"> </span>from<span class="w"> </span>start<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>stream
+<span class="m">1</span>:<span class="w"> </span>from<span class="w"> </span>current<span class="w"> </span>stream<span class="w"> </span>position
+<span class="m">2</span>:<span class="w"> </span>from<span class="w"> </span>end<span class="w"> </span>of<span class="w"> </span>the<span class="w"> </span>stream
+</code></pre>
+</div>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.seekable" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">seekable</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.seekable"></a>
+    
+            <div class="docstring"><p>Whether the buffer is seekable; here just for compatibility, it always returns True.</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.tell" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">tell</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.tell"></a>
+    
+            <div class="docstring"><p>Give the current position of the buffer.</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.set_len" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">set_len</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span>, </span><span class="param"><span class="n">size</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.set_len"></a>
+    
+            <div class="docstring"><p>Set the length of the buffer. If less than current length, it will truncate to the size given;
+otherwise will be null byte filled to the size.</p>
+</div>
+
+
+                            </div>
+                            <div id="Buffer.truncate" class="classattr">
+                                <div class="attr function">
+            
+        <span class="def">def</span>
+        <span class="name">truncate</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
+
+        
+    </div>
+    <a class="headerlink" href="#Buffer.truncate"></a>
+    
+            <div class="docstring"><p>Truncate the buffer</p>
+</div>
+
+
+                            </div>
                 </section>
     </main>
 <script>
