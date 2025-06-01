@@ -8,7 +8,7 @@
 [![NPM Version](https://img.shields.io/npm/v/cramjam)](https://www.npmjs.com/package/cramjam)
 
 
-[API Documentation](https://docs.rs/cramjam)
+[API Documentation](https://milesgranger.github.io/cramjam/cramjam.html)
 
 ### Install (Python)
 ```commandline
