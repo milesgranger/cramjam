@@ -31,5 +31,5 @@ dev = [
   "pytest>=5.30",
   "pytest-xdist",
   "pytest-benchmark",
-  "hypothesis"
+  "hypothesis==6.60.0"
 ]
