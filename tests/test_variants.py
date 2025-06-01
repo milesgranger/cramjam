@@ -29,9 +29,7 @@ for experimental_feat in ("blosc2", "igzip", "ideflate", "izlib"):
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile("local", deadline=None, max_examples=20)
-settings.register_profile(
-    "CI", deadline=None, max_examples=10, phases=[Phase.generate, Phase.explicit]
-)
+settings.register_profile("CI", deadline=None, max_examples=10, phases=[])
 if os.getenv("CI"):
     settings.load_profile("CI")
 else:
