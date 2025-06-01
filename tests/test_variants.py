@@ -64,7 +64,7 @@ def test_variants_different_dtypes(variant_str, arr, is_pypy):
             try:
                 compressed = variant.compress(arr)
             except:
-                pytest.xfail(
+                pytest.skip(
                     reason="PyPy struggles w/ multidim buffer views depending on dtype ie datetime[64]"
                 )
         else:
@@ -157,7 +157,7 @@ def test_variants_compress_into(
         output = output_type(b"0" * compressed_len)
 
     if (is_pypy or is_free_threaded) and isinstance(output, (bytes, memoryview)):
-        pytest.xfail(
+        pytest.skip(
             reason="Decompressing into immutable objects is not supported on PyPy or the free-threaded build"
         )
 
@@ -228,7 +228,7 @@ def test_variants_decompress_into(
         output = output_type(b"0" * len(raw_data))
 
     if (is_pypy or is_free_threaded) and isinstance(output, (bytes, memoryview)):
-        pytest.xfail(
+        pytest.skip(
             reason="Decompressing into immutable objects is not supported on PyPy or the free-threaded build"
         )
 
