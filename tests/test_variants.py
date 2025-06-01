@@ -4,7 +4,7 @@ import pytest
 import numpy as np
 import cramjam
 import hashlib
-from hypothesis import strategies as st, given, settings
+from hypothesis import strategies as st, given, settings, Phase
 from hypothesis.extra import numpy as st_np
 
 
@@ -29,7 +29,9 @@ for experimental_feat in ("blosc2", "igzip", "ideflate", "izlib"):
 
 # Some OS can be slow or have higher variability in their runtimes on CI
 settings.register_profile("local", deadline=None, max_examples=20)
-settings.register_profile("CI", deadline=None, max_examples=10)
+settings.register_profile(
+    "CI", deadline=None, max_examples=10, phases=[Phase.generate, Phase.explicit]
+)
 if os.getenv("CI"):
     settings.load_profile("CI")
 else:
@@ -106,7 +108,13 @@ def test_variants_raise_exception(variant_str):
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_compress_into(
-        variant_str, input_type, output_type, raw_data, tmp_path_factory, is_pypy, is_free_threaded
+    variant_str,
+    input_type,
+    output_type,
+    raw_data,
+    tmp_path_factory,
+    is_pypy,
+    is_free_threaded,
 ):
     # TODO: Fix segfault when using blosc2 compress_into cramjam.File
     #       decompress_into appears to work fine.
@@ -176,7 +184,13 @@ def test_variants_compress_into(
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_decompress_into(
-    variant_str, input_type, output_type, tmp_path_factory, raw_data, is_pypy, is_free_threaded
+    variant_str,
+    input_type,
+    output_type,
+    tmp_path_factory,
+    raw_data,
+    is_pypy,
+    is_free_threaded,
 ):
     if variant_str == "izlib" and output_type == "memoryview":
         pytest.skip("See issue https://github.com/milesgranger/cramjam/issues/193")
