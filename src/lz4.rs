@@ -16,7 +16,7 @@ pub mod lz4 {
 
     const DEFAULT_COMPRESSION_LEVEL: u32 = 4;
 
-    /// LZ4 compression.
+    /// LZ4 decompression.
     ///
     /// Python Example
     /// --------------

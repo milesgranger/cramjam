@@ -1,6 +1,7 @@
 cramjam-js/node_modules/
 cramjam-js/target/
 cramjam-js/pkg/
+docs/
 
 node_modules/
 package-lock.json
