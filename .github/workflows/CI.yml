@@ -136,7 +136,8 @@ jobs:
           python -m pip install cramjam[dev] --pre --find-links dist --force-reinstall
           python -m pip install cramjam --pre --no-index --find-links dist --force-reinstall
 
-          python -m pytest -vs --benchmark-skip
+          pip install pytest-rerunfailures
+          python -m pytest -vs --benchmark-skip --reruns 3 -n0 --dist no
 
       # Could use 'distro: alpine_latest' in 'run-on-arch-action' but seems difficult to install a specific version of python
       # so we'll just use existing python alpine images to test import and cli use w/o testing archs other than x86_64
