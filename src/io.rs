@@ -14,6 +14,7 @@ use pyo3::exceptions::{self, PyBufferError};
 use pyo3::ffi;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
+use pyo3::IntoPyObjectExt;
 use std::path::PathBuf;
 
 pub(crate) trait AsBytes {
@@ -176,8 +177,8 @@ impl RustyFile {
 pub struct PythonBuffer {
     pub(crate) inner: std::pin::Pin<Box<ffi::Py_buffer>>,
     pub(crate) pos: usize,
-    #[cfg(PyPy)]
-    pub(crate) owner: PyObject,
+    #[cfg(any(PyPy, Py_GIL_DISABLED))]
+    pub(crate) owner: Py<PyAny>,
 }
 // PyBuffer is thread-safe: the shape of the buffer is immutable while a Py_buffer exists.
 // Accessing the buffer contents is protected using the GIL.
@@ -207,14 +208,23 @@ impl PythonBuffer {
     }
     /// Get the underlying buffer as a mutable slice of bytes
     pub fn as_slice_mut(&mut self) -> PyResult<&mut [u8]> {
-        #[cfg(PyPy)]
+        #[cfg(any(PyPy, Py_GIL_DISABLED))]
         {
             Python::with_gil(|py| {
                 let is_memoryview = unsafe { ffi::PyMemoryView_Check(self.owner.as_ptr()) } == 1;
                 if is_memoryview || self.owner.bind(py).is_instance_of::<PyBytes>() {
-                    Err(pyo3::exceptions::PyTypeError::new_err(
-                        "With PyPy, an output of type `bytes` or `memoryview` does not work. See issue pypy/pypy#4918",
-                    ))
+                    #[cfg(PyPy)]
+                    {
+                        Err(pyo3::exceptions::PyTypeError::new_err(
+                            "Cannot create mutable reference to `bytes` or `memoryview` on PyPy. See issue pypy/pypy#4918",
+                        ))
+                    }
+                    #[cfg(Py_GIL_DISABLED)]
+                    {
+                        Err(pyo3::exceptions::PyTypeError::new_err(
+                            "Cannot create mutable reference to `bytes` or `memoryview` on the free-threaded build. See issue milesgranger/cramjam#213"
+                        ))
+                    }
                 } else {
                     Ok(())
                 }
@@ -274,8 +284,8 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyAny>> for PythonBuffer {
         let buf = Self {
             inner: std::pin::Pin::from(buf),
             pos: 0,
-            #[cfg(PyPy)]
-            owner: Python::with_gil(|py| obj.to_object(py)),
+            #[cfg(any(PyPy, Py_GIL_DISABLED))]
+            owner: Python::with_gil(|py| obj.into_py_any(py).unwrap()),
         };
         // sanity checks
         if buf.inner.shape.is_null() {
@@ -412,7 +422,6 @@ impl RustyBuffer {
     pub fn __init__(py: Python, mut data: Option<Py<PyAny>>, copy: Option<bool>) -> PyResult<Self> {
         if let Some(maybe_bytestype) = data.as_mut() {
             let mut bytestype = maybe_bytestype.extract::<BytesType<'_>>(py)?;
-
             if copy.unwrap_or(true) {
                 let mut buf = vec![];
                 bytestype.read_to_end(&mut buf)?;

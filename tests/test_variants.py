@@ -62,7 +62,7 @@ def test_variants_different_dtypes(variant_str, arr, is_pypy):
             try:
                 compressed = variant.compress(arr)
             except:
-                pytest.xfail(
+                pytest.skip(
                     reason="PyPy struggles w/ multidim buffer views depending on dtype ie datetime[64]"
                 )
         else:
@@ -106,7 +106,13 @@ def test_variants_raise_exception(variant_str):
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_compress_into(
-    variant_str, input_type, output_type, raw_data, tmp_path_factory, is_pypy
+    variant_str,
+    input_type,
+    output_type,
+    raw_data,
+    tmp_path_factory,
+    is_pypy,
+    is_free_threaded,
 ):
     # TODO: Fix segfault when using blosc2 compress_into cramjam.File
     #       decompress_into appears to work fine.
@@ -149,9 +155,9 @@ def test_variants_compress_into(
     else:
         output = output_type(b"0" * compressed_len)
 
-    if is_pypy and isinstance(output, (bytes, memoryview)):
-        pytest.xfail(
-            reason="PyPy de/compress_into w/ bytes or memoryview is a bit flaky behavior"
+    if (is_pypy or is_free_threaded) and isinstance(output, (bytes, memoryview)):
+        pytest.skip(
+            reason="Decompressing into immutable objects is not supported on PyPy or the free-threaded build"
         )
 
     n_bytes = variant.compress_into(input, output)
@@ -177,7 +183,13 @@ def test_variants_compress_into(
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
 def test_variants_decompress_into(
-    variant_str, input_type, output_type, tmp_path_factory, raw_data, is_pypy
+    variant_str,
+    input_type,
+    output_type,
+    tmp_path_factory,
+    raw_data,
+    is_pypy,
+    is_free_threaded,
 ):
     if variant_str == "izlib" and output_type == "memoryview":
         pytest.skip("See issue https://github.com/milesgranger/cramjam/issues/193")
@@ -214,9 +226,9 @@ def test_variants_decompress_into(
     else:
         output = output_type(b"0" * len(raw_data))
 
-    if is_pypy and isinstance(output, (bytes, memoryview)):
-        pytest.xfail(
-            reason="PyPy de/compress_into w/ bytes or memoryview is a bit flaky behavior"
+    if (is_pypy or is_free_threaded) and isinstance(output, (bytes, memoryview)):
+        pytest.skip(
+            reason="Decompressing into immutable objects is not supported on PyPy or the free-threaded build"
         )
 
     n_bytes = variant.decompress_into(input, output)
