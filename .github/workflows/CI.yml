@@ -67,7 +67,8 @@ jobs:
     runs-on: ${{ matrix.conf.os }}
     name: ${{ matrix.conf.os }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.target }}
     strategy:
-      fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
+      # fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
+      fail-fast: false
       matrix:
         python-version: 
           - '3.9'
