@@ -1,6 +1,6 @@
 [project]
 name = "cramjam"
-version = "2.11.0-rc3"
+version = "2.11.0-rc4"
 keywords = ["compression", "decompression", "snappy", "zstd", "bz2", "gzip", "lz4", "brotli", "deflate", "blosc2"]
 requires-python = ">=3.8"
 license = { file = "LICENSE" }
@@ -31,5 +31,5 @@ dev = [
   "pytest>=5.30",
   "pytest-xdist",
   "pytest-benchmark",
-  "hypothesis"
+  "hypothesis==6.60.0"
 ]

@@ -245,15 +245,15 @@ dependencies = [
 name = "cramjam"
 version = "0.1.0"
 dependencies = [
- "libcramjam",
+ "libcramjam 0.7.0",
  "wasm-bindgen",
 ]
 
 [[package]]
 name = "cramjam-python"
-version = "2.11.0-rc2"
+version = "2.11.0-rc4"
 dependencies = [
- "libcramjam",
+ "libcramjam 0.8.0",
  "pyo3",
  "pyo3-build-config",
 ]
@@ -397,14 +397,24 @@ version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d47c04e9aaf198d40b6f5c21dc541f0942fa61ed2e98fef893945d2699bbc28"
 dependencies = [
+ "brotli",
+ "cbindgen",
+ "lz4",
+ "snap",
+]
+
+[[package]]
+name = "libcramjam"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0e5f1b4af9048074ca80756cab7167effcbdc48b93b83e94957b26f924af1943"
+dependencies = [
  "blosc2-rs",
  "brotli",
  "bzip2",
- "cbindgen",
  "flate2",
  "isal-rs",
  "libdeflate-sys",
- "libdeflater",
  "lz4",
  "snap",
  "xz2",
@@ -419,15 +429,6 @@ checksum = "cc9caa76c8cc6ee8c4efcf8f4514a812ebcad3aa7d3b548efe4d26da1203f177"
 dependencies = [
  "cc",
  "pkg-config",
-]
-
-[[package]]
-name = "libdeflater"
-version = "1.19.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "265a985bd31e5f22e2b2ac107cbed44c6ccf40ae236e46963cd00dd213e4bd03"
-dependencies = [
- "libdeflate-sys",
 ]
 
 [[package]]
