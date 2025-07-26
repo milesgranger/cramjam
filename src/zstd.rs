@@ -42,15 +42,25 @@ pub mod zstd {
         level: Option<i32>,
         output_len: Option<usize>,
     ) -> PyResult<RustyBuffer> {
-        crate::generic!(py, libcramjam::zstd::compress[data], output_len = output_len, level)
-            .map_err(CompressionError::from_err)
+        let input_size = Some(data.len());
+
+        crate::generic!(
+            py,
+            libcramjam::zstd::compress[data],
+            output_len = output_len,
+            level,
+            input_size
+        )
+        .map_err(CompressionError::from_err)
     }
 
     /// Compress directly into an output buffer
     #[pyfunction]
     #[pyo3(signature = (input, output, level=None))]
     pub fn compress_into(py: Python, input: BytesType, mut output: BytesType, level: Option<i32>) -> PyResult<usize> {
-        crate::generic!(py, libcramjam::zstd::compress[input, output], level).map_err(CompressionError::from_err)
+        let input_size = Some(input.len());
+        crate::generic!(py, libcramjam::zstd::compress[input, output], level, input_size)
+            .map_err(CompressionError::from_err)
     }
 
     /// Decompress directly into an output buffer
