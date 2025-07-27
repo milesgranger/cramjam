@@ -70,12 +70,13 @@ jobs:
       fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
       matrix:
         python-version: 
-          - '3.8'
           - '3.9'
           - '3.10'
           - '3.11'
           - '3.12'
           - '3.13'
+          - '3.14'
+          - '3.14t'
         conf:
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu,             manylinux: auto }
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl,            manylinux: musllinux_1_1 }
@@ -183,14 +184,13 @@ jobs:
           python -m pip install cramjam[dev] --pre --find-links dist --force-reinstall
           python -m pip install cramjam --pre --no-index --find-links dist --force-reinstall
 
-          # remove --assert='plain' when https://github.com/HypothesisWorks/hypothesis/issues/4267 is fixed
-          python -m pytest --assert='plain' -vs --benchmark-skip -n0 --dist no
+          python -m pytest -vs --benchmark-skip -n0 --dist no
 
       # Could use 'distro: alpine_latest' in 'run-on-arch-action' but seems difficult to install a specific version of python
       # so we'll just use existing python alpine images to test import and cli use w/o testing archs other than x86_64
       - name: Install built wheel and Test (musllinux)
         # TODO: python:3.13-alpine doesn't exist yet
-        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64' && matrix.python-version != '3.13'
+        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64' && !startsWith(matrix.python-version, '3.14')
         run: |
           docker run \
             -v $(pwd)/dist:/wheels \
