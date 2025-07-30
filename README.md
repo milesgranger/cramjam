@@ -1,10 +1,9 @@
 # cramjam
 
-[![Code Style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/python/black)
 [![CI](https://github.com/milesgranger/cramjam/actions/workflows/CI.yml/badge.svg)](https://github.com/milesgranger/cramjam/actions/workflows/CI.yml)
-[![PyPI](https://img.shields.io/pypi/v/cramjam.svg)](https://pypi.org/project/cramjam)
-[![Anaconda-Server Badge](https://anaconda.org/conda-forge/cramjam/badges/version.svg)](https://anaconda.org/conda-forge/cramjam)
 [![Downloads](https://pepy.tech/badge/cramjam/month)](https://pepy.tech/project/cramjam)
+[![PyPI](https://img.shields.io/pypi/v/cramjam.svg)](https://pypi.org/project/cramjam)
+[![Conda Version](https://img.shields.io/conda/vn/conda-forge/cramjam.svg)](https://anaconda.org/conda-forge/cramjam)
 [![NPM Version](https://img.shields.io/npm/v/cramjam)](https://www.npmjs.com/package/cramjam)
 
 
