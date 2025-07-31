@@ -1,8 +1,8 @@
 [project]
 name = "cramjam"
-version = "2.11.0"
+version = "2.12.0-rc1"
 keywords = ["compression", "decompression", "snappy", "zstd", "bz2", "gzip", "lz4", "brotli", "deflate", "blosc2"]
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 license = { file = "LICENSE" }
 
 [project.urls]
