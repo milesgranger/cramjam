@@ -97,7 +97,7 @@ jobs:
 
           - { os: windows-latest, target: x86_64, target-triple: x86_64-pc-windows-msvc, python-architecture: x64 }
           - { os: windows-latest, target: i686,   target-triple: i686-pc-windows-msvc,   python-architecture: x86 }
-          - { os: windows-11-arm, target: arm64,   target-triple: arm64-pc-windows-msvc,   python-architecture: arm64 }
+          - { os: windows-11-arm, target: arm64,   target-triple: arm64-pc-windows-msvc}
 
         include:
           # Windows x86_64 pypy
