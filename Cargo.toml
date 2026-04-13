@@ -1,6 +1,6 @@
 [package]
 name = "cramjam-python"
-version = "2.12.0-rc1"
+version = "2.12.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
 license = "MIT"
@@ -21,54 +21,79 @@ name = "cramjam"
 crate-type = ["cdylib"]
 
 [features]
-default                  = ["extension-module", "snappy", "lz4", "bzip2", "brotli", "xz", "zstd", "gzip", "zlib", "deflate"]
-experimental             = ["blosc2", "igzip", "ideflate", "izlib"]
+default = [
+  "extension-module",
+  "snappy",
+  "lz4",
+  "bzip2",
+  "brotli",
+  "xz",
+  "zstd",
+  "gzip",
+  "zlib",
+  "deflate",
+]
+experimental = ["blosc2", "igzip", "ideflate", "izlib"]
 
-extension-module         = ["pyo3/extension-module"]
-generate-import-lib      = ["pyo3/generate-import-lib"]  # needed for Windows PyPy builds
+extension-module = ["pyo3/extension-module"]
+generate-import-lib = [
+  "pyo3/generate-import-lib",
+] # needed for Windows PyPy builds
 
-snappy                   = ["libcramjam/snappy"]
-lz4                      = ["libcramjam/lz4"]
-bzip2                    = ["libcramjam/bzip2"]
-brotli                   = ["libcramjam/brotli"]
-zstd                     = ["libcramjam/zstd"]
+snappy = ["libcramjam/snappy"]
+lz4 = ["libcramjam/lz4"]
+bzip2 = ["libcramjam/bzip2"]
+brotli = ["libcramjam/brotli"]
+zstd = ["libcramjam/zstd"]
 
-xz                       = ["xz-static"]
-xz-static                = ["libcramjam/xz-static"]
-xz-shared                = ["libcramjam/xz-shared"]
+xz = ["xz-static"]
+xz-static = ["libcramjam/xz-static"]
+xz-shared = ["libcramjam/xz-shared"]
 
 # ISA-L stuff
-igzip                    = ["igzip-static"]
-igzip-static             = ["libcramjam/igzip-static"]
-igzip-shared             = ["libcramjam/igzip-shared"]
-ideflate                 = ["ideflate-static"]
-ideflate-static          = ["libcramjam/ideflate-static"]
-ideflate-shared          = ["libcramjam/ideflate-shared"]
-izlib                    = ["izlib-static"]
-izlib-static             = ["libcramjam/izlib-static"]
-izlib-shared             = ["libcramjam/izlib-shared"]
-use-system-isal-static   = ["libcramjam/use-system-isal", "libcramjam/igzip-static"]
-use-system-isal-shared   = ["libcramjam/use-system-isal", "libcramjam/igzip-shared"]
+igzip = ["igzip-static"]
+igzip-static = ["libcramjam/igzip-static"]
+igzip-shared = ["libcramjam/igzip-shared"]
+ideflate = ["ideflate-static"]
+ideflate-static = ["libcramjam/ideflate-static"]
+ideflate-shared = ["libcramjam/ideflate-shared"]
+izlib = ["izlib-static"]
+izlib-static = ["libcramjam/izlib-static"]
+izlib-shared = ["libcramjam/izlib-shared"]
+use-system-isal-static = [
+  "libcramjam/use-system-isal",
+  "libcramjam/igzip-static",
+]
+use-system-isal-shared = [
+  "libcramjam/use-system-isal",
+  "libcramjam/igzip-shared",
+]
 
-gzip                     = ["gzip-static"]
-gzip-static              = ["libcramjam/gzip-static"]
-gzip-shared              = ["libcramjam/gzip-shared"]
+gzip = ["gzip-static"]
+gzip-static = ["libcramjam/gzip-static"]
+gzip-shared = ["libcramjam/gzip-shared"]
 
-zlib                     = ["zlib-static"]
-zlib-static              = ["libcramjam/zlib-static"]
-zlib-shared              = ["libcramjam/zlib-shared"]
+zlib = ["zlib-static"]
+zlib-static = ["libcramjam/zlib-static"]
+zlib-shared = ["libcramjam/zlib-shared"]
 
-deflate                  = ["deflate-static"]
-deflate-static           = ["libcramjam/deflate-static"]
-deflate-shared           = ["libcramjam/deflate-shared"]
+deflate = ["deflate-static"]
+deflate-static = ["libcramjam/deflate-static"]
+deflate-shared = ["libcramjam/deflate-shared"]
 
-blosc2                   = ["blosc2-static"]
-blosc2-static            = ["libcramjam/blosc2-static"]
-blosc2-shared            = ["libcramjam/blosc2-shared"]
-use-system-blosc2-static = ["libcramjam/use-system-blosc2", "libcramjam/blosc2-static"]
-use-system-blosc2-shared = ["libcramjam/use-system-blosc2", "libcramjam/blosc2-shared"]
+blosc2 = ["blosc2-static"]
+blosc2-static = ["libcramjam/blosc2-static"]
+blosc2-shared = ["libcramjam/blosc2-shared"]
+use-system-blosc2-static = [
+  "libcramjam/use-system-blosc2",
+  "libcramjam/blosc2-static",
+]
+use-system-blosc2-shared = [
+  "libcramjam/use-system-blosc2",
+  "libcramjam/blosc2-shared",
+]
 
-wasm32-compat            = ["libcramjam/wasm32-compat"]
+wasm32-compat = ["libcramjam/wasm32-compat"]
 
 
 [dependencies]
