@@ -69,8 +69,7 @@ jobs:
     strategy:
       fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
       matrix:
-        python-version: 
-          - '3.9'
+        python-version:
           - '3.10'
           - '3.11'
           - '3.12'
@@ -91,12 +90,19 @@ jobs:
           - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-gnu,        manylinux: auto }
         # - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-musleabihf, manylinux: musllinux_1_1 }  # no target musl for ppc64le
 
-          - { os: macos-13, target: x86_64,     target-triple: x86_64-apple-darwin }
-          - { os: macos-13, target: aarch64,    target-triple: aarch64-apple-darwin }
-          - { os: macos-13, target: universal2, target-triple: x86_64-apple-darwin }
+          - { os: macos-15, target: x86_64,     target-triple: x86_64-apple-darwin }
+          - { os: macos-15, target: aarch64,    target-triple: aarch64-apple-darwin }
+          - { os: macos-15, target: universal2, target-triple: x86_64-apple-darwin }
 
           - { os: windows-latest, target: x86_64, target-triple: x86_64-pc-windows-msvc, python-architecture: x64 }
           - { os: windows-latest, target: i686,   target-triple: i686-pc-windows-msvc,   python-architecture: x86 }
+
+          - { os: windows-11-arm, target: aarch64, target-triple: aarch64-pc-windows-msvc, python-architecture: arm64 }
+
+        # Python 3.10 has no native ARM64 Windows installer
+        exclude:
+          - python-version: '3.10'
+            conf: { os: windows-11-arm }
 
         include:
           # Windows x86_64 pypy
@@ -118,21 +124,21 @@ jobs:
             python-version: pypy3.11
 
           # OSX x86_64 pypy
-          - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
+          - conf: { os: macos-15, target: x86_64,  target-triple: x86_64-apple-darwin }
             python-version: pypy3.10
-          - conf: { os: macos-13, target: x86_64,  target-triple: x86_64-apple-darwin }
+          - conf: { os: macos-15, target: x86_64,  target-triple: x86_64-apple-darwin }
             python-version: pypy3.11
 
           # OSX universal2 pypy
-          - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
+          - conf: { os: macos-15, target: universal2,  target-triple: x86_64-apple-darwin }
             python-version: pypy3.10
-          - conf: { os: macos-13, target: universal2,  target-triple: x86_64-apple-darwin }
+          - conf: { os: macos-15, target: universal2,  target-triple: x86_64-apple-darwin }
             python-version: pypy3.11
 
           # OSX arm pypy
-          - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
+          - conf: { os: macos-15, target: aarch64,  target-triple: aarch64-apple-darwin }
             python-version: pypy3.10
-          - conf: { os: macos-13, target: aarch64,  target-triple: aarch64-apple-darwin }
+          - conf: { os: macos-15, target: aarch64,  target-triple: aarch64-apple-darwin }
             python-version: pypy3.11
           
     steps:
@@ -177,7 +183,7 @@ jobs:
         if: |
           !startsWith(matrix.conf.manylinux, 'musl') && 
           !( matrix.python-version == 'pypy3.10' && runner.os == 'Windows' ) &&
-          ( matrix.conf.target == 'x86_64' || matrix.conf.target == 'universal2' )
+          ( matrix.conf.target == 'universal2' || (matrix.conf.target == 'aarch64' && runner.os == 'Windows') || (matrix.conf.target == 'x86_64' && runner.os != 'macOS') )
         run: |
           # Second install guarantees it's going to install from local dir w/ --no-index
           # use first to get in dev dependencies
