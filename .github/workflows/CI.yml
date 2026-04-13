@@ -316,17 +316,17 @@ jobs:
     steps:
     - uses: actions/download-artifact@v4
       with:
-        path: .
+        path: dist
         merge-multiple: true
     - name: List artifacts
-      run: ls -lhs
+      run: ls -lhs dist/
     - name: Remove wasm32 wheels  # TODO: https://discuss.python.org/t/support-wasm-wheels-on-pypi/21924
-      run: rm -f ./*wasm32.whl
+      run: rm -f dist/*wasm32.whl
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         skip-existing: true
-        packages-dir: ./
+        packages-dir: dist/
 
   gh-publish:
     name: Publish artifacts to GH
@@ -338,11 +338,11 @@ jobs:
     steps:
     - uses: actions/download-artifact@v4
       with:
-        path: .
+        path: dist
         merge-multiple: true
     - name: List artifacts
-      run: ls -lhs
+      run: ls -lhs dist/
     - name: Upload to GitHub
       uses: softprops/action-gh-release@v2
       with:
-        files: ./*
+        files: dist/*
