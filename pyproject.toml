@@ -29,7 +29,7 @@ dev = [
 dev = [
   "black==26.3.1",
   "numpy",
-  "pytest>=5.30",
+  "pytest>=9.0.3",
   "pytest-xdist",
   "pytest-benchmark",
   "hypothesis==6.60.0"
