@@ -143,7 +143,7 @@ pub mod blosc2 {
     pub fn decompress_chunk(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
         let buf = py
-            .allow_threads(|| libcramjam::blosc2::decompress_chunk(bytes))
+            .detach(|| libcramjam::blosc2::decompress_chunk(bytes))
             .map(RustyBuffer::from)?;
         Ok(buf)
     }
@@ -153,7 +153,7 @@ pub mod blosc2 {
     pub fn decompress_chunk_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
         let bytes = input.as_bytes();
         let out = output.as_bytes_mut()?;
-        let nbytes = py.allow_threads(|| libcramjam::blosc2::decompress_chunk_into(bytes, out))?;
+        let nbytes = py.detach(|| libcramjam::blosc2::decompress_chunk_into(bytes, out))?;
         Ok(nbytes)
     }
 
@@ -176,7 +176,7 @@ pub mod blosc2 {
         codec: Option<PyCodec>,
     ) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
-        py.allow_threads(|| {
+        py.detach(|| {
             let clevel = clevel.map(Into::into);
             let filter = filter.map(Into::into);
             let codec = codec.map(Into::into);
@@ -200,7 +200,7 @@ pub mod blosc2 {
     ) -> PyResult<usize> {
         let bytes = input.as_bytes();
         let out = output.as_bytes_mut()?;
-        py.allow_threads(|| {
+        py.detach(|| {
             let clevel = clevel.map(Into::into);
             let filter = filter.map(Into::into);
             let codec = codec.map(Into::into);

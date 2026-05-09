@@ -54,7 +54,7 @@ pub mod snappy {
     #[pyo3(signature = (data, output_len=None))]
     pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
-        py.allow_threads(|| libcramjam::snappy::raw::decompress_vec(bytes))
+        py.detach(|| libcramjam::snappy::raw::decompress_vec(bytes))
             .map_err(DecompressionError::from_err)
             .map(From::from)
     }
@@ -72,7 +72,7 @@ pub mod snappy {
     #[pyo3(signature = (data, output_len=None))]
     pub fn compress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
-        py.allow_threads(|| libcramjam::snappy::raw::compress_vec(bytes))
+        py.detach(|| libcramjam::snappy::raw::compress_vec(bytes))
             .map_err(CompressionError::from_err)
             .map(From::from)
     }
@@ -94,7 +94,7 @@ pub mod snappy {
     pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
         let bytes_in = input.as_bytes();
         let bytes_out = output.as_bytes_mut()?;
-        py.allow_threads(|| libcramjam::snappy::raw::compress(bytes_in, bytes_out))
+        py.detach(|| libcramjam::snappy::raw::compress(bytes_in, bytes_out))
             .map_err(CompressionError::from_err)
     }
 
@@ -103,7 +103,7 @@ pub mod snappy {
     pub fn decompress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
         let bytes_in = input.as_bytes();
         let bytes_out = output.as_bytes_mut()?;
-        py.allow_threads(|| libcramjam::snappy::raw::decompress(bytes_in, bytes_out))
+        py.detach(|| libcramjam::snappy::raw::decompress(bytes_in, bytes_out))
             .map_err(DecompressionError::from_err)
     }
 

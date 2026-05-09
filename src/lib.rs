@@ -222,13 +222,13 @@ macro_rules! generic {
                 BytesType::RustyFile(f) => {
                     let borrowed = f.borrow();
                     let file = &borrowed.inner;
-                    $py.allow_threads(|| {
+                    $py.detach(|| {
                         $op(file, &mut Cursor::new(&mut output) $(, $args)* )
                     })
                 },
                 _ => {
                     let bytes = $input.as_bytes();
-                    $py.allow_threads(|| {
+                    $py.detach(|| {
                         $op(bytes, &mut Cursor::new(&mut output) $(, $args)* )
                     })
                 }
@@ -246,20 +246,20 @@ macro_rules! generic {
                         BytesType::RustyFile(f) => {
                             let mut borrowed = f.borrow_mut();
                             let mut f_out = &mut borrowed.inner;
-                            $py.allow_threads(|| {
+                            $py.detach(|| {
                                 $op(f_in, &mut f_out $(, $args)* )
                             })
                         },
                         BytesType::RustyBuffer(buffer) => {
                             let mut borrowed = buffer.borrow_mut();
                             let mut buf_out = &mut borrowed.inner;
-                            $py.allow_threads(|| {
+                            $py.detach(|| {
                                 $op(f_in, &mut buf_out $(, $args)* )
                             })
                         },
                         _ => {
                             let bytes_out = $output.as_bytes_mut()?;
-                            $py.allow_threads(|| {
+                            $py.detach(|| {
                                 $op(f_in, &mut Cursor::new(bytes_out) $(, $args)* )
                             })
                         }
@@ -271,20 +271,20 @@ macro_rules! generic {
                         BytesType::RustyFile(f) => {
                             let mut borrowed = f.borrow_mut();
                             let mut f_out = &mut borrowed.inner;
-                            $py.allow_threads(|| {
+                            $py.detach(|| {
                                 $op(bytes_in, &mut f_out $(, $args)* )
                             })
                         },
                         BytesType::RustyBuffer(buffer) => {
                             let mut borrowed = buffer.borrow_mut();
                             let mut buf_out = &mut borrowed.inner;
-                            $py.allow_threads(|| {
+                            $py.detach(|| {
                                 $op(bytes_in, &mut buf_out $(, $args)* )
                             })
                         },
                         _ => {
                             let bytes_out = $output.as_bytes_mut()?;
-                            $py.allow_threads(|| {
+                            $py.detach(|| {
                                 $op(bytes_in, &mut Cursor::new(bytes_out) $(, $args)*)
                             })
                         }
@@ -331,11 +331,11 @@ macro_rules! make_decompressor {
                         BytesType::RustyFile(f) => {
                             let mut borrowed = f.borrow_mut();
                             let f_in = &mut borrowed.inner;
-                            py.allow_threads(|| libcramjam::$codec::decompress(f_in, inner).map_err(Into::into))
+                            py.detach(|| libcramjam::$codec::decompress(f_in, inner).map_err(Into::into))
                         }
                         _ => {
                             let bytes = input.as_bytes();
-                            py.allow_threads(|| {
+                            py.detach(|| {
                                 libcramjam::$codec::decompress(&mut Cursor::new(bytes), inner).map_err(Into::into)
                             })
                         }
@@ -377,7 +377,7 @@ macro_rules! make_decompressor {
             }
             fn __contains__(&self, py: Python, x: BytesType) -> bool {
                 let bytes = x.as_bytes();
-                py.allow_threads(|| {
+                py.detach(|| {
                     self.inner
                         .as_ref()
                         .map(|c| c.get_ref().windows(bytes.len()).any(|w| w == bytes))
