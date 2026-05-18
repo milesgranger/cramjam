@@ -1,5 +1,19 @@
 # cramjam
 
+---
+
+## Project Status
+
+Over the course of the last year or two I've lost a lot of interest in open-source work and thus, this project. I thought it was simply
+new time limitations, but as those lifted, it became clear something has changed. In me, the environment...probably both. 
+
+This world of open-source, software engineering, deep thought of puzzles, creativity within constraints; it all use to make me happy.
+It was an escape. Seeing how it's evolving, the changes in people, the difference in tragectory, disregard for consequences...It makes me sad now.
+
+Anyway, I may touch this again or I may not.
+
+---
+
 [![CI](https://github.com/milesgranger/cramjam/actions/workflows/CI.yml/badge.svg)](https://github.com/milesgranger/cramjam/actions/workflows/CI.yml)
 [![Downloads](https://pepy.tech/badge/cramjam/month)](https://pepy.tech/project/cramjam)
 [![PyPI](https://img.shields.io/pypi/v/cramjam.svg)](https://pypi.org/project/cramjam)
