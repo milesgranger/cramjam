@@ -48,7 +48,7 @@ else:
 
 
 def same_same(a, b):
-    return hashlib.md5(a).hexdigest() == hashlib.md5(b).hexdigest()
+    return hashlib.md5(bytes(a)).hexdigest() == hashlib.md5(bytes(b)).hexdigest()
 
 
 def test_has_version():
