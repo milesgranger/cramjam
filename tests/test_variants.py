@@ -5,9 +5,8 @@ import pytest
 import numpy as np
 import cramjam
 import hashlib
-from hypothesis import strategies as st, given, settings
+from hypothesis import HealthCheck, strategies as st, given, settings
 from hypothesis.extra import numpy as st_np
-
 
 VARIANTS = (
     "snappy",
@@ -28,8 +27,20 @@ for experimental_feat in ("blosc2", "igzip", "ideflate", "izlib"):
             VARIANTS = (*VARIANTS, experimental_feat)
 
 # Some OS can be slow or have higher variability in their runtimes on CI
-settings.register_profile("local", deadline=None, max_examples=20, derandomize=False)
-settings.register_profile("CI", deadline=None, max_examples=10, derandomize=False)
+settings.register_profile(
+    "local",
+    deadline=None,
+    max_examples=20,
+    derandomize=False,
+    suppress_health_check=[HealthCheck.data_too_large],
+)
+settings.register_profile(
+    "CI",
+    deadline=None,
+    max_examples=10,
+    derandomize=False,
+    suppress_health_check=[HealthCheck.data_too_large],
+)
 if os.getenv("CI"):
     settings.load_profile("CI")
 else:

@@ -1,4 +1,5 @@
 import gc
+from concurrent.futures import ThreadPoolExecutor
 
 import cramjam
 import pytest
@@ -173,3 +174,25 @@ def test_buffer_view_cannot_read_passed():
     for i in range(0, 10):
         b += buf.read(i)
     assert b == data
+
+
+def test_buffer_exports_memoryview():
+    buf = Buffer(b"bytes")
+    view = memoryview(buf)
+
+    assert view.c_contiguous
+    assert view.itemsize == 1
+    assert view.ndim == 1
+    assert view.nbytes == 5
+    assert view.tobytes() == b"bytes"
+
+
+def test_concurrent_codec_calls():
+    data = b"concurrent compression" * 100
+
+    def roundtrip(_):
+        compressed = cramjam.zstd.compress(data)
+        return bytes(cramjam.zstd.decompress(compressed))
+
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        assert list(executor.map(roundtrip, range(32))) == [data] * 32

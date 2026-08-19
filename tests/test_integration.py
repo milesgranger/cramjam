@@ -100,3 +100,31 @@ def test_lz4_decompress_block_into_non_prepended_size(data, set_output_len):
     out = bytearray(len(compressed) * 2)
     n = cramjam.lz4.decompress_block_into(compressed, out, output_len=output_len)
     assert same_same(bytes(out[:n]), data)
+
+
+def test_module_registration():
+    import cramjam
+
+    assert cramjam.snappy.__name__ == "snappy"
+    assert cramjam.experimental.__name__ == "experimental"
+    assert issubclass(cramjam.CompressionError, Exception)
+    assert issubclass(cramjam.DecompressionError, Exception)
+
+
+def test_xz_configuration_objects():
+    import cramjam
+
+    options = cramjam.xz.Options()
+    options.set_mode(cramjam.xz.Mode.Normal)
+    options.set_mf(cramjam.xz.MatchFinder.BinaryTree4)
+    filters = cramjam.xz.FilterChain()
+    filters.append_filter(cramjam.xz.FilterChainItem(cramjam.xz.Filter.Lzma2, options))
+
+    data = b"configured xz compression"
+    compressed = cramjam.xz.compress(
+        data,
+        format=cramjam.xz.Format.XZ,
+        check=cramjam.xz.Check.Crc64,
+        filters=filters,
+    )
+    assert bytes(cramjam.xz.decompress(compressed)) == data

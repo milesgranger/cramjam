@@ -81,7 +81,7 @@ pub mod lz4 {
     pub fn decompress_block(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
 
-        py.allow_threads(|| {
+        py.detach(|| {
             match output_len {
                 Some(n) => {
                     let mut buf = vec![0u8; n];
@@ -123,11 +123,9 @@ pub mod lz4 {
         store_size: Option<bool>,
     ) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
-        py.allow_threads(|| {
-            libcramjam::lz4::block::compress_vec(bytes, compression.map(|v| v as _), acceleration, store_size)
-        })
-        .map_err(CompressionError::from_err)
-        .map(RustyBuffer::from)
+        py.detach(|| libcramjam::lz4::block::compress_vec(bytes, compression.map(|v| v as _), acceleration, store_size))
+            .map_err(CompressionError::from_err)
+            .map(RustyBuffer::from)
     }
 
     /// LZ4 _block_ decompression into a pre-allocated buffer.
@@ -160,7 +158,7 @@ pub mod lz4 {
         }
 
         let out_bytes = output.as_bytes_mut()?;
-        py.allow_threads(
+        py.detach(
             || match libcramjam::lz4::block::decompress_into(bytes, out_bytes, Some(size_stored)) {
                 Ok(r) => Ok(r),
                 // Fallback and try negation of stored size, incase we/they got it wrong;
@@ -202,7 +200,7 @@ pub mod lz4 {
     ) -> PyResult<usize> {
         let bytes = data.as_bytes();
         let out_bytes = output.as_bytes_mut()?;
-        py.allow_threads(|| {
+        py.detach(|| {
             libcramjam::lz4::block::compress_into(
                 bytes,
                 out_bytes,

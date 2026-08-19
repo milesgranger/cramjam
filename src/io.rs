@@ -14,6 +14,7 @@ use pyo3::exceptions::{self, PyBufferError};
 use pyo3::ffi;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
+#[cfg(any(PyPy, Py_GIL_DISABLED))]
 use pyo3::IntoPyObjectExt;
 use std::path::PathBuf;
 
@@ -210,7 +211,7 @@ impl PythonBuffer {
     pub fn as_slice_mut(&mut self) -> PyResult<&mut [u8]> {
         #[cfg(any(PyPy, Py_GIL_DISABLED))]
         {
-            Python::with_gil(|py| {
+            Python::attach(|py| {
                 let is_memoryview = unsafe { ffi::PyMemoryView_Check(self.owner.as_ptr()) } == 1;
                 if is_memoryview || self.owner.bind(py).is_instance_of::<PyBytes>() {
                     #[cfg(PyPy)]
@@ -260,13 +261,15 @@ impl PythonBuffer {
 
 impl Drop for PythonBuffer {
     fn drop(&mut self) {
-        Python::with_gil(|_| unsafe { ffi::PyBuffer_Release(&mut *self.inner) })
+        Python::attach(|_| unsafe { ffi::PyBuffer_Release(&mut *self.inner) })
     }
 }
 
-impl<'py> FromPyObject<'py> for PythonBuffer {
-    fn extract_bound(obj: &Bound<'py, PyAny>) -> PyResult<Self> {
-        Self::try_from(obj)
+impl<'a, 'py> FromPyObject<'a, 'py> for PythonBuffer {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
+        Self::try_from(&obj.to_owned())
     }
 }
 
@@ -285,7 +288,7 @@ impl<'a, 'py> TryFrom<&'a Bound<'py, PyAny>> for PythonBuffer {
             inner: std::pin::Pin::from(buf),
             pos: 0,
             #[cfg(any(PyPy, Py_GIL_DISABLED))]
-            owner: Python::with_gil(|py| obj.into_py_any(py).unwrap()),
+            owner: Python::attach(|py| obj.into_py_any(py).unwrap()),
         };
         // sanity checks
         if buf.inner.shape.is_null() {
@@ -493,8 +496,9 @@ impl RustyBuffer {
 
     /// Get the PyObject reference count this Buffer is referencing as its view,
     /// returns None if this Buffer owns its data.
-    pub fn get_view_reference_count(&self, py: Python) -> Option<isize> {
-        self.get_view_reference().map(|obj| obj.get_refcnt(py))
+    pub fn get_view_reference_count(&self, _py: Python) -> Option<isize> {
+        self.get_view_reference()
+            .map(|obj| unsafe { ffi::Py_REFCNT(obj.as_ptr()) })
     }
 
     /// Length of the underlying buffer
@@ -629,7 +633,7 @@ impl RustyBuffer {
     }
     fn __contains__(&self, py: Python, x: BytesType) -> bool {
         let bytes = x.as_bytes();
-        py.allow_threads(|| self.inner.get_ref().windows(bytes.len()).any(|w| w == bytes))
+        py.detach(|| self.inner.get_ref().windows(bytes.len()).any(|w| w == bytes))
     }
     fn __repr__(&mut self, py: Python) -> PyResult<String> {
         Ok(format!("cramjam.Buffer<len={:?}>", self.len(py)?))
