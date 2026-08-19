@@ -75,6 +75,7 @@ jobs:
           - '3.13'
           - '3.14'
           - '3.14t'
+          - '3.15'
         conf:
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu,             manylinux: auto }
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl,            manylinux: musllinux_1_1 }
@@ -98,6 +99,10 @@ jobs:
 
           - { os: windows-11-arm, target: aarch64, target-triple: aarch64-pc-windows-msvc, python-architecture: arm64 }
 
+        # Python 3.15 has no 32-bit Windows installer.
+        exclude:
+          - python-version: '3.15'
+            conf: { os: windows-latest, target: i686 }
         include:
           # Windows x86_64 pypy
           - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
