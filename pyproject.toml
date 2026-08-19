@@ -43,5 +43,5 @@ dev = [
   "pytest>=9.0.3",
   "pytest-xdist",
   "pytest-benchmark",
-  "hypothesis>=6.60.0"
+  "hypothesis>=6.165.10"
 ]
