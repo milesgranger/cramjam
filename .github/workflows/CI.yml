@@ -67,7 +67,7 @@ jobs:
     runs-on: ${{ matrix.conf.os }}
     name: ${{ matrix.conf.os }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.target }}
     strategy:
-      fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
+      fail-fast: false
       matrix:
         python-version:
           - '3.11'
@@ -100,12 +100,6 @@ jobs:
 
           - { os: windows-11-arm, target: aarch64, target-triple: aarch64-pc-windows-msvc, python-architecture: arm64 }
 
-        # Python 3.15 has no 32-bit Windows installer.
-        exclude:
-          - python-version: '3.15'
-            conf: { os: windows-latest, target: i686 }
-          - python-version: '3.15t'
-            conf: { os: windows-latest, target: i686 }
         include:
           # Windows x86_64 pypy
           - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
@@ -183,12 +177,13 @@ jobs:
       # Could use 'distro: alpine_latest' in 'run-on-arch-action' but seems difficult to install a specific version of python
       # so we'll just use existing python alpine images to test import and cli use w/o testing archs other than x86_64
       - name: Install built wheel and Test (musllinux)
-        # TODO: python:3.13-alpine doesn't exist yet
-        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64' && !startsWith(matrix.python-version, '3.14')
+        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64'
+        env:
+          PYTHON_IMAGE: ${{ matrix.python-version == '3.15' && 'python:3.15-rc-alpine' || format('python:{0}-alpine', matrix.python-version) }}
         run: |
           docker run \
             -v $(pwd)/dist:/wheels \
-            --rm python:${{ matrix.python-version }}-alpine sh \
+            --rm $PYTHON_IMAGE sh \
               -c "pip install cramjam --no-index --find-links /wheels && python -c 'import cramjam'"
 
       # xref: https://github.com/milesgranger/cramjam/issues/194
