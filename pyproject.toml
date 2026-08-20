@@ -2,7 +2,17 @@
 name = "cramjam"
 version = "2.12.0-rc1"
 keywords = ["compression", "decompression", "snappy", "zstd", "bz2", "gzip", "lz4", "brotli", "deflate", "blosc2"]
-requires-python = ">=3.10"
+requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
 license = { file = "LICENSE" }
 
 [project.urls]
@@ -21,6 +31,7 @@ strip = true
 [dependency-groups]
 dev = [
     "ipython>=8.12.3",
+    "maturin>=1.9,<2",
     "pyright>=1.1.399",
     "ruff-lsp>=0.0.62",
 ]
@@ -32,5 +43,5 @@ dev = [
   "pytest>=9.0.3",
   "pytest-xdist",
   "pytest-benchmark",
-  "hypothesis==6.60.0"
+  "hypothesis>=6.165.10"
 ]

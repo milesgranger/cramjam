@@ -3,6 +3,7 @@ name = "cramjam-python"
 version = "2.12.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
+rust-version = "1.83"
 license = "MIT"
 description = "Thin Python bindings to de/compression algorithms in Rust"
 readme = "README.md"
@@ -97,11 +98,11 @@ wasm32-compat = ["libcramjam/wasm32-compat"]
 
 
 [dependencies]
-pyo3 = { version = "^0.25", default-features = false, features = ["macros"] }
+pyo3 = { version = "^0.29.2", default-features = false, features = ["macros"] }
 libcramjam = { version = "^0.8", default-features = false }
 
 [build-dependencies]
-pyo3-build-config = "^0.25"
+pyo3-build-config = "^0.29.2"
 
 [profile.release]
 strip = true

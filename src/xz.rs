@@ -130,7 +130,7 @@ pub mod xz {
 
     /// Available Filter IDs
     #[derive(Clone, Debug, PartialEq)]
-    #[pyclass(eq, eq_int)]
+    #[pyclass(eq, eq_int, from_py_object)]
     #[allow(missing_docs)]
     pub enum Filter {
         Arm,
@@ -150,7 +150,7 @@ pub mod xz {
 
     /// MatchFinder, used with Options.mf attribute
     #[derive(Clone, Debug, PartialEq)]
-    #[pyclass(eq, eq_int)]
+    #[pyclass(eq, eq_int, from_py_object)]
     #[allow(missing_docs)]
     pub enum MatchFinder {
         HashChain3,
@@ -174,7 +174,7 @@ pub mod xz {
 
     /// MatchFinder, used with Options.mode attribute
     #[derive(Clone, Debug, PartialEq)]
-    #[pyclass(eq, eq_int)]
+    #[pyclass(eq, eq_int, from_py_object)]
     #[allow(missing_docs)]
     pub enum Mode {
         Fast,
@@ -192,7 +192,7 @@ pub mod xz {
     /// FilterChain, similar to the default Python XZ filter chain which is a list of
     /// dicts.
     #[derive(Debug, Clone)]
-    #[pyclass]
+    #[pyclass(from_py_object)]
     pub struct FilterChain(Vec<FilterChainItem>);
 
     #[pymethods]
@@ -229,7 +229,7 @@ pub mod xz {
     /// FilterChainItem. In Python's lzma module, this represents a single dict in the
     /// filter chain list. To be added to the `FilterChain`
     #[derive(Clone, Debug, Default)]
-    #[pyclass]
+    #[pyclass(from_py_object)]
     pub struct FilterChainItem {
         filter: Filter,
         options: Options,
@@ -250,7 +250,7 @@ pub mod xz {
 
     ///
     #[derive(Clone, Debug, Default)]
-    #[pyclass]
+    #[pyclass(from_py_object)]
     pub struct Options {
         preset: Option<u32>,
         dict_size: Option<u32>,
@@ -331,7 +331,7 @@ pub mod xz {
 
     /// Possible formats
     #[derive(Clone, Debug, PartialEq)]
-    #[pyclass(eq, eq_int)]
+    #[pyclass(eq, eq_int, from_py_object)]
     pub enum Format {
         /// Auto select the format, for compression this is XZ,
         /// for decompression it will be determined by the compressed input.
@@ -362,7 +362,7 @@ pub mod xz {
 
     /// Possible Check configurations
     #[derive(Debug, Clone, PartialEq)]
-    #[pyclass(eq, eq_int)]
+    #[pyclass(eq, eq_int, from_py_object)]
     #[allow(missing_docs)]
     pub enum Check {
         Crc64,

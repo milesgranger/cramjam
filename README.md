@@ -28,6 +28,18 @@ Anyway, I may touch this again or I may not.
 pip install --upgrade cramjam  # Requires no Python or system dependencies!
 ```
 
+## Development
+
+Install the locked development dependencies, build the extension, and run the
+test suite:
+
+```bash
+make dev-setup
+make test
+```
+
+Rust checks can be run separately with `cargo test`.
+
 
 ### Install (JavaScript / TypeScript)
 ```commandline

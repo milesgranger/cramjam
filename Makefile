@@ -1,7 +1,11 @@
 BASE_BENCH_CMD = python -m pytest -v --benchmark-sort name --benchmark-only benchmarks/ -k
 
 test:
-	python -m pytest -vs --benchmark-skip -n0 --dist no
+	uv run python -m pytest -vs --benchmark-skip -n0 --dist no
+
+dev-setup:
+	uv sync --extra dev
+	uv run maturin develop
 
 test-bench:
 	python -m pytest -v --benchmark-disable benchmarks/

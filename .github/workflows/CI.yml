@@ -70,12 +70,13 @@ jobs:
       fail-fast: ${{ !( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
       matrix:
         python-version:
-          - '3.10'
           - '3.11'
           - '3.12'
           - '3.13'
           - '3.14'
           - '3.14t'
+          - '3.15'
+          - '3.15t'
         conf:
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu,             manylinux: auto }
           - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl,            manylinux: musllinux_1_1 }
@@ -99,45 +100,28 @@ jobs:
 
           - { os: windows-11-arm, target: aarch64, target-triple: aarch64-pc-windows-msvc, python-architecture: arm64 }
 
-        # Python 3.10 has no native ARM64 Windows installer
-        exclude:
-          - python-version: '3.10'
-            conf: { os: windows-11-arm }
-
         include:
           # Windows x86_64 pypy
-          - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
-            python-version: pypy3.10
           - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
             python-version: pypy3.11
 
           # Linux x86_64 pypy
           - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.10
-          - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
             python-version: pypy3.11
 
           # Linux arm pypy
-          - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.10
           - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
             python-version: pypy3.11
 
           # OSX x86_64 pypy
           - conf: { os: macos-15, target: x86_64,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.10
-          - conf: { os: macos-15, target: x86_64,  target-triple: x86_64-apple-darwin }
             python-version: pypy3.11
 
           # OSX universal2 pypy
           - conf: { os: macos-15, target: universal2,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.10
-          - conf: { os: macos-15, target: universal2,  target-triple: x86_64-apple-darwin }
             python-version: pypy3.11
 
           # OSX arm pypy
-          - conf: { os: macos-15, target: aarch64,  target-triple: aarch64-apple-darwin }
-            python-version: pypy3.10
           - conf: { os: macos-15, target: aarch64,  target-triple: aarch64-apple-darwin }
             python-version: pypy3.11
           
@@ -179,10 +163,8 @@ jobs:
           delvewheel repair -v "wheels\$($file.Name)" -w "dist"
     
       - name: Install built wheel and Test (Native)
-        # TODO: I'm not sure but the actual collection of tests on windows using pypy3.10 takes forever and/or fails
         if: |
           !startsWith(matrix.conf.manylinux, 'musl') && 
-          !( matrix.python-version == 'pypy3.10' && runner.os == 'Windows' ) &&
           ( matrix.conf.target == 'universal2' || (matrix.conf.target == 'aarch64' && runner.os == 'Windows') || (matrix.conf.target == 'x86_64' && runner.os != 'macOS') )
         run: |
           # Second install guarantees it's going to install from local dir w/ --no-index
@@ -195,12 +177,13 @@ jobs:
       # Could use 'distro: alpine_latest' in 'run-on-arch-action' but seems difficult to install a specific version of python
       # so we'll just use existing python alpine images to test import and cli use w/o testing archs other than x86_64
       - name: Install built wheel and Test (musllinux)
-        # TODO: python:3.13-alpine doesn't exist yet
-        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64' && !startsWith(matrix.python-version, '3.14')
+        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64' && !endsWith(matrix.python-version, 't')
+        env:
+          PYTHON_IMAGE: ${{ matrix.python-version == '3.15' && 'python:3.15-rc-alpine' || format('python:{0}-alpine', matrix.python-version) }}
         run: |
           docker run \
             -v $(pwd)/dist:/wheels \
-            --rm python:${{ matrix.python-version }}-alpine sh \
+            --rm $PYTHON_IMAGE sh \
               -c "pip install cramjam --no-index --find-links /wheels && python -c 'import cramjam'"
 
       # xref: https://github.com/milesgranger/cramjam/issues/194

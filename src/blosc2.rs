@@ -40,8 +40,7 @@ pub mod blosc2 {
             .set_clevel(clevel.map_or_else(CLevel::default, Into::into))
             .set_filter(filter.map_or_else(Filter::default, Into::into))
             .set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
-        let dparams =
-            DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
+        let dparams = DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
 
         let storage = Storage::default()
             .set_contiguous(true)
@@ -78,8 +77,7 @@ pub mod blosc2 {
             .set_clevel(clevel.map_or_else(CLevel::default, Into::into))
             .set_filter(filter.map_or_else(Filter::default, Into::into))
             .set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
-        let dparams =
-            DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
+        let dparams = DParams::default().set_nthreads(nthreads.unwrap_or_else(libcramjam::blosc2::blosc2::get_nthreads));
 
         let storage = Storage::default()
             .set_contiguous(true)
@@ -143,7 +141,7 @@ pub mod blosc2 {
     pub fn decompress_chunk(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
         let buf = py
-            .allow_threads(|| libcramjam::blosc2::decompress_chunk(bytes))
+            .detach(|| libcramjam::blosc2::decompress_chunk(bytes))
             .map(RustyBuffer::from)?;
         Ok(buf)
     }
@@ -153,7 +151,7 @@ pub mod blosc2 {
     pub fn decompress_chunk_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
         let bytes = input.as_bytes();
         let out = output.as_bytes_mut()?;
-        let nbytes = py.allow_threads(|| libcramjam::blosc2::decompress_chunk_into(bytes, out))?;
+        let nbytes = py.detach(|| libcramjam::blosc2::decompress_chunk_into(bytes, out))?;
         Ok(nbytes)
     }
 
@@ -176,7 +174,7 @@ pub mod blosc2 {
         codec: Option<PyCodec>,
     ) -> PyResult<RustyBuffer> {
         let bytes = data.as_bytes();
-        py.allow_threads(|| {
+        py.detach(|| {
             let clevel = clevel.map(Into::into);
             let filter = filter.map(Into::into);
             let codec = codec.map(Into::into);
@@ -200,7 +198,7 @@ pub mod blosc2 {
     ) -> PyResult<usize> {
         let bytes = input.as_bytes();
         let out = output.as_bytes_mut()?;
-        py.allow_threads(|| {
+        py.detach(|| {
             let clevel = clevel.map(Into::into);
             let filter = filter.map(Into::into);
             let codec = codec.map(Into::into);
@@ -210,11 +208,9 @@ pub mod blosc2 {
     }
 
     /// A Compressor interface, using blosc2's SChunk
-    #[pyclass]
+    #[pyclass(skip_from_py_object, unsendable)]
     #[derive(Clone)]
     pub struct Compressor(Option<SChunk>);
-
-    unsafe impl Send for Compressor {}
 
     #[pymethods]
     impl Compressor {
@@ -346,20 +342,18 @@ pub mod blosc2 {
     }
 
     /// SChunk interface
-    #[pyclass(name = "SChunk")]
+    #[pyclass(name = "SChunk", unsendable)]
     pub struct PySChunk {
         schunk: SChunk,
-        from_bytes_cb: Option<PyObject>,
-        to_bytes_cb: Option<PyObject>,
+        from_bytes_cb: Option<Py<PyAny>>,
+        to_bytes_cb: Option<Py<PyAny>>,
     }
-
-    unsafe impl Send for PySChunk {}
 
     // Trampoline function from PySChunk, since generics not allowed.
     // Call a function on PyObject which may be BytesType, or have a `converter` python function to convert
     // the input PyObject `buf` into a `BytesType`, then call the intended operation on the bytes
     #[inline]
-    fn try_to_bytes_with_op<T, F>(py: Python, buf: PyObject, converter: Option<&PyObject>, op: F) -> PyResult<T>
+    fn try_to_bytes_with_op<T, F>(py: Python, buf: Py<PyAny>, converter: Option<&Py<PyAny>>, op: F) -> PyResult<T>
     where
         F: FnOnce(&[u8]) -> PyResult<T>,
     {
@@ -367,7 +361,7 @@ pub mod blosc2 {
             Ok(bt) => op(bt.as_bytes()),
             Err(_) => {
                 if let Some(to_bytes_cb) = &converter {
-                    let obj = to_bytes_cb.call_bound(py, (&buf,), None)?;
+                    let obj = to_bytes_cb.call(py, (&buf,), None)?;
                     let bytestype = obj.extract::<BytesType>(py)?;
                     op(bytestype.as_bytes())
                 } else {
@@ -382,10 +376,10 @@ pub mod blosc2 {
     /// Helper function to convert a RustyBuffer to some other PyObject
     /// as defined by user callback converter function
     #[inline]
-    fn maybe_convert_buffer(py: Python, buf: RustyBuffer, converter: Option<&PyObject>) -> PyResult<PyObject> {
+    fn maybe_convert_buffer(py: Python, buf: RustyBuffer, converter: Option<&Py<PyAny>>) -> PyResult<Py<PyAny>> {
         match converter {
-            Some(convert) => convert.call_bound(py, (buf,), None),
-            None => Ok(buf.into_py(py)),
+            Some(convert) => convert.call(py, (buf,), None),
+            None => Py::new(py, buf).map(Py::into_any),
         }
     }
 
@@ -394,13 +388,13 @@ pub mod blosc2 {
         /// Construct a new SChunk
         #[new]
         #[pyo3(signature = (
-            path=None, 
-            typesize=None, 
-            clevel=None, 
-            filter=None, 
-            codec=None, 
-            nthreads=None, 
-            from_bytes_cb=None, 
+            path=None,
+            typesize=None,
+            clevel=None,
+            filter=None,
+            codec=None,
+            nthreads=None,
+            from_bytes_cb=None,
             to_bytes_cb=None,
         ))]
         pub fn __init__(
@@ -410,8 +404,8 @@ pub mod blosc2 {
             filter: Option<PyFilter>,
             codec: Option<PyCodec>,
             nthreads: Option<usize>,
-            from_bytes_cb: Option<PyObject>,
-            to_bytes_cb: Option<PyObject>,
+            from_bytes_cb: Option<Py<PyAny>>,
+            to_bytes_cb: Option<Py<PyAny>>,
         ) -> PyResult<Self> {
             let cparams = CParams::from_typesize(typesize.unwrap_or(1))
                 .set_codec(codec.map_or_else(Codec::default, Into::into))
@@ -441,9 +435,8 @@ pub mod blosc2 {
         #[classmethod]
         pub fn from_compressor(
             _cls: &Bound<'_, pyo3::types::PyType>,
-            compressor: &Bound<'_, pyo3::types::PyType>,
+            compressor: PyRef<'_, Compressor>,
         ) -> PyResult<Self> {
-            let compressor: Compressor = compressor.extract()?;
             match compressor.0.as_ref() {
                 Some(inner) => Ok(Self {
                     schunk: inner.clone(),
@@ -506,14 +499,14 @@ pub mod blosc2 {
         }
 
         /// Append/compress a buffer into this SChunk, returning the new number of chunks
-        pub fn append_buffer(&mut self, py: Python, buf: PyObject) -> PyResult<usize> {
+        pub fn append_buffer(&mut self, py: Python, buf: Py<PyAny>) -> PyResult<usize> {
             try_to_bytes_with_op(py, buf, self.to_bytes_cb.as_ref(), |bytes| {
                 self.schunk.append_buffer(bytes).map_err(CompressionError::from_err)
             })
         }
 
         /// Decompress a specific chunk
-        pub fn decompress_chunk(&mut self, py: Python, nchunk: usize) -> PyResult<PyObject> {
+        pub fn decompress_chunk(&mut self, py: Python, nchunk: usize) -> PyResult<Py<PyAny>> {
             self.schunk
                 .decompress_chunk_vec(nchunk)
                 .map_err(DecompressionError::from_err)
@@ -535,7 +528,7 @@ pub mod blosc2 {
         }
 
         /// Get a slice of SChunk (uncompressed)
-        pub fn __getitem__(&self, py: Python, slice: &Bound<'_, PySlice>) -> PyResult<PyObject> {
+        pub fn __getitem__(&self, py: Python, slice: &Bound<'_, PySlice>) -> PyResult<Py<PyAny>> {
             let indices = slice.indices(self.len() as _)?;
             self.schunk
                 .get_slice_buffer(indices.start as _, indices.stop as _)
@@ -552,7 +545,7 @@ pub mod blosc2 {
         }
 
         /// Set a slice of the SChunk (will compress data given)
-        pub fn __setitem__(&self, py: Python, slice: &Bound<'_, PySlice>, buf: PyObject) -> PyResult<()> {
+        pub fn __setitem__(&self, py: Python, slice: &Bound<'_, PySlice>, buf: Py<PyAny>) -> PyResult<()> {
             let indices = slice.indices(self.len() as _)?;
             if indices.step != 1 {
                 return Err(CompressionError::new_err(
@@ -589,7 +582,7 @@ pub mod blosc2 {
         }
     }
 
-    #[pyclass(name = "Filter", eq, eq_int)]
+    #[pyclass(name = "Filter", eq, eq_int, from_py_object)]
     #[allow(missing_docs)]
     #[derive(Clone, PartialEq)]
     pub enum PyFilter {
@@ -617,7 +610,7 @@ pub mod blosc2 {
         }
     }
 
-    #[pyclass(name = "CLevel", eq, eq_int)]
+    #[pyclass(name = "CLevel", eq, eq_int, from_py_object)]
     #[allow(missing_docs)]
     #[derive(Clone, PartialEq)]
     pub enum PyCLevel {
@@ -651,7 +644,7 @@ pub mod blosc2 {
         }
     }
 
-    #[pyclass(name = "Codec", eq, eq_int)]
+    #[pyclass(name = "Codec", eq, eq_int, from_py_object)]
     #[allow(missing_docs)]
     #[derive(Clone, PartialEq)]
     pub enum PyCodec {
