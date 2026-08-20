@@ -12,6 +12,7 @@ classifiers = [
   "Programming Language :: Python :: 3.15",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
+  "Typing :: Typed",
 ]
 license = { file = "LICENSE" }
 
@@ -27,6 +28,16 @@ build-backend = "maturin"
 [tool.maturin]
 python-source = "src"
 strip = true
+
+[tool.pyright]
+include = ["typing_tests"]
+pythonVersion = "3.11"
+pythonPlatform = "All"
+stubPath = "src"
+typeCheckingMode = "strict"
+
+[tool.pytest.ini_options]
+norecursedirs = [".git", ".hypothesis", ".pytest_cache", ".venv*", "target", "typing_tests"]
 
 [dependency-groups]
 dev = [

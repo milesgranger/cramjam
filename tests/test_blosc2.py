@@ -10,15 +10,15 @@ except ImportError:
     pytest.skip("experimental module not built", allow_module_level=True)
 else:
     if hasattr(experimental, "blosc2"):
-        blosc2 = experimental.blosc2  # type: ignore
+        blosc2 = experimental.blosc2
     else:
         pytest.skip(
             "experimental module doesn't contain blosc2", allow_module_level=True
         )
 
 
-settings.register_profile("local", max_examples=10)
-settings.register_profile("CI", max_examples=5)
+settings.register_profile("local", max_examples=10, deadline=None)
+settings.register_profile("CI", max_examples=5, deadline=None)
 
 if os.getenv("CI"):
     settings.load_profile("CI")

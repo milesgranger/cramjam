@@ -62,6 +62,22 @@ jobs:
         run: npm run dev
       - name: Test
         run: npm run test
+
+  typing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install package and typing tools
+        run: pip install -e '.[dev]' --group dev
+      - name: Check types
+        run: pyright
+      - name: Check packaged typing files
+        run: python -m pytest tests/test_typing_package.py
     
   build-test:
     runs-on: ${{ matrix.conf.os }}

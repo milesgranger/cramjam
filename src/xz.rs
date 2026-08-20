@@ -368,6 +368,7 @@ pub mod xz {
         Crc64,
         Crc32,
         Sha256,
+        #[pyo3(name = "NONE")]
         None,
     }
 
