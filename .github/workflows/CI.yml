@@ -183,10 +183,13 @@ jobs:
           !startsWith(matrix.conf.manylinux, 'musl') && 
           ( matrix.conf.target == 'universal2' || (matrix.conf.target == 'aarch64' && runner.os == 'Windows') || (matrix.conf.target == 'x86_64' && runner.os != 'macOS') )
         run: |
-          # Second install guarantees it's going to install from local dir w/ --no-index
-          # use first to get in dev dependencies
-          python -m pip install cramjam[dev] --pre --find-links dist --force-reinstall
+          # Install the built wheel first; --no-index guarantees it comes from the local dist dir
           python -m pip install cramjam --pre --no-index --find-links dist --force-reinstall
+          # Then resolve the [dev] extras from the locally installed wheel's metadata.
+          # No --force-reinstall here so pip keeps the local cramjam instead of resolving
+          # it from PyPI, which previously installed stale dev dependencies frozen into
+          # old PyPI releases whenever the PyPI version compared >= the local wheel.
+          python -m pip install cramjam[dev] --pre --find-links dist
 
           python -m pytest -vs --benchmark-skip -n0 --dist no
 
