@@ -1,3 +1,4 @@
+import base64
 from typing import assert_type
 
 import cramjam
@@ -8,6 +9,10 @@ output: bytearray
 
 if False:
     assert_type(cramjam.snappy.compress(data), Buffer)
+    assert_type(base64.b64encode(cramjam.snappy.compress_raw(data)), bytes)
+    assert_type(bytes(cramjam.snappy.decompress_raw(data)), bytes)
+    assert_type(Buffer(data) == bytearray(), bool)
+    assert_type(Buffer(data) == memoryview(data), bool)
     assert_type(cramjam.snappy.compress_into(data, output), int)
     assert_type(cramjam.snappy.decompress_into(data, bytes(256)), int)
     assert_type(cramjam.lz4.compress_block_into(data, output, compression=9), int)
