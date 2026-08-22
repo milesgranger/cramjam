@@ -37,7 +37,6 @@ default = [
 experimental = ["blosc2", "igzip", "ideflate", "izlib"]
 
 extension-module = ["pyo3/extension-module"]
-generate-import-lib = []
 
 snappy = ["libcramjam/snappy"]
 lz4 = ["libcramjam/lz4"]
