@@ -209,6 +209,9 @@ impl PythonBuffer {
     }
     /// Get the underlying buffer as a mutable slice of bytes
     pub fn as_slice_mut(&mut self) -> PyResult<&mut [u8]> {
+        if self.readonly() {
+            return Err(pyo3::exceptions::PyTypeError::new_err("Output buffer is read-only"));
+        }
         #[cfg(any(PyPy, Py_GIL_DISABLED))]
         {
             Python::attach(|py| {
@@ -660,7 +663,8 @@ impl RustyBuffer {
 
         (*view).buf = bytes.as_ptr() as *mut std::os::raw::c_void;
         (*view).len = bytes.len() as isize;
-        (*view).readonly = 0;
+        // RustyBuffer may resize its Vec, so exported views cannot safely be writable.
+        (*view).readonly = 1;
         (*view).itemsize = 1;
 
         (*view).format = std::ptr::null_mut();

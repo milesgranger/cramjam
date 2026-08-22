@@ -93,7 +93,6 @@ wheels = [
 
 [[package]]
 name = "cramjam"
-version = "2.12.0rc1"
 source = { editable = "." }
 
 [package.optional-dependencies]

@@ -60,6 +60,6 @@ class File:
     def __len__(self) -> int: ...
 
 BufferInput: TypeAlias = ReadableBuffer | Buffer | File
-BufferOutput: TypeAlias = ReadableBuffer | WriteableBuffer | Buffer | File
+BufferOutput: TypeAlias = WriteableBuffer | Buffer | File
 # Retained as the public alias used by earlier cramjam stubs.
 BufferProtocol: TypeAlias = BufferInput

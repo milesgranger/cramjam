@@ -1,12 +1,10 @@
-import sys
-
 import pytest
 
 from cramjam import File, Buffer
 
 
 @pytest.mark.parametrize("Obj", (File, Buffer))
-def test_obj_api(tmpdir, Obj, is_pypy, is_free_threaded):
+def test_obj_api(tmpdir, Obj):
     if isinstance(Obj, File):
         buf = File(str(tmpdir.join("file.txt")))
     else:
@@ -25,19 +23,11 @@ def test_obj_api(tmpdir, Obj, is_pypy, is_free_threaded):
         buf.seek(1, 3)  # only 0, 1, 2 are valid seek from positions
 
     for out in (
-        b"12345",
         bytearray(b"12345"),
         File(str(tmpdir.join("test.txt"))),
         Buffer(),
     ):
         buf.seek(0)
-
-        if isinstance(out, bytes) and (
-            is_pypy or (is_free_threaded and sys.version_info >= (3, 14))
-        ):
-            with pytest.raises(OSError):
-                buf.readinto(out)
-            continue
 
         expected = b"bytes"
 
@@ -47,10 +37,8 @@ def test_obj_api(tmpdir, Obj, is_pypy, is_free_threaded):
         if isinstance(out, (File, Buffer)):
             out.seek(0)
             assert out.read() == expected
-        elif isinstance(out, bytearray):
-            assert out == bytearray(expected)
         else:
-            assert out == expected
+            assert out == bytearray(expected)
 
     # Set the length
     buf.set_len(2)
@@ -64,3 +52,14 @@ def test_obj_api(tmpdir, Obj, is_pypy, is_free_threaded):
     buf.truncate()
     buf.seek(0)
     assert buf.read() == b""
+
+
+@pytest.mark.parametrize("Obj", (File, Buffer))
+@pytest.mark.parametrize("out", (b"12345", memoryview(b"12345")))
+def test_readinto_rejects_readonly_buffer(tmpdir, Obj, out):
+    buf = File(str(tmpdir.join("file.txt"))) if Obj is File else Buffer()
+    buf.write(b"bytes")
+    buf.seek(0)
+
+    with pytest.raises(OSError, match="read-only"):
+        buf.readinto(out)

@@ -108,11 +108,28 @@ def test_variants_raise_exception(variant_str):
         variant.decompress(b"sknow")
 
 
+@pytest.mark.parametrize("variant_str", VARIANTS)
+@pytest.mark.parametrize("output", (b"0" * 128, memoryview(b"0" * 128)))
+def test_variants_into_reject_readonly_output(variant_str, output):
+    if variant_str == "blosc2":
+        pytest.skip("blosc2 validates the output length before buffer writability")
+
+    variant = getattr(cramjam, variant_str)
+    raw_data = b"data"
+
+    with pytest.raises(TypeError, match="read-only"):
+        variant.compress_into(raw_data, output)
+
+    compressed = variant.compress(raw_data)
+    with pytest.raises(TypeError, match="read-only"):
+        variant.decompress_into(compressed, output)
+
+
 @pytest.mark.parametrize(
     "input_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize(
-    "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
+    "output_type", (bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
@@ -154,7 +171,7 @@ def test_variants_compress_into(
     compressed_len = len(compressed)
 
     # Setup output buffer
-    output: Union[np.ndarray, cramjam.File, cramjam.Buffer, bytes]
+    output: Union[np.ndarray, cramjam.File, cramjam.Buffer, bytearray, memoryview]
     if output_type == "numpy":
         output = np.zeros(compressed_len, dtype=np.uint8)
     elif output_type == cramjam.File:
@@ -163,13 +180,13 @@ def test_variants_compress_into(
         output = cramjam.File(str(path))
     elif output_type == cramjam.Buffer:
         output = cramjam.Buffer()
+    elif output_type == memoryview:
+        output = memoryview(bytearray(compressed_len))
     else:
         output = output_type(b"0" * compressed_len)
 
-    if (is_pypy or is_free_threaded) and isinstance(output, (bytes, memoryview)):
-        pytest.skip(
-            reason="Decompressing into immutable objects is not supported on PyPy or the free-threaded build"
-        )
+    if (is_pypy or is_free_threaded) and output_type == memoryview:
+        pytest.skip("Writing into memoryviews is not supported on this runtime")
 
     n_bytes = variant.compress_into(input, output)
 
@@ -189,7 +206,7 @@ def test_variants_compress_into(
     "input_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize(
-    "output_type", (bytes, bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
+    "output_type", (bytearray, "numpy", cramjam.Buffer, cramjam.File, memoryview)
 )
 @pytest.mark.parametrize("variant_str", VARIANTS)
 @given(raw_data=st.binary())
@@ -234,13 +251,13 @@ def test_variants_decompress_into(
         output = cramjam.File(str(path))
     elif output_type == cramjam.Buffer:
         output = cramjam.Buffer()
+    elif output_type == memoryview:
+        output = memoryview(bytearray(len(raw_data)))
     else:
         output = output_type(b"0" * len(raw_data))
 
-    if (is_pypy or is_free_threaded) and isinstance(output, (bytes, memoryview)):
-        pytest.skip(
-            reason="Decompressing into immutable objects is not supported on PyPy or the free-threaded build"
-        )
+    if (is_pypy or is_free_threaded) and output_type == memoryview:
+        pytest.skip("Writing into memoryviews is not supported on this runtime")
 
     n_bytes = variant.decompress_into(input, output)
     assert n_bytes == len(raw_data)
