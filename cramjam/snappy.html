@@ -170,8 +170,8 @@
 <h6 id="python-example">Python Example</h6>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">_</span> <span class="o">=</span> <span class="n"><a href="#compress">cramjam.snappy.compress</a></span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;some bytes here&#39;</span><span class="p">)</span>
-<span class="o">&gt;&gt;&gt;</span> <span class="n">_</span> <span class="o">=</span> <span class="n"><a href="#compress">cramjam.snappy.compress</a></span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;this avoids double allocation in rust side, and thus faster!&#39;</span><span class="p">))</span>  <span class="c1"># &lt;- use bytearray where possible</span>
+<pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n">_</span> <span class="o">=</span> <span class="n"><a href="#compress">cramjam.snappy.compress</a></span><span class="p">(</span><span class="sa">b</span><span class="s1">'some bytes here'</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">_</span> <span class="o">=</span> <span class="n"><a href="#compress">cramjam.snappy.compress</a></span><span class="p">(</span><span class="nb">bytearray</span><span class="p">(</span><span class="sa">b</span><span class="s1">'this avoids double allocation in rust side, and thus faster!'</span><span class="p">))</span>  <span class="c1"># &lt;- use bytearray where possible</span>
 </code></pre>
 </div>
 </div>
@@ -217,7 +217,7 @@ This does not use the snappy 'framed' encoding of compressed bytes.</p>
 <h6 id="python-example">Python Example</h6>
 
 <div class="pdoc-code codehilite">
-<pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n"><a href="#compress_raw">cramjam.snappy.compress_raw</a></span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;some bytes here&#39;</span><span class="p">)</span>
+<pre><span></span><code><span class="o">&gt;&gt;&gt;</span> <span class="n"><a href="#compress_raw">cramjam.snappy.compress_raw</a></span><span class="p">(</span><span class="sa">b</span><span class="s1">'some bytes here'</span><span class="p">)</span>
 </code></pre>
 </div>
 </div>
