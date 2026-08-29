@@ -8,6 +8,7 @@ license = "MIT"
 description = "Thin Python bindings to de/compression algorithms in Rust"
 readme = "README.md"
 exclude = ["benchmarks/", "benchmark-requirements.txt"]
+repository = "https://github.com/milesgranger/cramjam"
 
 [[metadata.maturin]]
 python-source = "src/cramjam"
