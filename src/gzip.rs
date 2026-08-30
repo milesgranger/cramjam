@@ -63,7 +63,7 @@ pub mod gzip {
     /// GZIP Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Option<libcramjam::gzip::flate2::write::GzEncoder<Cursor<Vec<u8>>>>,
+        inner: Option<libcramjam::gzip::GzipStreamCompressor<Cursor<Vec<u8>>>>,
     }
 
     #[pymethods]
@@ -73,10 +73,7 @@ pub mod gzip {
         #[pyo3(signature = (level=None))]
         pub fn __init__(level: Option<u32>) -> PyResult<Self> {
             let level = level.unwrap_or(DEFAULT_COMPRESSION_LEVEL);
-            let inner = libcramjam::gzip::flate2::write::GzEncoder::new(
-                Cursor::new(vec![]),
-                libcramjam::gzip::flate2::Compression::new(level),
-            );
+            let inner = libcramjam::gzip::GzipStreamCompressor::new(Cursor::new(vec![]), level);
             Ok(Self { inner: Some(inner) })
         }
 
