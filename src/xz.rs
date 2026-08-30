@@ -11,7 +11,6 @@ pub mod xz {
     use crate::exceptions::{CompressionError, DecompressionError};
     use crate::io::{AsBytes, RustyBuffer};
     use crate::BytesType;
-    use pyo3::exceptions::PyNotImplementedError;
     use std::io::Cursor;
 
     /// LZMA compression.
@@ -88,7 +87,7 @@ pub mod xz {
     /// XZ Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Option<libcramjam::xz::xz2::write::XzEncoder<Cursor<Vec<u8>>>>,
+        inner: Option<libcramjam::xz::XzStreamCompressor<Cursor<Vec<u8>>>>,
     }
 
     #[pymethods]
@@ -98,7 +97,7 @@ pub mod xz {
         #[pyo3(signature = (preset=None))]
         pub fn __init__(preset: Option<u32>) -> PyResult<Self> {
             let preset = preset.unwrap_or(5);
-            let inner = libcramjam::xz::xz2::write::XzEncoder::new(Cursor::new(vec![]), preset);
+            let inner = libcramjam::xz::XzStreamCompressor::new(Cursor::new(vec![]), preset);
             Ok(Self { inner: Some(inner) })
         }
 
@@ -109,9 +108,7 @@ pub mod xz {
 
         /// Flush and return current compressed stream
         pub fn flush(&mut self) -> PyResult<RustyBuffer> {
-            Err(PyNotImplementedError::new_err(
-                "`.flush` for XZ/LZMA not implemented, just use `.finish()` instead when your done.",
-            ))
+            crate::io::stream_flush(&mut self.inner, |e| e.get_mut())
         }
 
         /// Consume the current compressor state and return the compressed stream

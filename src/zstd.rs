@@ -72,7 +72,7 @@ pub mod zstd {
     /// ZSTD Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Option<libcramjam::zstd::zstd::stream::write::Encoder<'static, Cursor<Vec<u8>>>>,
+        inner: Option<libcramjam::zstd::ZstdStreamCompressor<Cursor<Vec<u8>>>>,
     }
 
     #[pymethods]
@@ -81,7 +81,7 @@ pub mod zstd {
         #[new]
         #[pyo3(signature = (level=None))]
         pub fn __init__(level: Option<i32>) -> PyResult<Self> {
-            let inner = libcramjam::zstd::zstd::stream::write::Encoder::new(
+            let inner = libcramjam::zstd::ZstdStreamCompressor::new(
                 Cursor::new(vec![]),
                 level.unwrap_or(DEFAULT_COMPRESSION_LEVEL),
             )?;

@@ -63,7 +63,7 @@ pub mod bzip2 {
     /// bzip2 Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Option<libcramjam::bzip2::bzip2::write::BzEncoder<Cursor<Vec<u8>>>>,
+        inner: Option<libcramjam::bzip2::Bzip2StreamCompressor<Cursor<Vec<u8>>>>,
     }
 
     #[pymethods]
@@ -73,8 +73,7 @@ pub mod bzip2 {
         #[pyo3(signature = (level=None))]
         pub fn __init__(level: Option<u32>) -> PyResult<Self> {
             let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
-            let comp = libcramjam::bzip2::bzip2::Compression::new(level);
-            let inner = libcramjam::bzip2::bzip2::write::BzEncoder::new(Cursor::new(vec![]), comp);
+            let inner = libcramjam::bzip2::Bzip2StreamCompressor::new(Cursor::new(vec![]), level);
             Ok(Self { inner: Some(inner) })
         }
 
