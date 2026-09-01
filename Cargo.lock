@@ -432,6 +432,7 @@ dependencies = [
 [[package]]
 name = "libcramjam"
 version = "0.8.0"
+source = "git+https://github.com/cramjam/libcramjam?branch=pure-rust-attempt#7083f231e1cd1178e6440daadc0426442c735979"
 dependencies = [
  "blosc2-rs",
  "brotli 8.0.4",
