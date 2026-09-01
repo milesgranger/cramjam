@@ -120,8 +120,16 @@ def test_xz_bcj_filter_chains(bcj, pyfilter):
     out = bytes(cramjam.xz.compress(data, filters=_chain(bcj, cramjam.xz.Filter.Lzma2)))
     assert lzma.decompress(out) == data  # liblzma applies the filter flags from the block header
     assert bytes(cramjam.xz.decompress(out)) == data
-    # And liblzma-encoded input with the same chain decodes with ours.
-    theirs = lzma.compress(data, filters=[{"id": pyfilter}, {"id": lzma.FILTER_LZMA2, "preset": 6}])
+    # And liblzma-encoded input with the same chain decodes with ours. Some
+    # stdlib lzma builds (notably PyPy's cffi `_lzma`) can *decode* a BCJ
+    # stream but can't set up a BCJ filter chain for *encoding* — they raise
+    # LZMA_PROG_ERROR ("Internal error"). The forward direction above already
+    # validated our encoder against liblzma; skip the reverse check where the
+    # interpreter's lzma can't produce the reference stream.
+    try:
+        theirs = lzma.compress(data, filters=[{"id": pyfilter}, {"id": lzma.FILTER_LZMA2, "preset": 6}])
+    except lzma.LZMAError as e:
+        pytest.skip(f"stdlib lzma cannot encode a BCJ filter chain here: {e}")
     assert bytes(cramjam.xz.decompress(theirs)) == data
 
 
