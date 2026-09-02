@@ -120,10 +120,10 @@ jobs:
           - { name: windows-x86,   os: windows-latest, archs: x86,   rust-targets: i686-pc-windows-msvc }
           - { name: windows-arm64, os: windows-11-arm, archs: ARM64 }
 
-          # Pyodide/WASM. cibuildwheel installs Emscripten itself; the Rust nightly that Pyodide
-          # pins is installed by the before-build hook in pyproject.toml. Only the Pyodide version
-          # backed by a stable release is built.
-          - { name: pyodide, os: ubuntu-latest, platform: pyodide, build: cp313-pyodide_wasm32 }
+          # Pyodide/WASM, every Pyodide version cibuildwheel builds by default. cibuildwheel
+          # installs Emscripten itself; the Rust toolchain that each Pyodide release pins is
+          # installed per wheel by the before-build hook in pyproject.toml.
+          - { name: pyodide, os: ubuntu-latest, platform: pyodide }
 
     steps:
       - uses: actions/checkout@v4

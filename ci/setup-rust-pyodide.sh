@@ -2,7 +2,7 @@
 #
 # Install the Rust toolchain Pyodide expects for wasm32-unknown-emscripten builds.
 #
-# Pyodide pins an exact nightly, and for some releases ships its own build of the
+# Each Pyodide release pins an exact Rust toolchain, and some ship their own build of the
 # wasm32-unknown-emscripten standard library, compiled against the matching Emscripten
 # version and exception-handling flags. `pyodide build` exports that configuration but
 # leaves installing the toolchain to the caller, so this mirrors what pyodide-build does
