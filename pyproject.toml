@@ -57,3 +57,41 @@ dev = [
   "pytest-benchmark",
   "hypothesis>=6.165.10"
 ]
+
+[tool.cibuildwheel]
+# CPython versions come from `requires-python`; free-threaded (cp3XXt) builds are on by default.
+enable = ["pypy"]
+skip = [
+  # No Rust toolchain for musl on these targets
+  "*-musllinux_ppc64le",
+  "*-musllinux_s390x",
+  # PyPy has no 32-bit Linux builds worth shipping (and numpy has no wheels for it)
+  "pp*-manylinux_i686",
+]
+build-verbosity = 1
+test-sources = ["tests", "pyproject.toml"]
+test-extras = ["dev"]
+test-command = "python -m pytest tests -vs --benchmark-skip -n0 --dist no"
+# Prefer pre-built wheels for test deps (numpy only ships PyPy wheels for older releases).
+test-environment = { PIP_PREFER_BINARY = "1" }
+
+[tool.cibuildwheel.linux]
+# Builds run inside manylinux/musllinux containers, so Rust must be installed there.
+before-all = "curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal"
+environment = { PATH = "$HOME/.cargo/bin:$PATH" }
+
+[tool.cibuildwheel.macos]
+# Rust's minimum macOS target is 10.12; cibuildwheel bumps this further where CPython requires it.
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.12" }
+
+# rustup has no host toolchain for 32-bit musl; use the Rust packaged by Alpine instead.
+[[tool.cibuildwheel.overrides]]
+select = "*-musllinux_{i686,armv7l}"
+before-all = "apk add --no-progress rust cargo"
+
+# Emulated or 32-bit Linux targets: the full test suite is impractically slow under QEMU and
+# numpy (a test dependency) ships no wheels for them, so only smoke-test the built wheel.
+[[tool.cibuildwheel.overrides]]
+select = "*-manylinux_{i686,armv7l,ppc64le,s390x} *-musllinux_{i686,armv7l}"
+test-extras = []
+test-command = "python -c \"import cramjam; assert bytes(cramjam.snappy.decompress(cramjam.snappy.compress(b'cramjam'))) == b'cramjam'\""
