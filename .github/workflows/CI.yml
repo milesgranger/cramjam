@@ -96,35 +96,42 @@ jobs:
   # containers, ...) lives in [tool.cibuildwheel] in pyproject.toml. The matrix
   # here only decides which runner builds which architectures.
   build-wheels:
-    name: wheels-${{ matrix.os }}-${{ matrix.archs }}${{ matrix.build && format('-{0}', matrix.build) || '' }}
+    name: wheels-${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           # Linux builds run in manylinux/musllinux containers; Rust is installed there by cibuildwheel's before-all.
-          - { os: ubuntu-latest,    archs: x86_64,  build: manylinux }
-          - { os: ubuntu-latest,    archs: x86_64,  build: musllinux }
-          - { os: ubuntu-latest,    archs: i686,    build: manylinux }
-          - { os: ubuntu-latest,    archs: i686,    build: musllinux }
-          - { os: ubuntu-24.04-arm, archs: aarch64, build: manylinux }
-          - { os: ubuntu-24.04-arm, archs: aarch64, build: musllinux }
+          - { name: linux-x86_64-manylinux,  os: ubuntu-latest,    archs: x86_64,  build: '*-manylinux*' }
+          - { name: linux-x86_64-musllinux,  os: ubuntu-latest,    archs: x86_64,  build: '*-musllinux*' }
+          - { name: linux-i686-manylinux,    os: ubuntu-latest,    archs: i686,    build: '*-manylinux*' }
+          - { name: linux-i686-musllinux,    os: ubuntu-latest,    archs: i686,    build: '*-musllinux*' }
+          - { name: linux-aarch64-manylinux, os: ubuntu-24.04-arm, archs: aarch64, build: '*-manylinux*' }
+          - { name: linux-aarch64-musllinux, os: ubuntu-24.04-arm, archs: aarch64, build: '*-musllinux*' }
 
           # macOS builds all run on Apple Silicon; x86_64 (and the x86_64 half of universal2) is
           # cross-compiled and tested under Rosetta 2.
-          - { os: macos-15, archs: x86_64,     rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
-          - { os: macos-15, archs: arm64,      rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
-          - { os: macos-15, archs: universal2, rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
+          - { name: macos-x86_64,     os: macos-15, archs: x86_64,     rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
+          - { name: macos-arm64,      os: macos-15, archs: arm64,      rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
+          - { name: macos-universal2, os: macos-15, archs: universal2, rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
 
-          - { os: windows-latest, archs: AMD64 }
-          - { os: windows-latest, archs: x86, rust-targets: i686-pc-windows-msvc }
-          - { os: windows-11-arm, archs: ARM64 }
+          - { name: windows-amd64, os: windows-latest, archs: AMD64 }
+          - { name: windows-x86,   os: windows-latest, archs: x86,   rust-targets: i686-pc-windows-msvc }
+          - { name: windows-arm64, os: windows-11-arm, archs: ARM64 }
+
+          # Pyodide/WASM. cibuildwheel installs Emscripten itself; the Rust nightly that Pyodide
+          # pins is installed by the before-build hook in pyproject.toml. Only the Pyodide version
+          # backed by a stable release is built.
+          - { name: pyodide, os: ubuntu-latest, platform: pyodide, build: cp313-pyodide_wasm32 }
 
     steps:
       - uses: actions/checkout@v4
 
+      # Linux wheels get their Rust toolchain inside the build container, so it is only needed
+      # on the runner itself elsewhere - including for Pyodide, which builds on the host.
       - name: Install Rust toolchain
-        if: runner.os != 'Linux'
+        if: runner.os != 'Linux' || matrix.platform == 'pyodide'
         uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.rust-targets }}
@@ -132,14 +139,15 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@v4.2.0
         env:
-          CIBW_ARCHS: ${{ matrix.archs }}
-          CIBW_BUILD: ${{ matrix.build && format('*-{0}*', matrix.build) || '*' }}
+          CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
+          CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
+          CIBW_BUILD: ${{ matrix.build || '*' }}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
         with:
-          name: wheels-${{ matrix.os }}-${{ matrix.archs }}-${{ strategy.job-index }}
+          name: wheels-${{ matrix.name }}
           path: wheelhouse/*.whl
 
   # Architectures without native GitHub runners are built under QEMU emulation. Compiling
@@ -173,51 +181,6 @@ jobs:
         with:
           name: wheels-linux-${{ matrix.archs }}-${{ matrix.python }}
           path: wheelhouse/*.whl
-
-  # build-wasm32-emscripten-pyodide:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       python:
-  #         - "3.12"
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Install Rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
-  #       with:
-  #         toolchain: nightly
-  #         target: wasm32-unknown-emscripten
-
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python }}
-
-  #     - name: Install Emscripten
-  #       uses: mymindstorm/setup-emsdk@v14
-  #       with:
-  #         # This needs to match the exact expected version pyodide expects...seems a bit brittle TBH, maybe I'm missing something.
-  #         # Discover by updating pyodide in package.json and re-running 'npm run test'; it'll spit out the error of 
-  #         # the expected vs actual versions.
-  #         version: '3.1.58'
-
-  #     - name: Build
-  #       run: |
-  #         pip install maturin
-  #         maturin build --release -i python${{ matrix.python }} --features wasm32-compat --target wasm32-unknown-emscripten -o ./dist
-
-  #     - uses: actions/setup-node@v3
-  #       with:
-  #         node-version: '18'
-  #     - run: npm install
-  #     - run: npm run test
-
-  #     - name: Upload wheels
-  #       uses: actions/upload-artifact@v4
-  #       if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
-  #       with:
-  #         name: wasm32-unknown-emscripten-python${{ matrix.python }}
-  #         path: dist
 
   build-sdist:
     name: Build sdists

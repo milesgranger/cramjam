@@ -95,3 +95,9 @@ before-all = "apk add --no-progress rust cargo"
 select = "*-manylinux_{i686,armv7l,ppc64le,s390x} *-musllinux_{i686,armv7l}"
 test-extras = []
 test-command = "python -c \"import cramjam; assert bytes(cramjam.snappy.decompress(cramjam.snappy.compress(b'cramjam'))) == b'cramjam'\""
+
+[tool.cibuildwheel.pyodide]
+before-build = "bash {project}/ci/setup-rust-pyodide.sh"
+# numpy/hypothesis aren't worth pulling into the Pyodide test venv; smoke-test instead.
+test-extras = []
+test-command = "python -c \"import cramjam; assert bytes(cramjam.snappy.decompress(cramjam.snappy.compress(b'cramjam'))) == b'cramjam'\""
