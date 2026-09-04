@@ -120,9 +120,9 @@ jobs:
           - { name: windows-x86,   os: windows-latest, archs: x86,   rust-targets: i686-pc-windows-msvc }
           - { name: windows-arm64, os: windows-11-arm, archs: ARM64 }
 
-          # Pyodide/WASM, every Pyodide version cibuildwheel builds by default. cibuildwheel
-          # installs Emscripten itself; the Rust toolchain that each Pyodide release pins is
-          # installed per wheel by the before-build hook in pyproject.toml.
+          # Pyodide/WASM. cibuildwheel installs Emscripten itself; the Rust toolchain that
+          # each Pyodide release pins is installed per wheel by the before-build hook in
+          # pyproject.toml. Which Pyodide versions are built is set by skip in that file.
           - { name: pyodide, os: ubuntu-latest, platform: pyodide }
 
     steps:
