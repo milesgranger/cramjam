@@ -150,16 +150,17 @@ jobs:
           name: wheels-${{ matrix.name }}
           path: wheelhouse/*.whl
 
-  # Architectures without native GitHub runners are built under QEMU emulation. Compiling
-  # Rust that way is slow, so each job builds a single Python version.
+  # Architectures without native GitHub runners are built under QEMU emulation, which is slow.
+  # Every Python version for an architecture shares one container and one cargo target
+  # directory, so the dependency tree is compiled once and each extra version only rebuilds
+  # the few crates that are bound to the interpreter.
   build-wheels-emulated:
-    name: wheels-linux-${{ matrix.archs }}-${{ matrix.python }}
+    name: wheels-linux-${{ matrix.archs }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         archs: [armv7l, ppc64le, s390x]
-        python: [cp311, cp312, cp313, cp314, cp314t, cp315, cp315t]
 
     steps:
       - uses: actions/checkout@v4
@@ -173,13 +174,12 @@ jobs:
         uses: pypa/cibuildwheel@v4.2.0
         env:
           CIBW_ARCHS: ${{ matrix.archs }}
-          CIBW_BUILD: ${{ matrix.python }}-*
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
         with:
-          name: wheels-linux-${{ matrix.archs }}-${{ matrix.python }}
+          name: wheels-linux-${{ matrix.archs }}
           path: wheelhouse/*.whl
 
   build-sdist:
