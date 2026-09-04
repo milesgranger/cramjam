@@ -33,5 +33,14 @@ fi
 
 rm -rf "${rustlib}/wasm32-unknown-emscripten"
 mkdir -p "${rustlib}"
-curl -L --proto '=https' --tlsv1.2 -sSf "${target_url}" | tar -xz -C "${rustlib}"
+
+# Unpack with Python rather than tar: the archive is bzip2 today but the format is not
+# guaranteed, GNU tar will not sniff it off a pipe, and its bzip2 support is a separate
+# binary that need not be installed. shutil handles every format Pyodide might publish.
+tmpdir=$(mktemp -d)
+trap 'rm -rf "${tmpdir}"' EXIT
+archive="${tmpdir}/$(basename "${target_url}")"
+curl -L --proto '=https' --tlsv1.2 -sSf "${target_url}" -o "${archive}"
+python -c 'import shutil, sys; shutil.unpack_archive(sys.argv[1], sys.argv[2])' "${archive}" "${rustlib}"
+
 echo "${target_url}" > "${token}"
