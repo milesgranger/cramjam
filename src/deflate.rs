@@ -63,7 +63,7 @@ pub mod deflate {
     /// Deflate Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Option<libcramjam::deflate::flate2::write::DeflateEncoder<Cursor<Vec<u8>>>>,
+        inner: Option<libcramjam::deflate::DeflateStreamCompressor<Cursor<Vec<u8>>>>,
     }
 
     #[pymethods]
@@ -73,8 +73,7 @@ pub mod deflate {
         #[pyo3(signature = (level=None))]
         pub fn __init__(level: Option<u32>) -> PyResult<Self> {
             let level = level.unwrap_or_else(|| DEFAULT_COMPRESSION_LEVEL);
-            let compression = libcramjam::deflate::flate2::Compression::new(level);
-            let inner = libcramjam::deflate::flate2::write::DeflateEncoder::new(Cursor::new(vec![]), compression);
+            let inner = libcramjam::deflate::DeflateStreamCompressor::new(Cursor::new(vec![]), level);
             Ok(Self { inner: Some(inner) })
         }
 
