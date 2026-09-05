@@ -78,214 +78,109 @@ jobs:
         run: pyright
       - name: Check packaged typing files
         run: python -m pytest tests/test_typing_package.py
-    
-  build-test:
-    runs-on: ${{ matrix.conf.os }}
-    name: ${{ matrix.conf.os }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.target }}
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version:
-          - '3.11'
-          - '3.12'
-          - '3.13'
-          - '3.14'
-          - '3.14t'
-          - '3.15'
-          - '3.15t'
-        conf:
-          - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu,             manylinux: auto }
-          - { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-musl,            manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: i686,    target-triple: i686-unknown-linux-gnu,               manylinux: auto }
-          - { os: ubuntu-latest, target: i686,    target-triple: i686-unknown-linux-musl,              manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: aarch64, target-triple: aarch64-unknown-linux-gnu,            manylinux: auto }
-          - { os: ubuntu-latest, target: aarch64, target-triple: aarch64-unknown-linux-musl,           manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: armv7,   target-triple: armv7-unknown-linux-gnueabihf,        manylinux: auto }
-          - { os: ubuntu-latest, target: armv7,   target-triple: armv7-unknown-linux-musleabihf,       manylinux: musllinux_1_1 }
-          - { os: ubuntu-latest, target: s390x,   target-triple: s390x-unknown-linux-gnu,              manylinux: auto }
-        # - { os: ubuntu-latest, target: s390x,   target-triple: s390x-unknown-linux-musl,             manylinux: musllinux_1_1 }  # no target musl for s390x
-          - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-gnu,        manylinux: auto }
-        # - { os: ubuntu-latest, target: ppc64le, target-triple: powerpc64le-unknown-linux-musleabihf, manylinux: musllinux_1_1 }  # no target musl for ppc64le
 
-          - { os: macos-15, target: x86_64,     target-triple: x86_64-apple-darwin }
-          - { os: macos-15, target: aarch64,    target-triple: aarch64-apple-darwin }
-          - { os: macos-15, target: universal2, target-triple: x86_64-apple-darwin }
-
-          - { os: windows-latest, target: x86_64, target-triple: x86_64-pc-windows-msvc, python-architecture: x64 }
-          - { os: windows-latest, target: i686,   target-triple: i686-pc-windows-msvc,   python-architecture: x86 }
-
-          - { os: windows-11-arm, target: aarch64, target-triple: aarch64-pc-windows-msvc, python-architecture: arm64 }
-
-        include:
-          # Windows x86_64 pypy
-          - conf: { os: windows-latest, target: x86_64,  target-triple: x86_64-pc-windows-msvc }
-            python-version: pypy3.11
-
-          # Linux x86_64 pypy
-          - conf: { os: ubuntu-latest, target: x86_64,  target-triple: x86_64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.11
-
-          # Linux arm pypy
-          - conf: { os: ubuntu-latest, target: aarch64,  target-triple: aarch64-unknown-linux-gnu, manylinux: auto }
-            python-version: pypy3.11
-
-          # OSX x86_64 pypy
-          - conf: { os: macos-15, target: x86_64,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.11
-
-          # OSX universal2 pypy
-          - conf: { os: macos-15, target: universal2,  target-triple: x86_64-apple-darwin }
-            python-version: pypy3.11
-
-          # OSX arm pypy
-          - conf: { os: macos-15, target: aarch64,  target-triple: aarch64-apple-darwin }
-            python-version: pypy3.11
-          
+  rust-test:
+    name: Rust tests
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
-          architecture: ${{ matrix.conf.python-architecture }}
-          allow-prereleases: true
-
+          python-version: '3.12'
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
-        with:
-          target: ${{ matrix.conf.target-triple }}
-
-      - name: Set MSVC developer prompt
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-
       - name: Rust Tests
-        if: matrix.conf.target == 'x86_64' && !startsWith(matrix.python-version, 'pypy') && matrix.python-version == '3.12'
         run: cargo test
 
-      - name: Build wheel (OSX - Linux)
-        if: runner.os != 'Windows'
-        uses: PyO3/maturin-action@v1
+  # Wheel selection (Python versions, test commands, Rust setup inside the Linux
+  # containers, ...) lives in [tool.cibuildwheel] in pyproject.toml. The matrix
+  # here only decides which runner builds which architectures.
+  build-wheels:
+    name: wheels-${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Linux builds run in manylinux/musllinux containers; Rust is installed there by cibuildwheel's before-all.
+          - { name: linux-x86_64-manylinux,  os: ubuntu-latest,    archs: x86_64,  build: '*-manylinux*' }
+          - { name: linux-x86_64-musllinux,  os: ubuntu-latest,    archs: x86_64,  build: '*-musllinux*' }
+          - { name: linux-i686-manylinux,    os: ubuntu-latest,    archs: i686,    build: '*-manylinux*' }
+          - { name: linux-i686-musllinux,    os: ubuntu-latest,    archs: i686,    build: '*-musllinux*' }
+          - { name: linux-aarch64-manylinux, os: ubuntu-24.04-arm, archs: aarch64, build: '*-manylinux*' }
+          - { name: linux-aarch64-musllinux, os: ubuntu-24.04-arm, archs: aarch64, build: '*-musllinux*' }
+
+          # macOS builds all run on Apple Silicon; x86_64 (and the x86_64 half of universal2) is
+          # cross-compiled and tested under Rosetta 2.
+          - { name: macos-x86_64,     os: macos-15, archs: x86_64,     rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
+          - { name: macos-arm64,      os: macos-15, archs: arm64,      rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
+          - { name: macos-universal2, os: macos-15, archs: universal2, rust-targets: 'x86_64-apple-darwin,aarch64-apple-darwin' }
+
+          - { name: windows-amd64, os: windows-latest, archs: AMD64 }
+          - { name: windows-x86,   os: windows-latest, archs: x86,   rust-targets: i686-pc-windows-msvc }
+          - { name: windows-arm64, os: windows-11-arm, archs: ARM64 }
+
+          # Pyodide/WASM. cibuildwheel installs Emscripten itself; the Rust toolchain that
+          # each Pyodide release pins is installed per wheel by the before-build hook in
+          # pyproject.toml. Which Pyodide versions are built is set by skip in that file.
+          - { name: pyodide, os: ubuntu-latest, platform: pyodide }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Linux wheels get their Rust toolchain inside the build container, so it is only needed
+      # on the runner itself elsewhere - including for Pyodide, which builds on the host.
+      - name: Install Rust toolchain
+        if: runner.os != 'Linux' || matrix.platform == 'pyodide'
+        uses: dtolnay/rust-toolchain@stable
         with:
-          target: ${{ matrix.conf.target }}
-          manylinux: ${{ matrix.conf.manylinux }}
-          args: -i ${{ matrix.python-version }} --release --out dist
+          targets: ${{ matrix.rust-targets }}
 
-      - name: Build wheel (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          python -m pip install maturin delvewheel
-          maturin build -i python --release --out wheels --target ${{ matrix.conf.target-triple }}
-          $file = Get-ChildItem -Path "wheels" | Select-Object -First 1
-          delvewheel repair -v "wheels\$($file.Name)" -w "dist"
-    
-      - name: Install built wheel and Test (Native)
-        if: |
-          !startsWith(matrix.conf.manylinux, 'musl') && 
-          ( matrix.conf.target == 'universal2' || (matrix.conf.target == 'aarch64' && runner.os == 'Windows') || (matrix.conf.target == 'x86_64' && runner.os != 'macOS') )
-        run: |
-          # Install the built wheel first; --no-index guarantees it comes from the local dist dir
-          python -m pip install cramjam --pre --no-index --find-links dist --force-reinstall
-          # Then resolve the [dev] extras from the locally installed wheel's metadata.
-          # No --force-reinstall here so pip keeps the local cramjam instead of resolving
-          # it from PyPI, which previously installed stale dev dependencies frozen into
-          # old PyPI releases whenever the PyPI version compared >= the local wheel.
-          python -m pip install cramjam[dev] --pre --find-links dist
-
-          python -m pytest -vs --benchmark-skip -n0 --dist no
-
-      # Could use 'distro: alpine_latest' in 'run-on-arch-action' but seems difficult to install a specific version of python
-      # so we'll just use existing python alpine images to test import and cli use w/o testing archs other than x86_64
-      - name: Install built wheel and Test (musllinux)
-        if: startsWith(matrix.conf.manylinux, 'musl') && matrix.conf.target == 'x86_64' && !endsWith(matrix.python-version, 't')
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v4.2.0
         env:
-          PYTHON_IMAGE: ${{ matrix.python-version == '3.15' && 'python:3.15-rc-alpine' || format('python:{0}-alpine', matrix.python-version) }}
-        run: |
-          docker run \
-            -v $(pwd)/dist:/wheels \
-            --rm $PYTHON_IMAGE sh \
-              -c "pip install cramjam --no-index --find-links /wheels && python -c 'import cramjam'"
-
-      # xref: https://github.com/milesgranger/cramjam/issues/194
-      # - name: Install built wheel and Test (Cross)
-      #   if: |
-      #     !startsWith(matrix.conf.manylinux, 'musl') && 
-      #     runner.os == 'Linux' &&
-      #     contains(fromJson('["3.9", "3.11", "3.13"]'), matrix.python-version ) &&
-      #     !startsWith(matrix.python-version, 'pypy')  &&
-      #     contains(fromJson('["armv6", "armv7", "aarch64", "riscv64", "s390x", "ppc64le"]'), matrix.conf.target) 
-      #   uses: uraimo/run-on-arch-action@v2
-      #   with:
-      #     arch: ${{ matrix.conf.target }}
-      #     distro: ubuntu22.04
-      #     githubToken: ${{ github.token }}
-      #     # Mount the dist directory as /artifacts in the container
-      #     dockerRunArgs: |
-      #       --volume "${PWD}/dist:/artifacts"
-      #     install: |
-      #       apt-get update
-      #       apt-get install -y --no-install-recommends python3 python3-venv software-properties-common
-      #       add-apt-repository ppa:deadsnakes/ppa
-      #       apt-get update
-      #       apt-get install -y curl python${{ matrix.python-version }}-venv
-      #     run: |
-      #       ls -lrth /artifacts
-      #       PYTHON=python${{ matrix.python-version }}
-      #       $PYTHON -m venv venv
-      #       venv/bin/pip install -U pip
-      #       venv/bin/pip install cramjam --pre --no-index --find-links /artifacts --force-reinstall
-      #       venv/bin/python -c 'import cramjam'
+          CIBW_PLATFORM: ${{ matrix.platform || 'auto' }}
+          CIBW_ARCHS: ${{ matrix.archs || 'auto' }}
+          CIBW_BUILD: ${{ matrix.build || '*' }}
 
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
         with:
-          name: ${{ matrix.conf.os }}-${{ matrix.python-version }}-${{ matrix.conf.target-triple }}-${{ matrix.conf.target }}
-          path: dist
+          name: wheels-${{ matrix.name }}
+          path: wheelhouse/*.whl
 
-  # build-wasm32-emscripten-pyodide:
-  #   runs-on: ubuntu-latest
-  #   strategy:
-  #     matrix:
-  #       python:
-  #         - "3.12"
-  #   steps:
-  #     - uses: actions/checkout@v4
+  # Architectures without native GitHub runners are built under QEMU emulation, which is slow.
+  # Every Python version for an architecture shares one container and one cargo target
+  # directory, so the dependency tree is compiled once and each extra version only rebuilds
+  # the few crates that are bound to the interpreter.
+  build-wheels-emulated:
+    name: wheels-linux-${{ matrix.archs }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        archs: [armv7l, ppc64le, s390x]
 
-  #     - name: Install Rust toolchain
-  #       uses: dtolnay/rust-toolchain@stable
-  #       with:
-  #         toolchain: nightly
-  #         target: wasm32-unknown-emscripten
+    steps:
+      - uses: actions/checkout@v4
 
-  #     - uses: actions/setup-python@v5
-  #       with:
-  #         python-version: ${{ matrix.python }}
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
 
-  #     - name: Install Emscripten
-  #       uses: mymindstorm/setup-emsdk@v14
-  #       with:
-  #         # This needs to match the exact expected version pyodide expects...seems a bit brittle TBH, maybe I'm missing something.
-  #         # Discover by updating pyodide in package.json and re-running 'npm run test'; it'll spit out the error of 
-  #         # the expected vs actual versions.
-  #         version: '3.1.58'
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v4.2.0
+        env:
+          CIBW_ARCHS: ${{ matrix.archs }}
 
-  #     - name: Build
-  #       run: |
-  #         pip install maturin
-  #         maturin build --release -i python${{ matrix.python }} --features wasm32-compat --target wasm32-unknown-emscripten -o ./dist
-
-  #     - uses: actions/setup-node@v3
-  #       with:
-  #         node-version: '18'
-  #     - run: npm install
-  #     - run: npm run test
-
-  #     - name: Upload wheels
-  #       uses: actions/upload-artifact@v4
-  #       if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
-  #       with:
-  #         name: wasm32-unknown-emscripten-python${{ matrix.python }}
-  #         path: dist
+      - name: Upload wheels
+        uses: actions/upload-artifact@v4
+        if: ${{ ( startsWith(github.ref, 'refs/heads/master') || startsWith(github.ref, 'refs/tags/') ) }}
+        with:
+          name: wheels-linux-${{ matrix.archs }}
+          path: wheelhouse/*.whl
 
   build-sdist:
     name: Build sdists
@@ -325,7 +220,7 @@ jobs:
     name: Upload release to PyPI
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
-    needs: [build-test, build-sdist, version-check]
+    needs: [build-wheels, build-wheels-emulated, build-sdist, version-check]
     environment:
       name: pypi
       url: https://pypi.org/p/cramjam
@@ -338,8 +233,6 @@ jobs:
         merge-multiple: true
     - name: List artifacts
       run: ls -lhs dist/
-    - name: Remove wasm32 wheels  # TODO: https://discuss.python.org/t/support-wasm-wheels-on-pypi/21924
-      run: rm -f dist/*wasm32.whl
     - name: Publish package distributions to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
@@ -350,7 +243,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
       contents: write
-    needs: [build-test, build-sdist, version-check]
+    needs: [build-wheels, build-wheels-emulated, build-sdist, version-check]
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v4
