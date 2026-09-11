@@ -109,6 +109,7 @@ jobs:
           - { name: linux-i686-musllinux,    os: ubuntu-latest,    archs: i686,    build: '*-musllinux*' }
           - { name: linux-aarch64-manylinux, os: ubuntu-24.04-arm, archs: aarch64, build: '*-manylinux*' }
           - { name: linux-aarch64-musllinux, os: ubuntu-24.04-arm, archs: aarch64, build: '*-musllinux*' }
+          - { name: linux-riscv64-manylinux, os: ubuntu-24.04-riscv, archs: riscv64, build: '*-manylinux*' }
 
           # macOS builds all run on Apple Silicon; x86_64 (and the x86_64 half of universal2) is
           # cross-compiled and tested under Rosetta 2.

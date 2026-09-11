@@ -100,6 +100,17 @@ select = "*-manylinux_{i686,armv7l,ppc64le,s390x} *-musllinux_{i686,armv7l}"
 test-extras = []
 test-command = "python -c \"import cramjam; assert bytes(cramjam.snappy.decompress(cramjam.snappy.compress(b'cramjam'))) == b'cramjam'\""
 
+# riscv64 wheels are often missing on PyPI, so dependencies may get built from
+# source, which can drastically increase workflow run time. For riscv64, use the
+# RISE Python Packaging index in addition to PyPI, so that binaries are still
+# pulled when available.
+# manylinux only: RISE's numpy wheel for riscv64 is tagged plain "linux_riscv64"
+# (glibc), so pip installs it inside musllinux too, where it's ABI-incompatible
+# and breaks the compiled extension import at test time.
+[[tool.cibuildwheel.overrides]]
+select = "*-manylinux_riscv64"
+test-environment = { PIP_PREFER_BINARY = "1", PIP_EXTRA_INDEX_URL = "https://pypi.riseproject.dev/simple/" }
+
 [tool.cibuildwheel.pyodide]
 before-build = "bash {project}/ci/setup-rust-pyodide.sh"
 # numpy/hypothesis aren't worth pulling into the Pyodide test venv; smoke-test instead.
