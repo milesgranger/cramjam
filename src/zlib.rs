@@ -63,7 +63,7 @@ pub mod zlib {
     /// zlib Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Option<libcramjam::zlib::flate2::write::GzEncoder<Cursor<Vec<u8>>>>,
+        inner: Option<libcramjam::zlib::ZlibStreamCompressor<Cursor<Vec<u8>>>>,
     }
 
     #[pymethods]
@@ -73,10 +73,7 @@ pub mod zlib {
         #[pyo3(signature = (level=None))]
         pub fn __init__(level: Option<u32>) -> PyResult<Self> {
             let level = level.unwrap_or(DEFAULT_COMPRESSION_LEVEL);
-            let inner = libcramjam::zlib::flate2::write::GzEncoder::new(
-                Cursor::new(vec![]),
-                libcramjam::zlib::flate2::Compression::new(level),
-            );
+            let inner = libcramjam::zlib::ZlibStreamCompressor::new(Cursor::new(vec![]), level);
             Ok(Self { inner: Some(inner) })
         }
 

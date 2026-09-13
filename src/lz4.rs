@@ -8,7 +8,6 @@ pub mod lz4 {
     use crate::exceptions::{CompressionError, DecompressionError};
     use crate::io::{AsBytes, RustyBuffer};
     use crate::BytesType;
-    use libcramjam::lz4::lz4::{BlockMode, ContentChecksum};
     use pyo3::prelude::*;
     use pyo3::PyResult;
     use std::io::Cursor;
@@ -229,7 +228,7 @@ pub mod lz4 {
     /// lz4 Compressor object for streaming compression
     #[pyclass]
     pub struct Compressor {
-        inner: Mutex<Option<libcramjam::lz4::lz4::Encoder<Cursor<Vec<u8>>>>>,
+        inner: Mutex<Option<libcramjam::lz4::Lz4StreamCompressor<Cursor<Vec<u8>>>>>,
     }
 
     #[pymethods]
@@ -242,18 +241,12 @@ pub mod lz4 {
             content_checksum: Option<bool>,
             block_linked: Option<bool>,
         ) -> PyResult<Self> {
-            let inner = libcramjam::lz4::lz4::EncoderBuilder::new()
-                .auto_flush(true)
-                .level(level.unwrap_or(DEFAULT_COMPRESSION_LEVEL))
-                .checksum(match content_checksum {
-                    Some(false) => ContentChecksum::NoChecksum,
-                    _ => ContentChecksum::ChecksumEnabled,
-                })
-                .block_mode(match block_linked {
-                    Some(false) => BlockMode::Independent,
-                    _ => BlockMode::Linked,
-                })
-                .build(Cursor::new(vec![]))?;
+            let inner = libcramjam::lz4::Lz4StreamCompressor::with_options(
+                Cursor::new(vec![]),
+                level.unwrap_or(DEFAULT_COMPRESSION_LEVEL),
+                block_linked.unwrap_or(true),
+                content_checksum.unwrap_or(true),
+            );
             Ok(Self {
                 inner: Mutex::new(Some(inner)),
             })
@@ -265,22 +258,14 @@ pub mod lz4 {
         }
 
         /// Flush and return current compressed stream
-        #[allow(mutable_transmutes)] // TODO: feature req to lz4 to get mut ref to writer
         pub fn flush(&mut self) -> PyResult<RustyBuffer> {
-            crate::io::stream_flush(&mut self.inner.lock().unwrap(), |e| {
-                let writer = e.writer();
-                // no other mutations to buf b/c it'll be truncated and return immediately after this
-                unsafe { std::mem::transmute::<&Cursor<Vec<u8>>, &mut Cursor<Vec<u8>>>(writer) }
-            })
+            crate::io::stream_flush(&mut self.inner.lock().unwrap(), |e| e.get_mut())
         }
 
         /// Consume the current compressor state and return the compressed stream
         /// **NB** The compressor will not be usable after this method is called.
         pub fn finish(&mut self) -> PyResult<RustyBuffer> {
-            crate::io::stream_finish(&mut self.inner.lock().unwrap(), |inner| {
-                let (cursor, result) = inner.finish();
-                result.map(|_| cursor.into_inner())
-            })
+            crate::io::stream_finish(&mut self.inner.lock().unwrap(), |inner| inner.finish().map(|c| c.into_inner()))
         }
     }
 

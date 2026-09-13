@@ -357,8 +357,8 @@ def test_lzma(benchmark, file, use_cramjam: bool):
     if use_cramjam:
         benchmark(
             round_trip,
-            compress=cramjam.experimental.lzma.compress,
-            decompress=cramjam.experimental.lzma.decompress,
+            compress=cramjam.xz.compress,
+            decompress=cramjam.xz.decompress,
             data=data,
         )
     else:
