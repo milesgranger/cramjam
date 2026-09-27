@@ -18,11 +18,6 @@ use pyo3::types::PyBytes;
 use pyo3::IntoPyObjectExt;
 use std::path::PathBuf;
 
-pub(crate) trait AsBytes {
-    fn as_bytes(&self) -> &[u8];
-    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]>;
-}
-
 /// A native Rust file-like object. Reading and writing takes place
 /// through the Rust implementation, allowing access to the underlying
 /// bytes in Python.
@@ -42,21 +37,6 @@ pub(crate) trait AsBytes {
 pub struct RustyFile {
     pub(crate) path: PathBuf,
     pub(crate) inner: File,
-}
-
-impl AsBytes for RustyFile {
-    fn as_bytes(&self) -> &[u8] {
-        unimplemented!(
-            "Converting a File to bytes is not supported, as it'd require reading the \
-        entire file into memory; consider using cramjam.Buffer"
-        )
-    }
-    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]> {
-        unimplemented!(
-            "Converting a File to bytes is not supported, as it'd require reading the \
-        entire file into memory; consider using cramjam.Buffer"
-        )
-    }
 }
 
 #[pymethods]
@@ -392,16 +372,6 @@ impl Drop for RustyBuffer {
     }
 }
 
-impl AsBytes for RustyBuffer {
-    fn as_bytes(&self) -> &[u8] {
-        self.inner.get_ref().as_slice()
-    }
-    fn as_bytes_mut(&mut self) -> PyResult<&mut [u8]> {
-        let slice = self.inner.get_mut().as_mut_slice();
-        Ok(slice)
-    }
-}
-
 impl From<Vec<u8>> for RustyBuffer {
     fn from(v: Vec<u8>) -> Self {
         Self {
@@ -440,7 +410,7 @@ impl RustyBuffer {
                     return Err(exceptions::PyRuntimeError::new_err("copy=False not supported on PyPy"));
                 }
                 let reference = maybe_bytestype.clone_ref(py);
-                let bytes = bytestype.as_bytes();
+                let bytes = bytestype.as_bytes()?;
                 let buf = unsafe { Vec::from_raw_parts(bytes.as_ptr() as *mut _, bytes.len(), bytes.len()) };
                 Ok(Self {
                     inner: Cursor::new(buf),
@@ -465,7 +435,7 @@ impl RustyBuffer {
             BufferOwnership::Owned => Ok(()),
             BufferOwnership::View(obj) => {
                 let bytestype = obj.extract::<BytesType<'_>>(py)?;
-                let bytes = bytestype.as_bytes();
+                let bytes = bytestype.as_bytes()?;
 
                 // if the pointer has changed or the length, we need to realign our buffer view
                 if bytes.as_ptr() != self.inner.get_ref().as_ptr() || bytes.len() != self.inner.get_ref().len() {
@@ -516,7 +486,7 @@ impl RustyBuffer {
 
         // TODO: combining conditions is unstable with if let
         if let BufferOwnership::View(_) = self.ownership {
-            if input.len() > self.inner.get_ref().len() - self.inner.position() as usize {
+            if input.len()? > self.inner.get_ref().len() - self.inner.position() as usize {
                 return Err(exceptions::PyIOError::new_err("Too much to write on view"));
             }
         }
@@ -634,9 +604,9 @@ impl RustyBuffer {
     fn __len__(&mut self, py: Python) -> PyResult<usize> {
         self.len(py)
     }
-    fn __contains__(&self, py: Python, x: BytesType) -> bool {
-        let bytes = x.as_bytes();
-        py.detach(|| self.inner.get_ref().windows(bytes.len()).any(|w| w == bytes))
+    fn __contains__(&self, py: Python, x: BytesType) -> PyResult<bool> {
+        let bytes: &[u8] = &x.as_bytes()?;
+        Ok(py.detach(|| self.inner.get_ref().windows(bytes.len()).any(|w| w == bytes)))
     }
     fn __repr__(&mut self, py: Python) -> PyResult<String> {
         Ok(format!("cramjam.Buffer<len={:?}>", self.len(py)?))

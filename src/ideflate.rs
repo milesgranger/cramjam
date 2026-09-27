@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 pub mod ideflate {
 
     use crate::exceptions::{CompressionError, DecompressionError};
-    use crate::io::{AsBytes, RustyBuffer};
+    use crate::io::RustyBuffer;
     use crate::BytesType;
     use pyo3::prelude::*;
     use pyo3::PyResult;

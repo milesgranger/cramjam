@@ -8,7 +8,7 @@ pub mod blosc2 {
     use std::io::{self, BufReader, Cursor};
 
     use crate::exceptions::{CompressionError, DecompressionError};
-    use crate::io::{AsBytes, RustyBuffer};
+    use crate::io::RustyBuffer;
     use crate::BytesType;
     use libcramjam::blosc2::blosc2::schunk::{Chunk, SChunk, Storage};
     use libcramjam::blosc2::blosc2::{CLevel, CParams, Codec, DParams, Filter};
@@ -31,7 +31,7 @@ pub mod blosc2 {
         codec: Option<PyCodec>,
         nthreads: Option<usize>,
     ) -> PyResult<RustyBuffer> {
-        if input.is_empty() {
+        if input.is_empty()? {
             return Ok(RustyBuffer::from(vec![]));
         }
 
@@ -68,7 +68,7 @@ pub mod blosc2 {
         codec: Option<PyCodec>,
         nthreads: Option<usize>,
     ) -> PyResult<usize> {
-        if input.is_empty() {
+        if input.is_empty()? {
             return Ok(0);
         }
 
@@ -112,7 +112,7 @@ pub mod blosc2 {
     #[allow(unused_variables)]
     #[pyo3(signature = (input, output_len=None))]
     pub fn decompress(py: Python, input: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        if input.is_empty() {
+        if input.is_empty()? {
             return Ok(RustyBuffer::from(vec![]));
         }
         return crate::generic!(py, libcramjam::blosc2::decompress[input], output_len = output_len)
@@ -122,7 +122,7 @@ pub mod blosc2 {
     /// decompress into output
     #[pyfunction]
     pub fn decompress_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
-        if input.is_empty() {
+        if input.is_empty()? {
             return Ok(0);
         }
         crate::generic!(py, libcramjam::blosc2::decompress[input, output]).map_err(DecompressionError::from_err)
@@ -139,7 +139,7 @@ pub mod blosc2 {
     #[allow(unused_variables)]
     #[pyo3(signature = (data, output_len=None))]
     pub fn decompress_chunk(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        let bytes = data.as_bytes();
+        let bytes: &[u8] = &data.as_bytes()?;
         let buf = py
             .detach(|| libcramjam::blosc2::decompress_chunk(bytes))
             .map(RustyBuffer::from)?;
@@ -149,8 +149,8 @@ pub mod blosc2 {
     /// Decompress a Chunk into output
     #[pyfunction]
     pub fn decompress_chunk_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
-        let bytes = input.as_bytes();
-        let out = output.as_bytes_mut()?;
+        let bytes: &[u8] = &input.as_bytes()?;
+        let out: &mut [u8] = &mut output.as_bytes_mut()?;
         let nbytes = py.detach(|| libcramjam::blosc2::decompress_chunk_into(bytes, out))?;
         Ok(nbytes)
     }
@@ -173,7 +173,7 @@ pub mod blosc2 {
         filter: Option<PyFilter>,
         codec: Option<PyCodec>,
     ) -> PyResult<RustyBuffer> {
-        let bytes = data.as_bytes();
+        let bytes: &[u8] = &data.as_bytes()?;
         py.detach(|| {
             let clevel = clevel.map(Into::into);
             let filter = filter.map(Into::into);
@@ -196,8 +196,8 @@ pub mod blosc2 {
         filter: Option<PyFilter>,
         codec: Option<PyCodec>,
     ) -> PyResult<usize> {
-        let bytes = input.as_bytes();
-        let out = output.as_bytes_mut()?;
+        let bytes: &[u8] = &input.as_bytes()?;
+        let out: &mut [u8] = &mut output.as_bytes_mut()?;
         py.detach(|| {
             let clevel = clevel.map(Into::into);
             let filter = filter.map(Into::into);
@@ -249,7 +249,7 @@ pub mod blosc2 {
         pub fn compress(&mut self, input: BytesType) -> PyResult<usize> {
             match self.0.as_mut() {
                 Some(schunk) => schunk
-                    .append_buffer(input.as_bytes())
+                    .append_buffer(&input.as_bytes()?)
                     .map_err(CompressionError::from_err),
                 None => Err(CompressionError::new_err("Compressor has been consumed")),
             }
@@ -308,8 +308,8 @@ pub mod blosc2 {
             let clevel = clevel.map(Into::into);
             let filter = filter.map(Into::into);
             let codec = codec.map(Into::into);
-            let chunk =
-                Chunk::compress(src.as_bytes(), typesize, clevel, filter, codec).map_err(CompressionError::from_err)?;
+            let chunk = Chunk::compress(&*src.as_bytes()?, typesize, clevel, filter, codec)
+                .map_err(CompressionError::from_err)?;
             Ok(Self(chunk))
         }
 
@@ -358,12 +358,13 @@ pub mod blosc2 {
         F: FnOnce(&[u8]) -> PyResult<T>,
     {
         match buf.extract::<BytesType>(py) {
-            Ok(bt) => op(bt.as_bytes()),
+            Ok(bt) => op(&bt.as_bytes()?),
             Err(_) => {
                 if let Some(to_bytes_cb) = &converter {
                     let obj = to_bytes_cb.call(py, (&buf,), None)?;
                     let bytestype = obj.extract::<BytesType>(py)?;
-                    op(bytestype.as_bytes())
+                    let bytes = bytestype.as_bytes()?;
+                    op(&bytes)
                 } else {
                     let msg = "Could not convert to variant of `BytesType` and no `to_bytes_cb` function set";
                     return Err(CompressionError::new_err(msg));
