@@ -17,6 +17,7 @@ use pyo3::types::PyBytes;
 #[cfg(any(PyPy, Py_GIL_DISABLED))]
 use pyo3::IntoPyObjectExt;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 /// A native Rust file-like object. Reading and writing takes place
 /// through the Rust implementation, allowing access to the underlying
@@ -358,6 +359,10 @@ impl Default for BufferOwnership {
 pub struct RustyBuffer {
     pub(crate) inner: Cursor<Vec<u8>>,
     pub(crate) ownership: BufferOwnership,
+    /// Each live buffer-protocol export (memoryview, numpy array, ...) holds a clone, dropped in
+    /// `__releasebuffer__`. Exports point straight into `inner`'s allocation, so its length
+    /// can't change while any exist.
+    exports: Arc<()>,
 }
 
 impl Drop for RustyBuffer {
@@ -377,7 +382,20 @@ impl From<Vec<u8>> for RustyBuffer {
         Self {
             inner: Cursor::new(v),
             ownership: BufferOwnership::Owned,
+            exports: Default::default(),
         }
+    }
+}
+
+impl RustyBuffer {
+    /// Like `bytearray`, refuse to change the length while buffer-protocol exports exist.
+    fn ensure_resizable(&self) -> PyResult<()> {
+        if Arc::strong_count(&self.exports) > 1 {
+            return Err(PyBufferError::new_err(
+                "Existing exports of data: object cannot be re-sized",
+            ));
+        }
+        Ok(())
     }
 }
 
@@ -401,10 +419,7 @@ impl RustyBuffer {
             if copy.unwrap_or(true) {
                 let mut buf = vec![];
                 bytestype.read_to_end(&mut buf)?;
-                Ok(Self {
-                    inner: Cursor::new(buf),
-                    ownership: BufferOwnership::Owned,
-                })
+                Ok(Self::from(buf))
             } else {
                 if cfg!(PyPy) {
                     return Err(exceptions::PyRuntimeError::new_err("copy=False not supported on PyPy"));
@@ -415,13 +430,11 @@ impl RustyBuffer {
                 Ok(Self {
                     inner: Cursor::new(buf),
                     ownership: BufferOwnership::View(reference),
+                    exports: Default::default(),
                 })
             }
         } else {
-            Ok(Self {
-                inner: Cursor::new(vec![]),
-                ownership: BufferOwnership::Owned,
-            })
+            Ok(Self::default())
         }
     }
 
@@ -588,6 +601,9 @@ impl RustyBuffer {
         if let BufferOwnership::View(_) = self.ownership {
             return Err(exceptions::PyIOError::new_err("Cannot set length on unowned buffer"));
         }
+        if size != self.inner.get_ref().len() {
+            self.ensure_resizable()?;
+        }
         self.inner.get_mut().resize(size, 0);
         Ok(())
     }
@@ -595,6 +611,9 @@ impl RustyBuffer {
     pub fn truncate(&mut self) -> PyResult<()> {
         if let BufferOwnership::View(_) = self.ownership {
             return Err(exceptions::PyIOError::new_err("Cannot truncate unowned buffer"));
+        }
+        if !self.inner.get_ref().is_empty() {
+            self.ensure_resizable()?;
         }
         self.inner.get_mut().truncate(0);
         self.inner.set_position(0);
@@ -655,10 +674,14 @@ impl RustyBuffer {
         }
 
         (*view).suboffsets = std::ptr::null_mut();
-        (*view).internal = std::ptr::null_mut();
+        (*view).internal = Arc::into_raw(Arc::clone(&slf.exports)) as *mut std::os::raw::c_void;
         Ok(())
     }
-    unsafe fn __releasebuffer__(&self, _view: *mut ffi::Py_buffer) {}
+    // Takes `&Bound` rather than `&self` so no borrow is needed: a failed borrow would skip
+    // this, leaking the export and leaving the buffer non-resizable forever.
+    unsafe fn __releasebuffer__(_slf: &Bound<'_, Self>, view: *mut ffi::Py_buffer) {
+        drop(Arc::from_raw((*view).internal as *const ()));
+    }
 }
 
 fn write<W: Write>(input: &mut BytesType, output: &mut W) -> std::io::Result<u64> {
@@ -708,6 +731,10 @@ impl Seek for PythonBuffer {
 }
 impl Write for RustyBuffer {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        let pos = usize::try_from(self.inner.position()).unwrap_or(usize::MAX);
+        if pos.saturating_add(buf.len()) > self.inner.get_ref().len() {
+            self.ensure_resizable().map_err(std::io::Error::other)?;
+        }
         self.inner.write(buf)
     }
     fn flush(&mut self) -> std::io::Result<()> {

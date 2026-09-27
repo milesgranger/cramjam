@@ -183,7 +183,7 @@ impl<'a> BytesType<'a> {
 impl<'a> Write for BytesType<'a> {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         let result = match self {
-            BytesType::RustyBuffer(out) => out.borrow_mut().inner.write(buf)?,
+            BytesType::RustyBuffer(out) => Write::write(&mut *out.borrow_mut(), buf)?,
             BytesType::RustyFile(out) => out.borrow_mut().inner.write(buf)?,
             BytesType::PyBuffer(out) => out.write(buf)?,
         };
@@ -285,7 +285,7 @@ macro_rules! generic {
                         },
                         BytesType::RustyBuffer(buffer) => {
                             let mut borrowed = buffer.try_borrow_mut()?;
-                            let mut buf_out = &mut borrowed.inner;
+                            let mut buf_out = &mut *borrowed;
                             $py.detach(|| {
                                 $op(f_in, &mut buf_out $(, $args)* )
                             })
@@ -310,7 +310,7 @@ macro_rules! generic {
                         },
                         BytesType::RustyBuffer(buffer) => {
                             let mut borrowed = buffer.try_borrow_mut()?;
-                            let mut buf_out = &mut borrowed.inner;
+                            let mut buf_out = &mut *borrowed;
                             $py.detach(|| {
                                 $op(bytes_in, &mut buf_out $(, $args)* )
                             })
