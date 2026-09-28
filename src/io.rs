@@ -677,10 +677,19 @@ impl RustyBuffer {
         (*view).internal = Arc::into_raw(Arc::clone(&slf.exports)) as *mut std::os::raw::c_void;
         Ok(())
     }
-    // Takes `&Bound` rather than `&self` so no borrow is needed: a failed borrow would skip
-    // this, leaking the export and leaving the buffer non-resizable forever.
-    unsafe fn __releasebuffer__(_slf: &Bound<'_, Self>, view: *mut ffi::Py_buffer) {
-        drop(Arc::from_raw((*view).internal as *const ()));
+    // Takes `&Bound` rather than `&self` so CPython's path needs no borrow: a failed borrow
+    // would skip this, leaking the export and leaving the buffer non-resizable forever.
+    unsafe fn __releasebuffer__(slf: &Bound<'_, Self>, view: *mut ffi::Py_buffer) {
+        let export = (*view).internal as *const ();
+        if !export.is_null() {
+            drop(Arc::from_raw(export));
+        } else if let Ok(this) = slf.try_borrow() {
+            // PyPy passes a fresh Py_buffer with `internal` unset, so reach the Arc through
+            // `self`; all clones share one allocation, so this releases exactly one export.
+            // ponytail: if another thread holds a mutable borrow right now, the export leaks
+            // (Buffer stays non-resizable; never unsound).
+            Arc::decrement_strong_count(Arc::as_ptr(&this.exports));
+        }
     }
 }
 
