@@ -187,6 +187,30 @@ def test_buffer_exports_memoryview():
     assert view.tobytes() == b"bytes"
 
 
+def test_buffer_export_blocks_resize():
+    # Exported views point into the Buffer's allocation; resizing would leave them dangling.
+    buf = Buffer(b"a" * 64)
+    view = memoryview(buf)
+
+    for resize in (
+        lambda: buf.set_len(1 << 20),
+        buf.truncate,
+        lambda: buf.write(b"x" * 128),
+    ):
+        with pytest.raises(BufferError):
+            resize()
+    with pytest.raises(cramjam.CompressionError, match="Existing exports"):
+        cramjam.snappy.compress_into(b"x" * 1024, buf)
+
+    buf.set_len(64)  # same length is fine
+    buf.write(b"b")  # in-place write is fine
+    assert view[:2] == b"ba"
+
+    view.release()
+    buf.set_len(1 << 20)
+    assert len(buf) == 1 << 20
+
+
 def test_concurrent_codec_calls():
     data = b"concurrent compression" * 100
 
