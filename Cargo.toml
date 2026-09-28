@@ -1,6 +1,6 @@
 [package]
 name = "cramjam-python"
-version = "2.12.2"
+version = "2.13.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
 rust-version = "1.83"
