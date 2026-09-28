@@ -5,7 +5,7 @@ use pyo3::prelude::*;
 #[pymodule]
 pub mod snappy {
     use crate::exceptions::{CompressionError, DecompressionError};
-    use crate::io::{AsBytes, RustyBuffer};
+    use crate::io::RustyBuffer;
     use crate::BytesType;
     use pyo3::prelude::*;
     use pyo3::PyResult;
@@ -53,7 +53,7 @@ pub mod snappy {
     #[allow(unused_variables)]
     #[pyo3(signature = (data, output_len=None))]
     pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        let bytes = data.as_bytes();
+        let bytes: &[u8] = &data.as_bytes()?;
         py.detach(|| libcramjam::snappy::raw::decompress_vec(bytes))
             .map_err(DecompressionError::from_err)
             .map(From::from)
@@ -71,7 +71,7 @@ pub mod snappy {
     #[allow(unused_variables)]
     #[pyo3(signature = (data, output_len=None))]
     pub fn compress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        let bytes = data.as_bytes();
+        let bytes: &[u8] = &data.as_bytes()?;
         py.detach(|| libcramjam::snappy::raw::compress_vec(bytes))
             .map_err(CompressionError::from_err)
             .map(From::from)
@@ -92,8 +92,8 @@ pub mod snappy {
     /// Compress raw format directly into an output buffer
     #[pyfunction]
     pub fn compress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
-        let bytes_in = input.as_bytes();
-        let bytes_out = output.as_bytes_mut()?;
+        let bytes_in: &[u8] = &input.as_bytes()?;
+        let bytes_out: &mut [u8] = &mut output.as_bytes_mut()?;
         py.detach(|| libcramjam::snappy::raw::compress(bytes_in, bytes_out))
             .map_err(CompressionError::from_err)
     }
@@ -101,8 +101,8 @@ pub mod snappy {
     /// Decompress raw format directly into an output buffer
     #[pyfunction]
     pub fn decompress_raw_into(py: Python, input: BytesType, mut output: BytesType) -> PyResult<usize> {
-        let bytes_in = input.as_bytes();
-        let bytes_out = output.as_bytes_mut()?;
+        let bytes_in: &[u8] = &input.as_bytes()?;
+        let bytes_out: &mut [u8] = &mut output.as_bytes_mut()?;
         py.detach(|| libcramjam::snappy::raw::decompress(bytes_in, bytes_out))
             .map_err(DecompressionError::from_err)
     }
@@ -110,15 +110,15 @@ pub mod snappy {
     /// Get the expected max compressed length for snappy raw compression; this is the size
     /// of buffer that should be passed to `compress_raw_into`
     #[pyfunction]
-    pub fn compress_raw_max_len(data: BytesType) -> usize {
-        libcramjam::snappy::snap::raw::max_compress_len(data.len())
+    pub fn compress_raw_max_len(data: BytesType) -> PyResult<usize> {
+        Ok(libcramjam::snappy::snap::raw::max_compress_len(data.len()?))
     }
 
     /// Get the decompressed length for the given data. This is the size of buffer
     /// that should be passed to `decompress_raw_into`
     #[pyfunction]
     pub fn decompress_raw_len(data: BytesType) -> PyResult<usize> {
-        libcramjam::snappy::snap::raw::decompress_len(data.as_bytes()).map_err(DecompressionError::from_err)
+        libcramjam::snappy::snap::raw::decompress_len(&data.as_bytes()?).map_err(DecompressionError::from_err)
     }
 
     /// Snappy Compressor object for streaming compression

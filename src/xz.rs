@@ -9,7 +9,7 @@ pub mod xz {
     use pyo3::PyResult;
 
     use crate::exceptions::{CompressionError, DecompressionError};
-    use crate::io::{AsBytes, RustyBuffer};
+    use crate::io::RustyBuffer;
     use crate::BytesType;
     use pyo3::exceptions::PyNotImplementedError;
     use std::io::Cursor;

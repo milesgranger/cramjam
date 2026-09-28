@@ -7,7 +7,7 @@ pub mod deflate {
 
     use crate::exceptions::{CompressionError, DecompressionError};
     use crate::io::RustyBuffer;
-    use crate::{AsBytes, BytesType};
+    use crate::BytesType;
     use pyo3::prelude::*;
     use pyo3::PyResult;
     use std::io::Cursor;

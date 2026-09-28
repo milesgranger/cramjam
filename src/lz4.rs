@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 pub mod lz4 {
 
     use crate::exceptions::{CompressionError, DecompressionError};
-    use crate::io::{AsBytes, RustyBuffer};
+    use crate::io::RustyBuffer;
     use crate::BytesType;
     use libcramjam::lz4::lz4::{BlockMode, ContentChecksum};
     use pyo3::prelude::*;
@@ -79,7 +79,7 @@ pub mod lz4 {
     #[allow(unused_variables)]
     #[pyo3(signature = (data, output_len=None))]
     pub fn decompress_block(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        let bytes = data.as_bytes();
+        let bytes: &[u8] = &data.as_bytes()?;
 
         py.detach(|| {
             match output_len {
@@ -122,7 +122,7 @@ pub mod lz4 {
         compression: Option<i32>,
         store_size: Option<bool>,
     ) -> PyResult<RustyBuffer> {
-        let bytes = data.as_bytes();
+        let bytes: &[u8] = &data.as_bytes()?;
         py.detach(|| libcramjam::lz4::block::compress_vec(bytes, compression.map(|v| v as _), acceleration, store_size))
             .map_err(CompressionError::from_err)
             .map(RustyBuffer::from)
@@ -143,7 +143,7 @@ pub mod lz4 {
         mut output: BytesType,
         output_len: Option<usize>,
     ) -> PyResult<usize> {
-        let bytes = input.as_bytes();
+        let bytes: &[u8] = &input.as_bytes()?;
 
         // If output_len is not set, we assume size is stored in block
         let size_stored = output_len.is_none();
@@ -151,13 +151,14 @@ pub mod lz4 {
         // If we have output_len set, but the actual length of output
         // is less than output_len, we'll let the user know.
         if let Some(size) = output_len {
-            if output.len() < size {
-                let msg = format!("output_len set to {}, but output is less. ({})", size, output.len());
+            let actual = output.len()?;
+            if actual < size {
+                let msg = format!("output_len set to {}, but output is less. ({})", size, actual);
                 return Err(DecompressionError::new_err(msg));
             }
         }
 
-        let out_bytes = output.as_bytes_mut()?;
+        let out_bytes: &mut [u8] = &mut output.as_bytes_mut()?;
         py.detach(
             || match libcramjam::lz4::block::decompress_into(bytes, out_bytes, Some(size_stored)) {
                 Ok(r) => Ok(r),
@@ -198,8 +199,8 @@ pub mod lz4 {
         compression: Option<i32>,
         store_size: Option<bool>,
     ) -> PyResult<usize> {
-        let bytes = data.as_bytes();
-        let out_bytes = output.as_bytes_mut()?;
+        let bytes: &[u8] = &data.as_bytes()?;
+        let out_bytes: &mut [u8] = &mut output.as_bytes_mut()?;
         py.detach(|| {
             libcramjam::lz4::block::compress_into(
                 bytes,
@@ -223,7 +224,7 @@ pub mod lz4 {
     /// ```
     #[pyfunction]
     pub fn compress_block_bound(src: BytesType) -> PyResult<usize> {
-        Ok(libcramjam::lz4::block::compress_bound(src.len(), Some(true)))
+        Ok(libcramjam::lz4::block::compress_bound(src.len()?, Some(true)))
     }
 
     /// lz4 Compressor object for streaming compression
