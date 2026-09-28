@@ -681,7 +681,7 @@ impl RustyBuffer {
     // would skip this, leaking the export and leaving the buffer non-resizable forever.
     unsafe fn __releasebuffer__(slf: &Bound<'_, Self>, view: *mut ffi::Py_buffer) {
         let export = (*view).internal as *const ();
-        if !export.is_null() {
+        if !cfg!(PyPy) && !export.is_null() {
             drop(Arc::from_raw(export));
         } else if let Ok(this) = slf.try_borrow() {
             // PyPy passes a fresh Py_buffer with `internal` unset, so reach the Arc through
