@@ -260,14 +260,16 @@ impl<'a, 'py> FromPyObject<'a, 'py> for PythonBuffer {
 impl<'a, 'py> TryFrom<&'a Bound<'py, PyAny>> for PythonBuffer {
     type Error = PyErr;
     fn try_from(obj: &'a Bound<'py, PyAny>) -> Result<Self, Self::Error> {
-        let mut buf = Box::new(mem::MaybeUninit::uninit());
+        let mut buf = Box::<ffi::Py_buffer>::new_uninit();
         let rc = unsafe { ffi::PyObject_GetBuffer(obj.as_ptr(), buf.as_mut_ptr(), ffi::PyBUF_CONTIG_RO) };
         if rc != 0 {
-            return Err(exceptions::PyBufferError::new_err(
-                "Failed to get buffer, is it C contiguous, and shape is not null?",
-            ));
+            // Chain the reason (e.g. "a bytes-like object is required") instead of leaving it pending.
+            let err =
+                exceptions::PyBufferError::new_err("Failed to get buffer, is it C contiguous, and shape is not null?");
+            err.set_cause(obj.py(), PyErr::take(obj.py()));
+            return Err(err);
         }
-        let buf = Box::new(unsafe { mem::MaybeUninit::<ffi::Py_buffer>::assume_init(*buf) });
+        let buf = unsafe { buf.assume_init() };
         let buf = Self {
             inner: std::pin::Pin::from(buf),
             pos: 0,
