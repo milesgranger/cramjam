@@ -152,7 +152,7 @@ impl Deref for BytesRefMut<'_> {
 impl DerefMut for BytesRefMut<'_> {
     fn deref_mut(&mut self) -> &mut [u8] {
         match self {
-            Self::Buffer(b) => b.inner.get_mut(),
+            Self::Buffer(b) => b.inner.get_mut().as_mut_slice().expect("checked in as_bytes_mut"),
             Self::Slice(s) => s,
         }
     }
@@ -173,7 +173,11 @@ impl<'a> BytesType<'a> {
     /// Mutably borrow the underlying bytes; the borrow is held for as long as the returned guard lives.
     pub(crate) fn as_bytes_mut(&mut self) -> PyResult<BytesRefMut<'_>> {
         match self {
-            BytesType::RustyBuffer(b) => Ok(BytesRefMut::Buffer(b.try_borrow_mut()?)),
+            BytesType::RustyBuffer(b) => {
+                let mut buf = b.try_borrow_mut()?;
+                buf.inner.get_mut().as_mut_slice()?; // a view of a read-only source errors here
+                Ok(BytesRefMut::Buffer(buf))
+            }
             BytesType::PyBuffer(b) => Ok(BytesRefMut::Slice(b.as_slice_mut()?)),
             BytesType::RustyFile(_) => Err(pyo3::exceptions::PyTypeError::new_err(FILE_AS_BYTES_ERR)),
         }
