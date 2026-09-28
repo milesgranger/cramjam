@@ -2,28 +2,16 @@
 
 ---
 
-## Project Status
-
-Over the course of the last year or two I've lost a lot of interest in open-source work and thus, this project. I thought it was simply
-new time limitations, but as those lifted, it became clear something has changed. In me, the environment...probably both. 
-
-This world of open-source, software engineering, deep thought of puzzles, creativity within constraints; it all use to make me happy.
-It was an escape. Seeing how it's evolving, the changes in people, the difference in tragectory, disregard for consequences...It makes me sad now.
-
-Anyway, I may touch this again or I may not.
-
----
-
 [![CI](https://github.com/milesgranger/cramjam/actions/workflows/CI.yml/badge.svg)](https://github.com/milesgranger/cramjam/actions/workflows/CI.yml)
 [![Downloads](https://pepy.tech/badge/cramjam/month)](https://pepy.tech/project/cramjam)
 [![PyPI](https://img.shields.io/pypi/v/cramjam.svg)](https://pypi.org/project/cramjam)
 [![Conda Version](https://img.shields.io/conda/vn/conda-forge/cramjam.svg)](https://anaconda.org/conda-forge/cramjam)
 [![NPM Version](https://img.shields.io/npm/v/cramjam)](https://www.npmjs.com/package/cramjam)
 
-
 [API Documentation](https://milesgranger.github.io/cramjam/cramjam.html)
 
 ### Install (Python)
+
 ```commandline
 pip install --upgrade cramjam  # Requires no Python or system dependencies!
 ```
@@ -40,8 +28,8 @@ make test
 
 Rust checks can be run separately with `cargo test`.
 
-
 ### Install (JavaScript / TypeScript)
+
 ```commandline
 npm install cramjam
 ```
@@ -69,24 +57,23 @@ Some basic benchmarks are available [in the benchmarks directory](./benchmarks/R
 
 Available algorithms:
 
-- [X] Snappy&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.snappy`
-- [X] Brotli&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.brotli`
-- [X] Bzip2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.bzip2`
-- [X] Lz4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.lz4`
-- [X] Gzip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.gzip`
-- [X] Zlib&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.zlib`
-- [X] Deflate&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.deflate`
-- [X] ZSTD&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.zstd`
-- [X] XZ / LZMA&nbsp;&nbsp;`cramjam.xz`
-
+- [x] Snappy&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.snappy`
+- [x] Brotli&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.brotli`
+- [x] Bzip2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.bzip2`
+- [x] Lz4&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.lz4`
+- [x] Gzip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.gzip`
+- [x] Zlib&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.zlib`
+- [x] Deflate&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.deflate`
+- [x] ZSTD&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.zstd`
+- [x] XZ / LZMA&nbsp;&nbsp;`cramjam.xz`
 
 Experimental (Requires build from source enabling each feature):
 
-- [X] Blosc2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.blosc2`
-- [X] ISA-L backend  _(only on 64-bit targets)_
-  - [X] igzip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.igzip`
-  - [X] ideflate&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.ideflate`
-  - [X] izlib&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.izlib`
+- [x] Blosc2&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.blosc2`
+- [x] ISA-L backend _(only on 64-bit targets)_
+  - [x] igzip&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.igzip`
+  - [x] ideflate&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.ideflate`
+  - [x] izlib&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`cramjam.experimental.izlib`
 
 All available for use as:
 
@@ -103,12 +90,13 @@ b"bytes here"
 array([ 98, 121, 116, 101, 115,  32, 104, 101, 114, 101], dtype=uint8)
 ```
 
-Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts 
+Where the API is `cramjam.<compression-variant>.compress/decompress` and accepts
 `bytes`/`bytearray`/`numpy.array`/`cramjam.File`/`cramjam.Buffer` / `memoryview` objects.
 
 **de/compress_into**
-Additionally, all variants support `decompress_into` and `compress_into`. 
+Additionally, all variants support `decompress_into` and `compress_into`.
 Ex.
+
 ```python
 >>> import numpy as np
 >>> from cramjam import snappy, Buffer
@@ -136,12 +124,9 @@ b'000000000000000'
 b'some bytes here'
 ```
 
-
 [TypeScript](./cramjam-js/README.md):
 
-
 ```typescript
-
 import {Compress, Decompress} from 'cramjam';
 
 const decoder = new TextDecoder();
@@ -154,5 +139,4 @@ const compressed = Compress.brotli(encoded);
 const decompressed = Decompress.brotli(compressed);
 
 const decoded = decoder.decode(decompressed);
-
 ```
