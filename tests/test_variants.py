@@ -396,6 +396,7 @@ def test_gzip_multiple_streams(first: bytes, second: bytes):
         cramjam.lz4,
         cramjam.snappy,
         cramjam.zstd,
+        cramjam.zlib,
     ),
 )
 @given(first=st.binary(), second=st.binary())
