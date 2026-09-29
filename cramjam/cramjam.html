@@ -98,9 +98,6 @@
                     <a class="class" href="#Buffer">Buffer</a>
                             <ul class="memberlist">
                         <li>
-                                <a class="function" href="#Buffer.ensure_aligned_view">ensure_aligned_view</a>
-                        </li>
-                        <li>
                                 <a class="function" href="#Buffer.get_view_reference">get_view_reference</a>
                         </li>
                         <li>
@@ -190,7 +187,7 @@
                 <section id="__version__">
                     <div class="attr variable">
             <span class="name">__version__</span>        =
-<span class="default_value">&#39;2.12.1&#39;</span>
+<span class="default_value">&#39;2.13.0&#39;</span>
 
         
     </div>
@@ -399,36 +396,18 @@ bytes in Python.</p>
 </code></pre>
 </div>
 
-<p>NOTE: Use <code>copy=False</code> responsibly! That is to say, it will not
-copy the data, and will be referencing the underlying buffer during this
-Buffer's lifetime. We make an attempt to realign each time when accessing
-the buffer, but one should broadly take care to use locks where neccessary.
-Internally we increment the PyObject ref count, so it <strong>should</strong> be free
-from said buffer being garbage collected out from under us, but do try to
-avoid any funny business. :)</p>
+<p>NOTE: <code>copy=False</code> doesn't copy: the Buffer reads and writes the source object's memory
+directly, holding its buffer export for the Buffer's lifetime. While the Buffer is alive
+the source can't be resized (e.g. <code>bytearray</code> raises <code>BufferError</code>), the Buffer itself
+can't grow past the source's length, and writing into a read-only source such as <code>bytes</code>
+raises <code>TypeError</code>. This makes it a zero-copy file-like wrapper, e.g. for handing a numpy
+array to an API that only accepts file-like objects, such as an S3 upload <code>Body</code>
+(fsspec/s3fs#959).</p>
 
 <p><code>copy=False</code> is not supported on PyPy distributions</p>
 </div>
 
 
-                            <div id="Buffer.ensure_aligned_view" class="classattr">
-                                <div class="attr function">
-            
-        <span class="def">def</span>
-        <span class="name">ensure_aligned_view</span><span class="signature pdoc-code condensed">(<span class="param"><span class="bp">self</span>, </span><span class="param"><span class="o">/</span></span><span class="return-annotation">):</span></span>
-
-        
-    </div>
-    <a class="headerlink" href="#Buffer.ensure_aligned_view"></a>
-    
-            <div class="docstring"><p>When the underlying buffer view has maybe changed, call this to
-realign it according to the object we're referencing.
-Has no effect if Buffer has owned data or if it's determined no
-change has occurred, by comparing pointer and length.</p>
-</div>
-
-
-                            </div>
                             <div id="Buffer.get_view_reference" class="classattr">
                                 <div class="attr function">
             
