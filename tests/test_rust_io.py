@@ -80,3 +80,11 @@ def test_buffer_borrow_held_during_op(op):
     buf = Buffer(b"x" * 1024)
     with pytest.raises(RuntimeError, match="borrowed"):
         op(buf, buf)
+
+
+@pytest.mark.parametrize("bad", ("text", 123, None))
+def test_unsupported_input_raises_type_error(bad):
+    with pytest.raises(TypeError, match="expected Buffer, File or a C-contiguous bytes-like object") as info:
+        snappy.compress(bad)
+    # The real reason is kept in the cause chain.
+    assert "bytes-like object is required" in str(info.value.__cause__.__cause__)

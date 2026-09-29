@@ -102,17 +102,39 @@ use std::ops::{Deref, DerefMut};
 /// Any possible input/output to de/compression algorithms.
 /// Typically, as a Python user, you never have to worry about this object. It's exposed here in
 /// the documentation to see what types are acceptable for de/compression functions.
-#[derive(FromPyObject)]
 pub enum BytesType<'a> {
     /// [`cramjam.Buffer`](io/struct.RustyBuffer.html)
-    #[pyo3(transparent, annotation = "Buffer")]
     RustyBuffer(Bound<'a, RustyBuffer>),
     /// [`cramjam.File`](io/struct.RustyFile.html)
-    #[pyo3(transparent, annotation = "File")]
     RustyFile(Bound<'a, RustyFile>),
     /// `object` implementing the Buffer Protocol
-    #[pyo3(transparent, annotation = "pybuffer")]
     PyBuffer(PythonBuffer),
+}
+
+// Hand-written rather than derived: the derive tries each variant in turn and builds a
+// formatted Python exception for every miss, ~1.7 µs per call for the most common inputs
+// (bytes, bytearray, numpy), which all fall through to the last variant.
+impl<'a, 'py> FromPyObject<'a, 'py> for BytesType<'py> {
+    type Error = PyErr;
+
+    fn extract(obj: Borrowed<'a, 'py, PyAny>) -> PyResult<Self> {
+        if let Ok(buffer) = obj.cast::<RustyBuffer>() {
+            return Ok(Self::RustyBuffer(buffer.to_owned()));
+        }
+        if let Ok(file) = obj.cast::<RustyFile>() {
+            return Ok(Self::RustyFile(file.to_owned()));
+        }
+        PythonBuffer::try_from(&*obj).map(Self::PyBuffer).map_err(|cause| {
+            let expected = "expected Buffer, File or a C-contiguous bytes-like object";
+            let msg = match obj.get_type().name() {
+                Ok(name) => format!("{expected}, not '{name}'"),
+                Err(_) => expected.to_string(),
+            };
+            let err = pyo3::exceptions::PyTypeError::new_err(msg);
+            err.set_cause(obj.py(), Some(cause));
+            err
+        })
+    }
 }
 
 /// Bytes borrowed from a [`BytesType`]. For `Buffer` this holds the PyCell borrow, so the
