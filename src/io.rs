@@ -5,7 +5,6 @@
 use std::convert::TryFrom;
 use std::fs::{File, OpenOptions};
 use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
-use std::mem;
 use std::ops::Deref;
 use std::os::raw::c_int;
 
