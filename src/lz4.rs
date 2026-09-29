@@ -266,7 +266,9 @@ pub mod lz4 {
         /// Consume the current compressor state and return the compressed stream
         /// **NB** The compressor will not be usable after this method is called.
         pub fn finish(&mut self) -> PyResult<RustyBuffer> {
-            crate::io::stream_finish(&mut self.inner.lock().unwrap(), |inner| inner.finish().map(|c| c.into_inner()))
+            crate::io::stream_finish(&mut self.inner.lock().unwrap(), |inner| {
+                inner.finish().map(|c| c.into_inner())
+            })
         }
     }
 

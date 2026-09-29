@@ -51,6 +51,8 @@ dev = [
 ]
 
 [project.optional-dependencies]
+# ponytail: keep pinned to this release's version (bump with Cargo.toml)
+pure-rust = ["cramjam-pure-rust==2.14.0"]
 dev = [
   "black==26.3.1",
   "numpy",
@@ -98,7 +100,7 @@ before-all = "apk add --no-progress rust cargo"
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux_{i686,armv7l,ppc64le,s390x} *-musllinux_{i686,armv7l}"
 test-extras = []
-test-command = "python -c \"import cramjam; assert bytes(cramjam.snappy.decompress(cramjam.snappy.compress(b'cramjam'))) == b'cramjam'\""
+test-command = "python tests/smoke.py"
 
 # riscv64 wheels are often missing on PyPI, so dependencies may get built from
 # source, which can drastically increase workflow run time. For riscv64, use the
@@ -115,4 +117,4 @@ test-environment = { PIP_PREFER_BINARY = "1", PIP_EXTRA_INDEX_URL = "https://pyp
 before-build = "bash {project}/ci/setup-rust-pyodide.sh"
 # numpy/hypothesis aren't worth pulling into the Pyodide test venv; smoke-test instead.
 test-extras = []
-test-command = "python -c \"import cramjam; assert bytes(cramjam.snappy.decompress(cramjam.snappy.compress(b'cramjam'))) == b'cramjam'\""
+test-command = "python tests/smoke.py"

@@ -2,6 +2,9 @@ from importlib.resources import files
 from pathlib import Path
 
 import cramjam
+import pytest
+
+pytestmark = pytest.mark.skipif(cramjam.__name__ != "cramjam", reason="stubs ship with the cramjam dist")
 
 
 def test_typing_files_are_installed():

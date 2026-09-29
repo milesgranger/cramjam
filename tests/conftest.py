@@ -4,6 +4,15 @@ import sysconfig
 
 import pytest
 
+try:
+    import cramjam  # noqa: F401
+except ImportError:  # a lone cramjam-pure-rust wheel (its CI test run)
+    import sys
+
+    import cramjam_pure_rust
+
+    sys.modules["cramjam"] = cramjam_pure_rust
+
 # Eagerly import hypothesis modules that are otherwise imported lazily in the
 # middle of the test session (e.g. on the first failing example). pytest
 # assertion-rewrites hypothesis modules on import because hypothesis ships a

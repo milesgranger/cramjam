@@ -115,6 +115,8 @@ def test_xz_raw_format_lzma1():
     ],
 )
 def test_xz_bcj_filter_chains(bcj, pyfilter):
+    if cramjam.backend == "c" and bcj not in (cramjam.xz.Filter.X86, cramjam.xz.Filter.Sparc):
+        pytest.xfail("lzma-sys' vendored liblzma only builds the x86 and SPARC BCJ coders")
     # Byte patterns that the branch converters actually rewrite (E8/E9 calls).
     data = bytes([0xE8, 0x10, 0x00, 0x00, 0x00, 0x90, 0xE9, 0x34, 0x12, 0x00, 0x00]) * 20_000 + sample(50_000)
     out = bytes(cramjam.xz.compress(data, filters=_chain(bcj, cramjam.xz.Filter.Lzma2)))
