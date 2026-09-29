@@ -104,7 +104,7 @@ xz-pure = ["libcramjam/xz-pure"]
 
 [dependencies]
 pyo3 = { version = "^0.29.2", default-features = false, features = ["macros"] }
-libcramjam = { version = "^0.9", default-features = false }
+libcramjam = { version = "^0.9.1", default-features = false }
 
 [build-dependencies]
 pyo3-build-config = "^0.29.2"

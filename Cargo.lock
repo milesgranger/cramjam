@@ -291,18 +291,35 @@ dependencies = [
 name = "cramjam-python"
 version = "2.14.0"
 dependencies = [
- "libcramjam 0.9.0",
+ "libcramjam 0.9.1",
  "pyo3",
  "pyo3-build-config",
 ]
 
 [[package]]
-name = "crc-fast"
-version = "1.10.0"
+name = "crc"
+version = "3.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e75b2483e97a5a7da73ac68a05b629f9c53cff58d8ed1c77866079e18b00dba5"
+checksum = "9710d3b3739c2e349eb44fe848ad0b7c8cb1e42bd87ee49371df2f7acaf3e675"
 dependencies = [
+ "crc-catalog",
+]
+
+[[package]]
+name = "crc-catalog"
+version = "2.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "217698eaf96b4a3f0bc4f3662aaa55bdf913cd54d7204591faa790070c6d0853"
+
+[[package]]
+name = "crc-fast"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fd92aca2c6001b1bf5ba0ff84ee74ec8501b52bbef0cac80bf25a6c1d87a83d"
+dependencies = [
+ "crc",
  "digest",
+ "rustversion",
  "spin",
 ]
 
@@ -478,9 +495,9 @@ dependencies = [
 
 [[package]]
 name = "libcramjam"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9a9f9efe4396a3c098578cffafee99a453b579a0f308751df30596a00ae4fce1"
+checksum = "fed6283449aca00875945db516fe81ae7018cb773eb979701919886b87e1a861"
 dependencies = [
  "blosc2-rs",
  "brotli 8.0.4",
