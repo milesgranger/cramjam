@@ -76,7 +76,9 @@ skip = [
 ]
 build-verbosity = 1
 test-sources = ["tests", "pyproject.toml"]
-test-extras = ["dev"]
+# Not `test-extras`: cibuildwheel reads extras from each dist's own pyproject, and
+# cramjam-pure-rust has no `dev` extra. Keep in step with the `dev` extra above.
+test-requires = ["numpy", "pytest>=9.0.3", "pytest-xdist", "pytest-benchmark", "hypothesis>=6.165.10"]
 test-command = "python -m pytest tests -vs --benchmark-skip -n0 --dist no"
 # Prefer pre-built wheels for test deps (numpy only ships PyPy wheels for older releases).
 test-environment = { PIP_PREFER_BINARY = "1" }
@@ -99,7 +101,7 @@ before-all = "apk add --no-progress rust cargo"
 # numpy (a test dependency) ships no wheels for them, so only smoke-test the built wheel.
 [[tool.cibuildwheel.overrides]]
 select = "*-manylinux_{i686,armv7l,ppc64le,s390x} *-musllinux_{i686,armv7l}"
-test-extras = []
+test-requires = []
 test-command = "python tests/smoke.py"
 
 # riscv64 wheels are often missing on PyPI, so dependencies may get built from
@@ -116,5 +118,5 @@ test-environment = { PIP_PREFER_BINARY = "1", PIP_EXTRA_INDEX_URL = "https://pyp
 [tool.cibuildwheel.pyodide]
 before-build = "bash {project}/ci/setup-rust-pyodide.sh"
 # numpy/hypothesis aren't worth pulling into the Pyodide test venv; smoke-test instead.
-test-extras = []
+test-requires = []
 test-command = "python tests/smoke.py"
