@@ -2,6 +2,7 @@ import gc
 from concurrent.futures import ThreadPoolExecutor
 
 import cramjam
+import numpy as np
 import pytest
 from cramjam import Buffer
 
@@ -120,43 +121,62 @@ def test_buffer_view_cleanup():
 
 
 @pytest.mark.skip_pypy
-def test_buffer_view_changing_underlying_buffer_size():
-    # A buffer owning it's data
-    data = Buffer()
-    data.write(b"bytes")
+@pytest.mark.parametrize(
+    "source, resize",
+    (
+        (bytearray(b"bytes"), lambda data: data.extend(b"s")),
+        (Buffer(b"bytes"), lambda data: data.set_len(6)),
+    ),
+)
+def test_buffer_view_pins_source(source, resize):
+    # The view holds the source's export for its whole lifetime, so the source can't be
+    # resized (and its memory reallocated) underneath it.
+    buf = Buffer(source, copy=False)
+    with pytest.raises(BufferError):
+        resize(source)
+    assert buf.read() == b"bytes"
 
-    # Our reference buffer
+    del buf
+    gc.collect()
+    resize(source)
+    assert len(source) == 6
+
+
+@pytest.mark.skip_pypy
+def test_buffer_view_cannot_grow():
+    buf = Buffer(bytearray(16), copy=False)
+    # The view's memory belongs to the source, so a codec writing past its end must fail
+    # rather than reallocate it.
+    with pytest.raises(cramjam.CompressionError, match="Too much to write on view"):
+        cramjam.snappy.compress_into(bytes(range(256)) * 64, buf)
+
+
+@pytest.mark.skip_pypy
+def test_buffer_view_of_readonly_source_rejects_writes():
+    data = b"bytes"
     buf = Buffer(data, copy=False)
 
-    # Can write 5 bytes, no problem.
-    buf.write(b"12345")
+    with pytest.raises(TypeError, match="read-only"):
+        buf.write(b"00")
+    with pytest.raises(TypeError, match="read-only"):
+        cramjam.snappy.decompress_raw_into(cramjam.snappy.compress_raw(b"00"), buf)
+    assert data == b"bytes"
+    assert buf.read() == b"bytes"  # reads are still zero-copy
 
-    # 6th is an issue
-    with pytest.raises(IOError, match="Too much to write on view"):
-        buf.write(b"6")
 
-    # buf if we extend our data, then we can
-    assert len(buf) == 5
-    data.write(b"s")
-    assert len(buf) == 6  # Length sync'd with underlying buffer
+@pytest.mark.skip_pypy
+def test_buffer_view_of_numpy_array_is_file_like_without_copy():
+    # APIs such as botocore want a file-like upload body, which a memoryview isn't;
+    # Buffer(copy=False) gives one over an array's memory without copying (fsspec/s3fs#959).
+    arr = np.frombuffer(b"hello world", dtype=np.uint8).copy()
+    buf = Buffer(arr, copy=False)
+    assert buf.get_view_reference() is arr
 
+    assert buf.read(5) == b"hello"
     assert buf.tell() == 5
-    buf.write(b"6")
-    assert buf.tell() == 6
-
-    # Now, shrink the underlying data
-    data.set_len(2)
-    assert buf.tell() == 2  # updated to end of buffer
-
-    # Writing fails b/c the underlying is at 2 in length now
-    with pytest.raises(IOError, match="Too much to write on view"):
-        buf.write(b"6")
-
-    # Seek to 1 and write one byte
-    buf.seek(1)
-    buf.write(b"1")
-    assert buf.tell() == 2  # back at 2
-    assert len(buf) == 2
+    buf.seek(0)
+    arr[0] = ord("j")  # shared memory: the change shows through the Buffer
+    assert buf.read() == b"jello world"
 
 
 @pytest.mark.skip_pypy
