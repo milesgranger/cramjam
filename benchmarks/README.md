@@ -31,16 +31,18 @@ For snappy used in conjunction with `bytearray`s, this is only midly helpful as
 we automatically estimate the buffer size and can resize the `bytearray` after.
 
 
-Pure-Rust cramjam vs C-backed cramjam (2.12.1)
+cramjam-pure-rust vs cramjam (C-backed)
 ---
 
-As of this branch every core codec (deflate/gzip/zlib, zstd, lz4, bzip2, xz/lzma)
-is a pure-Rust implementation in [libcramjam](https://github.com/milesgranger/libcramjam)
-(no C dependencies; blosc2 remains C-backed by design). The tables in this README were
-regenerated with the pure-Rust build on 2026-08-30. To quantify the switch itself, the
-same benchmark suite was also run with the released C-backed cramjam 2.12.1 on the same
-machine, same Python; the ratios below compare the medians of the cramjam-parametrized
-cases only (the other libraries are identical in both runs).
+`cramjam` uses the C libraries for deflate/gzip/zlib, zstd, lz4, bzip2 and xz/lzma.
+The opt-in `cramjam-pure-rust` backend (`pip install cramjam[pure-rust]`, then
+`CRAMJAM_BACKEND=pure-rust`) uses [libcramjam](https://github.com/cramjam/libcramjam)'s
+pure-Rust implementations of the same codecs instead (snappy and brotli are Rust in
+both; blosc2 is C-only). **The tables further down were generated with the pure-Rust
+backend** on 2026-08-30. To compare the two, the same suite was also run with the
+C-backed cramjam 2.12.1 on the same machine and Python; the ratios below compare the
+medians of the cramjam-parametrized cases only (the other libraries are identical in
+both runs).
 
 | Suite | pure-Rust / C-backed (geomean) | best | worst |
 |---|---|---|---|
@@ -69,6 +71,7 @@ Notes:
   (e.g. x-ray: 7.99 MB vs 7.18 MB). The pure-Rust build emits standard 64 KiB
   blocks — the same output as python-lz4/the lz4 CLI, and byte-identical block
   payloads to `LZ4_compress_HC` — so it trades those rows for smaller output.
+  As of 2.14 the C backend emits 64 KiB blocks as well.
   At equal block size the pure-Rust encoder is 0.85-0.95x of C's time.
 * **zstd (1.04x)**: at parity or faster on files >= 100 KB; the worst row is the
   54 MB incompressible input (1.4x), which is dominated by buffer copies in the

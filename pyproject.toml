@@ -51,7 +51,7 @@ dev = [
 ]
 
 [project.optional-dependencies]
-# ponytail: keep pinned to this release's version (bump with Cargo.toml)
+# Must equal Cargo.toml's version; the CI version-check job enforces it on tags.
 pure-rust = ["cramjam-pure-rust==2.14.0"]
 dev = [
   "black==26.3.1",

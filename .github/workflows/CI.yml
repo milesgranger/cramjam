@@ -229,6 +229,10 @@ jobs:
             echo "::error::Tag '${GITHUB_REF_NAME}' does not match package version 'v${VERSION}'; update Cargo.toml before tagging a release."
             exit 1
           fi
+          if ! grep -qF "\"cramjam-pure-rust==${VERSION}\"" pyproject.toml; then
+            echo "::error::The cramjam[pure-rust] extra in pyproject.toml must pin cramjam-pure-rust==${VERSION}."
+            exit 1
+          fi
 
   pypi-publish:
     name: Upload release to PyPI

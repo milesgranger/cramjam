@@ -3,7 +3,9 @@ name = "cramjam-python"
 version = "2.14.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
-rust-version = "1.83"
+# Resolver 3 picks dependency versions that build on this, which keeps musllinux
+# i686/armv7l (Alpine's packaged rustc) building, e.g. crc-fast 1.10 needs 1.89.
+rust-version = "1.85"
 license = "MIT"
 description = "Thin Python bindings to de/compression algorithms in Rust"
 readme = "README.md"
