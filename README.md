@@ -16,6 +16,20 @@
 pip install --upgrade cramjam  # Requires no Python or system dependencies!
 ```
 
+#### Pure-Rust backend
+
+By default zstd, lz4, bzip2, xz and deflate/gzip/zlib use their C libraries.
+To use [libcramjam](https://github.com/cramjam/libcramjam)'s pure-Rust
+implementations instead (same API, no C), install the add-on and select it
+before `cramjam` is imported:
+
+```commandline
+pip install --upgrade "cramjam[pure-rust]"
+export CRAMJAM_BACKEND=pure-rust  # `cramjam.backend` reports which is active
+```
+
+Output is interchangeable between backends, but the compressed bytes may differ.
+
 ## Development
 
 Install the locked development dependencies, build the extension, and run the

@@ -1,0 +1,32 @@
+# Same crate as ../pyproject.toml, built with libcramjam's pure-Rust codecs and
+# no C. Imports as `cramjam_pure_rust` so it never clobbers `cramjam` in
+# site-packages; `cramjam` picks it up via CRAMJAM_BACKEND=pure-rust.
+[project]
+name = "cramjam-pure-rust"
+dynamic = ["version"]
+description = "cramjam's pure-Rust backend; select with CRAMJAM_BACKEND=pure-rust"
+readme = "README.md"
+keywords = ["compression", "decompression", "snappy", "zstd", "bz2", "gzip", "lz4", "brotli", "deflate"]
+requires-python = ">=3.11"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+license = { text = "MIT" }
+
+[project.urls]
+homepage = "https://github.com/milesgranger/pyrus-cramjam"
+repository = "https://github.com/milesgranger/pyrus-cramjam"
+
+[build-system]
+requires = ["maturin>=0.14"]
+build-backend = "maturin"
+
+[tool.maturin]
+manifest-path = "../Cargo.toml"
+python-source = "."
+module-name = "cramjam_pure_rust.cramjam"
+no-default-features = true
+features = ["extension-module", "snappy", "brotli", "pure-rust"]
+strip = true

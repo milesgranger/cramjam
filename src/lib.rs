@@ -59,11 +59,21 @@ pub mod io;
 pub mod blosc2;
 #[cfg(feature = "brotli")]
 pub mod brotli;
-#[cfg(feature = "bzip2")]
+#[cfg(any(feature = "bzip2", feature = "bzip2-pure"))]
 pub mod bzip2;
-#[cfg(any(feature = "deflate", feature = "deflate-static", feature = "deflate-shared"))]
+#[cfg(any(
+    feature = "deflate",
+    feature = "deflate-static",
+    feature = "deflate-shared",
+    feature = "deflate-pure"
+))]
 pub mod deflate;
-#[cfg(any(feature = "gzip", feature = "gzip-static", feature = "gzip-shared"))]
+#[cfg(any(
+    feature = "gzip",
+    feature = "gzip-static",
+    feature = "gzip-shared",
+    feature = "deflate-pure"
+))]
 pub mod gzip;
 #[cfg(all(
     any(feature = "ideflate", feature = "ideflate-static", feature = "ideflate-shared"),
@@ -80,15 +90,20 @@ pub mod igzip;
     target_pointer_width = "64"
 ))]
 pub mod izlib;
-#[cfg(feature = "lz4")]
+#[cfg(any(feature = "lz4", feature = "lz4-pure"))]
 pub mod lz4;
 #[cfg(feature = "snappy")]
 pub mod snappy;
-#[cfg(any(feature = "xz", feature = "xz-static", feature = "xz-shared"))]
+#[cfg(any(feature = "xz", feature = "xz-static", feature = "xz-shared", feature = "xz-pure"))]
 pub mod xz;
-#[cfg(any(feature = "zlib", feature = "zlib-static", feature = "zlib-shared"))]
+#[cfg(any(
+    feature = "zlib",
+    feature = "zlib-static",
+    feature = "zlib-shared",
+    feature = "deflate-pure"
+))]
 pub mod zlib;
-#[cfg(feature = "zstd")]
+#[cfg(any(feature = "zstd", feature = "zstd-pure"))]
 pub mod zstd;
 
 use io::{PythonBuffer, RustyBuffer};
@@ -475,11 +490,11 @@ mod cramjam {
     #[pymodule_export]
     use crate::snappy::snappy;
 
-    #[cfg(feature = "zstd")]
+    #[cfg(any(feature = "zstd", feature = "zstd-pure"))]
     #[pymodule_export]
     use crate::zstd::zstd;
 
-    #[cfg(feature = "lz4")]
+    #[cfg(any(feature = "lz4", feature = "lz4-pure"))]
     #[pymodule_export]
     use crate::lz4::lz4;
 
@@ -487,23 +502,38 @@ mod cramjam {
     #[pymodule_export]
     use crate::brotli::brotli;
 
-    #[cfg(any(feature = "xz", feature = "xz-static", feature = "xz-shared"))]
+    #[cfg(any(feature = "xz", feature = "xz-static", feature = "xz-shared", feature = "xz-pure"))]
     #[pymodule_export]
     use crate::xz::xz;
 
-    #[cfg(feature = "bzip2")]
+    #[cfg(any(feature = "bzip2", feature = "bzip2-pure"))]
     #[pymodule_export]
     use crate::bzip2::bzip2;
 
-    #[cfg(any(feature = "gzip", feature = "gzip-static", feature = "gzip-shared"))]
+    #[cfg(any(
+        feature = "gzip",
+        feature = "gzip-static",
+        feature = "gzip-shared",
+        feature = "deflate-pure"
+    ))]
     #[pymodule_export]
     use crate::gzip::gzip;
 
-    #[cfg(any(feature = "zlib", feature = "zlib-static", feature = "zlib-shared"))]
+    #[cfg(any(
+        feature = "zlib",
+        feature = "zlib-static",
+        feature = "zlib-shared",
+        feature = "deflate-pure"
+    ))]
     #[pymodule_export]
     use crate::zlib::zlib;
 
-    #[cfg(any(feature = "deflate", feature = "deflate-static", feature = "deflate-shared"))]
+    #[cfg(any(
+        feature = "deflate",
+        feature = "deflate-static",
+        feature = "deflate-shared",
+        feature = "deflate-pure"
+    ))]
     #[pymodule_export]
     use crate::deflate::deflate;
 

@@ -1,5 +1,5 @@
 from _typeshed import ReadableBuffer, WriteableBuffer
-from typing import Any, TypeAlias
+from typing import Any, Literal, TypeAlias
 
 from . import brotli as brotli
 from . import bzip2 as bzip2
@@ -13,6 +13,7 @@ from . import zlib as zlib
 from . import zstd as zstd
 
 __version__: str
+backend: Literal["c", "pure-rust"]
 
 class CompressionError(Exception): ...
 class DecompressionError(Exception): ...

@@ -1,9 +1,11 @@
 [package]
 name = "cramjam-python"
-version = "2.13.0"
+version = "2.14.0"
 authors = ["Miles Granger <miles59923@gmail.com>"]
 edition = "2021"
-rust-version = "1.83"
+# Resolver 3 picks dependency versions that build on this, which keeps musllinux
+# i686/armv7l (Alpine's packaged rustc) building, e.g. crc-fast 1.10 needs 1.89.
+rust-version = "1.85"
 license = "MIT"
 description = "Thin Python bindings to de/compression algorithms in Rust"
 readme = "README.md"
@@ -91,10 +93,20 @@ use-system-blosc2-shared = [
 
 wasm32-compat = ["libcramjam/wasm32-compat"]
 
+# Pure-Rust backends (no C compiled). These expose the same Python modules as
+# their C counterparts above; build with --no-default-features to leave the C
+# libraries out entirely. This is what the `cramjam-pure-rust` dist ships.
+pure-rust = ["zstd-pure", "lz4-pure", "bzip2-pure", "deflate-pure", "xz-pure"]
+zstd-pure = ["libcramjam/zstd-pure"]
+lz4-pure = ["libcramjam/lz4-pure"]
+bzip2-pure = ["libcramjam/bzip2-pure"]
+deflate-pure = ["libcramjam/deflate-pure"]  # deflate, gzip and zlib
+xz-pure = ["libcramjam/xz-pure"]
+
 
 [dependencies]
 pyo3 = { version = "^0.29.2", default-features = false, features = ["macros"] }
-libcramjam = { version = "^0.8", default-features = false }
+libcramjam = { version = "^0.9.1", default-features = false }
 
 [build-dependencies]
 pyo3-build-config = "^0.29.2"
