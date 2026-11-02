@@ -16,7 +16,7 @@ pub mod zlib {
 
     /// zlib decompression.
     ///
-    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceeded`
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceededError`
     /// before growing output past the limit. It does not bound decoder workspace.
     /// With a limit, `output_len` is a capacity hint, clamped to the limit.
     /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.

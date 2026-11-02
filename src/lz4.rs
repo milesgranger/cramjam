@@ -17,7 +17,7 @@ pub mod lz4 {
 
     /// LZ4 decompression.
     ///
-    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceeded`
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceededError`
     /// before growing output past the limit. It does not bound decoder workspace.
     /// With a limit, `output_len` is a capacity hint, clamped to the limit.
     /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.
@@ -81,7 +81,7 @@ pub mod lz4 {
 
     /// LZ4 _block_ decompression.
     /// `max_output_size` checks the declared size (or `output_len`) before
-    /// allocating, raising `cramjam.OutputLimitExceeded` if it exceeds the limit.
+    /// allocating, raising `cramjam.OutputLimitExceededError` if it exceeds the limit.
     /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.
     ///
     /// `output_len` is optional, it's the upper bound length of decompressed data; if it's not provided,
@@ -119,9 +119,9 @@ pub mod lz4 {
                     }
                 };
                 if size > limit {
-                    return Err(crate::exceptions::OutputLimitExceeded::for_limit(limit));
+                    return Err(crate::exceptions::OutputLimitExceededError::for_limit(limit));
                 }
-                let mut output = vec![0; size];
+                let mut output = crate::decompression::allocate_output(size)?;
                 let actual = libcramjam::lz4::block::decompress_into(bytes, &mut output, Some(output_len.is_none()))
                     .map_err(DecompressionError::from_err)?;
                 output.truncate(actual);

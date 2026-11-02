@@ -16,10 +16,9 @@ pub mod bzip2 {
 
     /// bzip2 decompression.
     ///
-    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceeded`
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceededError`
     /// before growing output past the limit. It does not bound decoder workspace.
     /// With a limit, `output_len` is a capacity hint, clamped to the limit.
-    /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.
     ///
     /// Python Example
     /// --------------
@@ -34,9 +33,6 @@ pub mod bzip2 {
         output_len: Option<usize>,
         max_output_size: Option<usize>,
     ) -> PyResult<RustyBuffer> {
-        #[cfg(feature = "bzip2-pure")]
-        crate::decompression::require_unbounded(max_output_size)?;
-
         crate::generic!(
             py,
             libcramjam::bzip2::decompress[data],

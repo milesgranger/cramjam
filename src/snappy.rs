@@ -13,7 +13,7 @@ pub mod snappy {
 
     /// Snappy decompression.
     ///
-    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceeded`
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceededError`
     /// before growing output past the limit. It does not bound decoder workspace.
     /// With a limit, `output_len` is a capacity hint, clamped to the limit.
     ///
@@ -57,7 +57,7 @@ pub mod snappy {
     /// Snappy decompression, raw
     /// This does not use the snappy 'framed' encoding of compressed bytes.
     /// `max_output_size` checks the declared decoded length before allocating,
-    /// raising `cramjam.OutputLimitExceeded` if it exceeds the limit.
+    /// raising `cramjam.OutputLimitExceededError` if it exceeds the limit.
     ///
     /// Python Example
     /// --------------
@@ -78,11 +78,11 @@ pub mod snappy {
             return py.detach(|| {
                 let size = libcramjam::snappy::snap::raw::decompress_len(bytes).map_err(DecompressionError::from_err)?;
                 if size > limit {
-                    return Err(crate::exceptions::OutputLimitExceeded::for_limit(limit));
+                    return Err(crate::exceptions::OutputLimitExceededError::for_limit(limit));
                 }
                 // Use a fixed destination after checking the header, rather than
                 // letting decompress_vec read it again to choose an allocation.
-                let mut output = vec![0; size];
+                let mut output = crate::decompression::allocate_output(size)?;
                 libcramjam::snappy::raw::decompress(bytes, &mut output).map_err(DecompressionError::from_err)?;
                 Ok(RustyBuffer::from(output))
             });

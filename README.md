@@ -39,7 +39,7 @@ The one-shot `decompress` functions for the standard codecs, plus
 ```python
 try:
     decoded = cramjam.zstd.decompress(compressed, max_output_size=16 * 1024 * 1024)
-except cramjam.OutputLimitExceeded:  # a subclass of cramjam.DecompressionError
+except cramjam.OutputLimitExceededError:  # a subclass of cramjam.DecompressionError
     ...
 ```
 
@@ -47,19 +47,15 @@ Exceeding the limit raises an error; it never returns truncated output. The limi
 is cumulative across all frames decoded by a call. Zero permits only empty
 output. Omitting the option (or passing `None`) preserves the existing behavior.
 
-For framed codecs, output storage grows as needed without preallocating the
-limit. With a limit, `output_len` is an initial-capacity hint clamped to that
-limit, and the result contains only decoded bytes. For raw Snappy and LZ4 blocks,
-the declared output size is checked before allocating. Raw LZ4's `output_len`
-still describes a headerless block's output bound and must not exceed the limit.
+The default backend supports all standard codecs. The pure-Rust backend currently
+supports bounded Snappy, Brotli and Bzip2; other codecs reject a requested limit
+with `NotImplementedError`. This limits output storage, not decoder workspace or
+total process memory. In particular, pure-Rust Bzip2 may temporarily retain about
+44.5 MiB of decoded block data before writing to the bounded sink.
 
-This is an output-storage limit, not a total-memory or CPU limit. Compressed
-input and decoder workspace, including dictionaries/windows, are separate.
-The `Decompressor` streaming classes and experimental codecs do not expose this
-option. With the pure-Rust backend, bounded decoding is currently supported for
-Snappy and Brotli only. Other codecs raise `NotImplementedError` when a limit is
-requested, because their underlying implementations can accumulate decoded
-output before writing it to the bounded sink.
+See [bounded decompression](docs/index.md#bounded-decompression) for backend
+limitations, allocation errors and the intentional differences in `output_len`
+semantics between bounded and unbounded calls.
 
 ## Development
 

@@ -1,13 +1,13 @@
 //! Output storage bounded before each write, independently of decoder workspace.
-use crate::exceptions::{DecompressionError, OutputLimitExceeded};
+use crate::exceptions::{DecompressionError, OutputLimitExceededError};
 use crate::io::RustyBuffer;
 use pyo3::PyResult;
+use std::collections::TryReserveError;
 use std::io::{self, Write};
 
 #[cfg(any(
     feature = "zstd-pure",
     feature = "lz4-pure",
-    feature = "bzip2-pure",
     feature = "deflate-pure",
     feature = "xz-pure"
 ))]
@@ -27,26 +27,37 @@ pub(crate) struct BoundedOutput {
     bytes: Vec<u8>,
     limit: usize,
     exceeded: bool,
+    allocation_error: Option<TryReserveError>,
 }
 
 impl BoundedOutput {
     pub(crate) fn new(limit: usize, output_len: Option<usize>) -> io::Result<Self> {
-        let mut bytes = Vec::new();
-        bytes
-            .try_reserve_exact(output_len.unwrap_or(0).min(limit))
-            .map_err(io::Error::other)?;
-        Ok(Self {
-            bytes,
+        let mut output = Self {
+            bytes: Vec::new(),
             limit,
             exceeded: false,
-        })
+            allocation_error: None,
+        };
+        output.reserve(output_len.unwrap_or(0).min(limit))?;
+        Ok(output)
+    }
+
+    fn reserve(&mut self, capacity: usize) -> io::Result<()> {
+        self.bytes
+            .try_reserve_exact(capacity - self.bytes.len())
+            .map_err(|error| {
+                self.allocation_error = Some(error);
+                io::Error::from(io::ErrorKind::OutOfMemory)
+            })
     }
 
     pub(crate) fn finish<T, E: ToString>(self, result: Result<T, E>) -> PyResult<RustyBuffer> {
         // Some decoders wrap writer errors; retain the specific failure without
         // relying on their error type or text (or on them propagating the error).
         if self.exceeded {
-            Err(OutputLimitExceeded::for_limit(self.limit))
+            Err(OutputLimitExceededError::for_limit(self.limit))
+        } else if let Some(error) = self.allocation_error {
+            Err(pyo3::exceptions::PyMemoryError::new_err(error.to_string()))
         } else {
             result
                 .map(|_| RustyBuffer::from(self.bytes))
@@ -65,9 +76,7 @@ impl Write for BoundedOutput {
         if needed > self.bytes.capacity() {
             // Grow geometrically without Vec's automatic growth crossing the cap.
             let capacity = needed.max(self.bytes.capacity().saturating_mul(2)).min(self.limit);
-            self.bytes
-                .try_reserve_exact(capacity - self.bytes.len())
-                .map_err(io::Error::other)?;
+            self.reserve(capacity)?;
         }
         self.bytes.extend_from_slice(bytes);
         Ok(bytes.len())
@@ -76,6 +85,16 @@ impl Write for BoundedOutput {
     fn flush(&mut self) -> io::Result<()> {
         Ok(())
     }
+}
+
+/// Allocate a checked raw-block destination without panicking on allocation failure.
+pub(crate) fn allocate_output(size: usize) -> PyResult<Vec<u8>> {
+    let mut output = Vec::new();
+    output
+        .try_reserve_exact(size)
+        .map_err(|error| pyo3::exceptions::PyMemoryError::new_err(error.to_string()))?;
+    output.resize(size, 0);
+    Ok(output)
 }
 
 #[cfg(test)]
@@ -117,5 +136,16 @@ mod tests {
         assert_eq!(output.bytes.capacity(), 16);
         output.write_all(b"x").unwrap();
         assert_eq!(output.bytes, b"x");
+    }
+
+    #[test]
+    fn allocation_failure_retains_its_kind_without_allocating() {
+        let mut output = BoundedOutput::new(usize::MAX, None).unwrap();
+        // Vec rejects a capacity above isize::MAX without requesting memory.
+        let error = output.reserve(usize::MAX).unwrap_err();
+        assert_eq!(error.kind(), io::ErrorKind::OutOfMemory);
+        assert!(output.allocation_error.is_some());
+        assert_eq!(output.bytes.capacity(), 0);
+        assert!(!output.exceeded);
     }
 }

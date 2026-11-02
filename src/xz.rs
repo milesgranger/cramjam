@@ -15,11 +15,6 @@ pub mod xz {
 
     /// LZMA compression.
     ///
-    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceeded`
-    /// before growing output past the limit. It does not bound decoder workspace.
-    /// With a limit, `output_len` is a capacity hint, clamped to the limit.
-    /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.
-    ///
     /// Python Example
     /// --------------
     /// ```python
@@ -70,6 +65,11 @@ pub mod xz {
     }
 
     /// LZMA decompression.
+    ///
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceededError`
+    /// before growing output past the limit. It does not bound decoder workspace.
+    /// With a limit, `output_len` is a capacity hint, clamped to the limit.
+    /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.
     ///
     /// Python Example
     /// --------------

@@ -18,7 +18,7 @@ pub mod brotli {
 
     /// Brotli decompression.
     ///
-    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceeded`
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceededError`
     /// before growing output past the limit. It does not bound decoder workspace.
     /// With a limit, `output_len` is a capacity hint, clamped to the limit.
     ///

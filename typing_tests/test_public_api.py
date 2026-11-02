@@ -15,7 +15,7 @@ if False:
     assert_type(cramjam.lz4.decompress_block(data, max_output_size=1024), Buffer)
     assert_type(cramjam.zstd.decompress(data, max_output_size=1024), Buffer)
     assert_type(cramjam.lz4.decompress(data, max_output_size=1024), Buffer)
-    assert_type(cramjam.OutputLimitExceeded("limit"), cramjam.OutputLimitExceeded)
+    assert_type(cramjam.OutputLimitExceededError("limit"), cramjam.OutputLimitExceededError)
     assert_type(Buffer(data) == bytearray(), bool)
     assert_type(Buffer(data) == memoryview(data), bool)
     assert_type(cramjam.snappy.compress_into(data, output), int)

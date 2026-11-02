@@ -292,7 +292,7 @@ macro_rules! generic {
                 .map_err(crate::exceptions::DecompressionError::from_err),
             Some(limit) => {
                 let mut output = crate::decompression::BoundedOutput::new(limit, $output_len)
-                    .map_err(crate::exceptions::DecompressionError::from_err)?;
+                    .map_err(|error| pyo3::exceptions::PyMemoryError::new_err(error.to_string()))?;
                 let result = match $input {
                     BytesType::RustyFile(f) => {
                         let borrowed = f.try_borrow()?;
@@ -512,7 +512,7 @@ mod cramjam {
     use crate::DecompressionError;
 
     #[pymodule_export]
-    use crate::exceptions::OutputLimitExceeded;
+    use crate::exceptions::OutputLimitExceededError;
 
     #[cfg(feature = "snappy")]
     #[pymodule_export]
