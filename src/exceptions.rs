@@ -5,6 +5,13 @@ use pyo3::exceptions::PyException;
 
 create_exception!(cramjam, CompressionError, PyException);
 create_exception!(cramjam, DecompressionError, PyException);
+create_exception!(cramjam, OutputLimitExceeded, DecompressionError);
+
+impl OutputLimitExceeded {
+    pub(crate) fn for_limit(limit: usize) -> pyo3::PyErr {
+        Self::new_err(format!("decompressed output exceeds max_output_size={limit}"))
+    }
+}
 
 impl CompressionError {
     // From<ToString> already impl

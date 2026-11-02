@@ -18,16 +18,29 @@ pub mod brotli {
 
     /// Brotli decompression.
     ///
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceeded`
+    /// before growing output past the limit. It does not bound decoder workspace.
+    /// With a limit, `output_len` is a capacity hint, clamped to the limit.
+    ///
     /// Python Example
     /// --------------
     /// ```python
     /// >>> cramjam.brotli.decompress(compressed_bytes, output_len=Optional[int])
     /// ```
     #[pyfunction]
-    #[pyo3(signature = (data, output_len=None))]
-    pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        crate::generic!(py, libcramjam::brotli::decompress[data], output_len = output_len)
-            .map_err(DecompressionError::from_err)
+    #[pyo3(signature = (data, output_len=None, *, max_output_size=None))]
+    pub fn decompress(
+        py: Python,
+        data: BytesType,
+        output_len: Option<usize>,
+        max_output_size: Option<usize>,
+    ) -> PyResult<RustyBuffer> {
+        crate::generic!(
+            py,
+            libcramjam::brotli::decompress[data],
+            output_len = output_len,
+            max_output_size = max_output_size
+        )
     }
 
     /// Brotli compression.

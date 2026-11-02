@@ -16,16 +16,33 @@ pub mod gzip {
 
     /// Gzip decompression.
     ///
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceeded`
+    /// before growing output past the limit. It does not bound decoder workspace.
+    /// With a limit, `output_len` is a capacity hint, clamped to the limit.
+    /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.
+    ///
     /// Python Example
     /// --------------
     /// ```python
     /// >>> cramjam.gzip.decompress(compressed_bytes, output_len=Optional[int])
     /// ```
     #[pyfunction]
-    #[pyo3(signature = (data, output_len=None))]
-    pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        crate::generic!(py, libcramjam::gzip::decompress[data], output_len = output_len)
-            .map_err(DecompressionError::from_err)
+    #[pyo3(signature = (data, output_len=None, *, max_output_size=None))]
+    pub fn decompress(
+        py: Python,
+        data: BytesType,
+        output_len: Option<usize>,
+        max_output_size: Option<usize>,
+    ) -> PyResult<RustyBuffer> {
+        #[cfg(feature = "deflate-pure")]
+        crate::decompression::require_unbounded(max_output_size)?;
+
+        crate::generic!(
+            py,
+            libcramjam::gzip::decompress[data],
+            output_len = output_len,
+            max_output_size = max_output_size
+        )
     }
 
     /// Gzip compression.

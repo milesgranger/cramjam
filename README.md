@@ -30,6 +30,37 @@ export CRAMJAM_BACKEND=pure-rust  # `cramjam.backend` reports which is active
 
 Output is interchangeable between backends, but the compressed bytes may differ.
 
+#### Limit decompressed output
+
+The one-shot `decompress` functions for the standard codecs, plus
+`snappy.decompress_raw` and `lz4.decompress_block`, accept an optional keyword-only
+`max_output_size` in bytes:
+
+```python
+try:
+    decoded = cramjam.zstd.decompress(compressed, max_output_size=16 * 1024 * 1024)
+except cramjam.OutputLimitExceeded:  # a subclass of cramjam.DecompressionError
+    ...
+```
+
+Exceeding the limit raises an error; it never returns truncated output. The limit
+is cumulative across all frames decoded by a call. Zero permits only empty
+output. Omitting the option (or passing `None`) preserves the existing behavior.
+
+For framed codecs, output storage grows as needed without preallocating the
+limit. With a limit, `output_len` is an initial-capacity hint clamped to that
+limit, and the result contains only decoded bytes. For raw Snappy and LZ4 blocks,
+the declared output size is checked before allocating. Raw LZ4's `output_len`
+still describes a headerless block's output bound and must not exceed the limit.
+
+This is an output-storage limit, not a total-memory or CPU limit. Compressed
+input and decoder workspace, including dictionaries/windows, are separate.
+The `Decompressor` streaming classes and experimental codecs do not expose this
+option. With the pure-Rust backend, bounded decoding is currently supported for
+Snappy and Brotli only. Other codecs raise `NotImplementedError` when a limit is
+requested, because their underlying implementations can accumulate decoded
+output before writing it to the bounded sink.
+
 ## Development
 
 Install the locked development dependencies, build the extension, and run the
