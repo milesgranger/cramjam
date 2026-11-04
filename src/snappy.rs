@@ -13,6 +13,10 @@ pub mod snappy {
 
     /// Snappy decompression.
     ///
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceededError`
+    /// before growing output past the limit. It does not bound decoder workspace.
+    /// With a limit, `output_len` is a capacity hint, clamped to the limit.
+    ///
     /// Python Example
     /// --------------
     /// ```python
@@ -20,10 +24,19 @@ pub mod snappy {
     /// >>> cramjam.snappy.decompress(compressed_bytes, output_len=Optional[None])
     /// ```
     #[pyfunction]
-    #[pyo3(signature = (data, output_len=None))]
-    pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        crate::generic!(py, libcramjam::snappy::decompress[data], output_len = output_len)
-            .map_err(DecompressionError::from_err)
+    #[pyo3(signature = (data, output_len=None, *, max_output_size=None))]
+    pub fn decompress(
+        py: Python,
+        data: BytesType,
+        output_len: Option<usize>,
+        max_output_size: Option<usize>,
+    ) -> PyResult<RustyBuffer> {
+        crate::generic!(
+            py,
+            libcramjam::snappy::decompress[data],
+            output_len = output_len,
+            max_output_size = max_output_size
+        )
     }
 
     /// Snappy compression.
@@ -43,6 +56,8 @@ pub mod snappy {
 
     /// Snappy decompression, raw
     /// This does not use the snappy 'framed' encoding of compressed bytes.
+    /// `max_output_size` checks the declared decoded length before allocating,
+    /// raising `cramjam.OutputLimitExceededError` if it exceeds the limit.
     ///
     /// Python Example
     /// --------------
@@ -51,9 +66,27 @@ pub mod snappy {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
-    #[pyo3(signature = (data, output_len=None))]
-    pub fn decompress_raw(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    #[pyo3(signature = (data, output_len=None, *, max_output_size=None))]
+    pub fn decompress_raw(
+        py: Python,
+        data: BytesType,
+        output_len: Option<usize>,
+        max_output_size: Option<usize>,
+    ) -> PyResult<RustyBuffer> {
         let bytes: &[u8] = &data.as_bytes()?;
+        if let Some(limit) = max_output_size {
+            return py.detach(|| {
+                let size = libcramjam::snappy::snap::raw::decompress_len(bytes).map_err(DecompressionError::from_err)?;
+                if size > limit {
+                    return Err(crate::exceptions::OutputLimitExceededError::for_limit(limit));
+                }
+                // Use a fixed destination after checking the header, rather than
+                // letting decompress_vec read it again to choose an allocation.
+                let mut output = crate::decompression::allocate_output(size)?;
+                libcramjam::snappy::raw::decompress(bytes, &mut output).map_err(DecompressionError::from_err)?;
+                Ok(RustyBuffer::from(output))
+            });
+        }
         py.detach(|| libcramjam::snappy::raw::decompress_vec(bytes))
             .map_err(DecompressionError::from_err)
             .map(From::from)

@@ -30,6 +30,33 @@ export CRAMJAM_BACKEND=pure-rust  # `cramjam.backend` reports which is active
 
 Output is interchangeable between backends, but the compressed bytes may differ.
 
+#### Limit decompressed output
+
+The one-shot `decompress` functions for the standard codecs, plus
+`snappy.decompress_raw` and `lz4.decompress_block`, accept an optional keyword-only
+`max_output_size` in bytes:
+
+```python
+try:
+    decoded = cramjam.zstd.decompress(compressed, max_output_size=16 * 1024 * 1024)
+except cramjam.OutputLimitExceededError:  # a subclass of cramjam.DecompressionError
+    ...
+```
+
+Exceeding the limit raises an error; it never returns truncated output. The limit
+is cumulative across all frames decoded by a call. Zero permits only empty
+output. Omitting the option (or passing `None`) preserves the existing behavior.
+
+The default backend supports all standard codecs. The pure-Rust backend currently
+supports bounded Snappy, Brotli and Bzip2; other codecs reject a requested limit
+with `NotImplementedError`. This limits output storage, not decoder workspace or
+total process memory. In particular, pure-Rust Bzip2 may temporarily retain about
+44.5 MiB of decoded block data before writing to the bounded sink.
+
+See [bounded decompression](docs/index.md#bounded-decompression) for backend
+limitations, allocation errors and the intentional differences in `output_len`
+semantics between bounded and unbounded calls.
+
 ## Development
 
 Install the locked development dependencies, build the extension, and run the

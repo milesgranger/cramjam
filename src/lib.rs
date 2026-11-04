@@ -106,6 +106,8 @@ pub mod zlib;
 #[cfg(any(feature = "zstd", feature = "zstd-pure"))]
 pub mod zstd;
 
+mod decompression;
+
 use io::{PythonBuffer, RustyBuffer};
 use pyo3::prelude::*;
 
@@ -283,6 +285,29 @@ impl<'a> BytesType<'a> {
 /// Macro for generating the implementation of de/compression against a variant interface
 #[macro_export]
 macro_rules! generic {
+    // Bounded one-shot decompression. Keep the original path when no cap is set.
+    ($py:ident, $op:path[$input:ident], output_len = $output_len:ident, max_output_size = $limit:ident) => {{
+        match $limit {
+            None => crate::generic!($py, $op[$input], output_len = $output_len)
+                .map_err(crate::exceptions::DecompressionError::from_err),
+            Some(limit) => {
+                let mut output = crate::decompression::BoundedOutput::new(limit, $output_len)
+                    .map_err(|error| pyo3::exceptions::PyMemoryError::new_err(error.to_string()))?;
+                let result = match $input {
+                    BytesType::RustyFile(f) => {
+                        let borrowed = f.try_borrow()?;
+                        let file = &borrowed.inner;
+                        $py.detach(|| $op(file, &mut output))
+                    }
+                    _ => {
+                        let bytes: &[u8] = &$input.as_bytes()?;
+                        $py.detach(|| $op(bytes, &mut output))
+                    }
+                };
+                output.finish(result)
+            }
+        }
+    }};
     // de/compress
     ($py:ident, $op:path[$input:expr], output_len = $output_len:ident $(, $args:ident)*) => {
         {
@@ -485,6 +510,9 @@ mod cramjam {
 
     #[pymodule_export]
     use crate::DecompressionError;
+
+    #[pymodule_export]
+    use crate::exceptions::OutputLimitExceededError;
 
     #[cfg(feature = "snappy")]
     #[pymodule_export]

@@ -17,17 +17,33 @@ pub mod lz4 {
 
     /// LZ4 decompression.
     ///
+    /// `max_output_size` bounds decoded output and raises `cramjam.OutputLimitExceededError`
+    /// before growing output past the limit. It does not bound decoder workspace.
+    /// With a limit, `output_len` is a capacity hint, clamped to the limit.
+    /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.
+    ///
     /// Python Example
     /// --------------
     /// ```python
-    /// >>> # Note, output_len is currently ignored; underlying algorithm does not support reading to slice at this time
     /// >>> cramjam.lz4.decompress(compressed_bytes, output_len=Optional[int])
     /// ```
     #[pyfunction]
-    #[pyo3(signature = (data, output_len=None))]
-    pub fn decompress(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
-        crate::generic!(py, libcramjam::lz4::decompress[data], output_len = output_len)
-            .map_err(DecompressionError::from_err)
+    #[pyo3(signature = (data, output_len=None, *, max_output_size=None))]
+    pub fn decompress(
+        py: Python,
+        data: BytesType,
+        output_len: Option<usize>,
+        max_output_size: Option<usize>,
+    ) -> PyResult<RustyBuffer> {
+        #[cfg(feature = "lz4-pure")]
+        crate::decompression::require_unbounded(max_output_size)?;
+
+        crate::generic!(
+            py,
+            libcramjam::lz4::decompress[data],
+            output_len = output_len,
+            max_output_size = max_output_size
+        )
     }
 
     /// LZ4 compression.
@@ -64,6 +80,9 @@ pub mod lz4 {
     }
 
     /// LZ4 _block_ decompression.
+    /// `max_output_size` checks the declared size (or `output_len`) before
+    /// allocating, raising `cramjam.OutputLimitExceededError` if it exceeds the limit.
+    /// The pure-Rust backend raises `NotImplementedError` when a limit is requested.
     ///
     /// `output_len` is optional, it's the upper bound length of decompressed data; if it's not provided,
     /// then it's assumed `store_size=True` was used during compression and length will then be taken
@@ -76,9 +95,39 @@ pub mod lz4 {
     /// ```
     #[pyfunction]
     #[allow(unused_variables)]
-    #[pyo3(signature = (data, output_len=None))]
-    pub fn decompress_block(py: Python, data: BytesType, output_len: Option<usize>) -> PyResult<RustyBuffer> {
+    #[pyo3(signature = (data, output_len=None, *, max_output_size=None))]
+    pub fn decompress_block(
+        py: Python,
+        data: BytesType,
+        output_len: Option<usize>,
+        max_output_size: Option<usize>,
+    ) -> PyResult<RustyBuffer> {
+        #[cfg(feature = "lz4-pure")]
+        crate::decompression::require_unbounded(max_output_size)?;
+
         let bytes: &[u8] = &data.as_bytes()?;
+
+        if let Some(limit) = max_output_size {
+            return py.detach(|| {
+                let size = match output_len {
+                    Some(size) => size,
+                    None => {
+                        let header = bytes
+                            .get(..4)
+                            .ok_or_else(|| DecompressionError::new_err("Input not long enough"))?;
+                        u32::from_le_bytes(header.try_into().unwrap()) as usize
+                    }
+                };
+                if size > limit {
+                    return Err(crate::exceptions::OutputLimitExceededError::for_limit(limit));
+                }
+                let mut output = crate::decompression::allocate_output(size)?;
+                let actual = libcramjam::lz4::block::decompress_into(bytes, &mut output, Some(output_len.is_none()))
+                    .map_err(DecompressionError::from_err)?;
+                output.truncate(actual);
+                Ok(RustyBuffer::from(output))
+            });
+        }
 
         py.detach(|| {
             match output_len {
