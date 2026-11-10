@@ -696,4 +696,4 @@ pub mod blosc2 {
     pub fn max_compressed_len(len_bytes: usize) -> usize {
         libcramjam::blosc2::blosc2::max_compress_len_bytes(len_bytes)
     }
-                                }
+}
