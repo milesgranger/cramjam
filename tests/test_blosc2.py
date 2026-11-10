@@ -1,4 +1,6 @@
 import os
+import subprocess
+import sys
 import pytest
 import numpy as np
 from hypothesis import strategies as st, given, settings
@@ -90,3 +92,108 @@ def test_schunk_from_compressor():
     schunk = blosc2.SChunk.from_compressor(compressor)
     assert schunk.nchunks == 1
     assert bytes(schunk.decompress_chunk(0)) == b"data"
+
+
+@pytest.mark.parametrize(
+    "first_operation",
+    [
+        "compress",
+        "compress_into",
+        "compressor",
+        "schunk",
+        "compress_chunk",
+        "compress_chunk_into",
+    ],
+)
+def test_first_use_in_fresh_process(first_operation):
+    """Blosc2 must work before any other Blosc2 call initializes global state."""
+    script = r"""
+import cramjam
+blosc2 = cramjam.experimental.blosc2
+payload = b"first Blosc2 operation" * 8
+operation = __import__("sys").argv[1]
+if operation == "compress":
+    compressed = blosc2.compress(payload)
+    restored = blosc2.decompress(compressed)
+elif operation == "compress_into":
+    compressed = cramjam.Buffer()
+    size = blosc2.compress_into(payload, compressed)
+    assert size == len(compressed)
+    compressed.seek(0)
+    restored = blosc2.decompress(compressed)
+elif operation == "compressor":
+    compressor = blosc2.Compressor()
+    compressor.compress(payload)
+    restored = blosc2.decompress(compressor.finish())
+elif operation == "schunk":
+    schunk = blosc2.SChunk()
+    assert schunk.append_buffer(payload) == 1
+    restored = schunk.decompress_chunk(0)
+elif operation == "compress_chunk":
+    restored = blosc2.decompress_chunk(blosc2.compress_chunk(payload))
+else:
+    compressed = bytearray(blosc2.max_compressed_len(len(payload)))
+    size = blosc2.compress_chunk_into(payload, compressed)
+    restored = blosc2.decompress_chunk(compressed[:size])
+assert bytes(restored) == payload
+print("roundtrip passed")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", script, first_operation],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.strip() == "roundtrip passed"
+
+
+@pytest.mark.parametrize("append", [False, True])
+@pytest.mark.parametrize("data", [b"x", b"frame payload" * 1000])
+def test_compress_into_file_at_position(tmp_path, append, data):
+    import cramjam
+
+    prefix = b"prefix:"
+    path = tmp_path / "frame.b2"
+    path.write_bytes(prefix)
+    output = cramjam.File(str(path), append=append)
+    # Non-append output follows the cursor. Append output writes at EOF even
+    # when its cursor starts at zero, as other File writes do.
+    output.seek(0 if append else len(prefix))
+    nbytes = blosc2.compress_into(data, output, nthreads=1)
+    assert output.tell() == len(prefix) + nbytes
+    stored = path.read_bytes()
+    assert stored[: len(prefix)] == prefix
+    assert len(stored) == len(prefix) + nbytes
+    assert bytes(blosc2.decompress(stored[len(prefix) :])) == data
+
+
+def test_compress_into_file_preserves_trailing_bytes(tmp_path):
+    import cramjam
+
+    data = b"payload" * 100
+    expected_frame = bytes(blosc2.compress(data, nthreads=1))
+    prefix, suffix = b"prefix:", b":suffix"
+    path = tmp_path / "frame.b2"
+    path.write_bytes(prefix + b"\x00" * len(expected_frame) + suffix)
+    output = cramjam.File(str(path))
+    output.seek(len(prefix))
+    nbytes = blosc2.compress_into(data, output, nthreads=1)
+    assert nbytes == len(expected_frame)
+    assert output.tell() == len(prefix) + nbytes
+    stored = path.read_bytes()
+    assert stored[: len(prefix)] == prefix
+    assert stored[len(prefix) + nbytes :] == suffix
+    assert bytes(blosc2.decompress(stored[len(prefix) : len(prefix) + nbytes])) == data
+
+
+def test_compress_into_file_empty_input_is_noop(tmp_path):
+    import cramjam
+
+    path = tmp_path / "frame.b2"
+    path.write_bytes(b"unchanged")
+    output = cramjam.File(str(path))
+    output.seek(3)
+    assert blosc2.compress_into(b"", output) == 0
+    assert output.tell() == 3
+    assert path.read_bytes() == b"unchanged"
