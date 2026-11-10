@@ -5,6 +5,18 @@ use pyo3::prelude::*;
 #[pymodule]
 pub mod blosc2 {
 
+    // Blosc2 state is process-wide. Retain our own guard for process lifetime,
+    // including while native objects can outlive the Python module.
+    static BLOSC2_GUARD: std::sync::OnceLock<std::sync::Arc<libcramjam::blosc2::blosc2::Blosc2Guard>> =
+        std::sync::OnceLock::new();
+
+    /// Initialize Blosc2 before constructing contexts or frames.
+    #[pymodule_init]
+    fn init(_module: &Bound<'_, PyModule>) -> PyResult<()> {
+        BLOSC2_GUARD.get_or_init(libcramjam::blosc2::blosc2::Blosc2Guard::get_or_init);
+        Ok(())
+    }
+
     use std::io::{self, BufReader, Cursor};
 
     use crate::exceptions::{CompressionError, DecompressionError};
@@ -84,27 +96,13 @@ pub mod blosc2 {
             .set_cparams(cparams)
             .set_dparams(dparams);
 
-        if let BytesType::RustyFile(_file) = output {
-            return Err(pyo3::exceptions::PyNotImplementedError::new_err(
-                "Output to File w/ blosc2 not implemented yet.",
-            ));
-            // storage = storage
-            //     .set_urlpath(&file.borrow().path)
-            //     .map_err(CompressionError::from_err)?;
-        }
-
         let mut schunk = SChunk::new(storage);
         io::copy(&mut BufReader::new(input), &mut schunk)?;
 
         let nbytes = schunk.frame().map_err(CompressionError::from_err)?.len();
-        match output {
-            BytesType::RustyFile(_) => Ok(nbytes),
-            _ => {
-                let schunk_buf = schunk.into_vec().map_err(CompressionError::from_err)?;
-                io::copy(&mut Cursor::new(schunk_buf), &mut output)?;
-                Ok(nbytes)
-            }
-        }
+        let schunk_buf = schunk.into_vec().map_err(CompressionError::from_err)?;
+        io::copy(&mut Cursor::new(schunk_buf), &mut output)?;
+        Ok(nbytes)
     }
 
     /// Decompress a SChunk into buffer
@@ -698,4 +696,4 @@ pub mod blosc2 {
     pub fn max_compressed_len(len_bytes: usize) -> usize {
         libcramjam::blosc2::blosc2::max_compress_len_bytes(len_bytes)
     }
-}
+                                }
