@@ -291,7 +291,7 @@ dependencies = [
 name = "cramjam-python"
 version = "2.14.0"
 dependencies = [
- "libcramjam 0.9.1",
+ "libcramjam 0.9.4",
  "pyo3",
  "pyo3-build-config",
 ]
@@ -495,9 +495,9 @@ dependencies = [
 
 [[package]]
 name = "libcramjam"
-version = "0.9.1"
+version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fed6283449aca00875945db516fe81ae7018cb773eb979701919886b87e1a861"
+checksum = "ab787ebf451e468b10542ed3315a9d927455d2f38e841687a3dd10044389774d"
 dependencies = [
  "blosc2-rs",
  "brotli 8.0.4",
