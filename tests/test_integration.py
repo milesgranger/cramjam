@@ -154,6 +154,23 @@ def test_lz4_compress_block_high_compression_level():
     assert size(mode="high_compression") == hc9
 
 
+def test_lz4_compress_block_fast_acceleration():
+    data = _lz4_block_text(500_000)
+
+    def size(**kwargs):
+        return len(cramjam.lz4.compress_block(data, store_size=False, **kwargs))
+
+    default = size()
+    assert size(mode="fast") == default
+    assert size(mode="fast", acceleration=1) == default
+    assert size(mode="fast", acceleration=64) > default
+    # as in python-lz4, `acceleration` only applies to mode="fast"
+    assert size(acceleration=64) == default
+    assert size(mode="high_compression", acceleration=64) == size(
+        mode="high_compression"
+    )
+
+
 @pytest.mark.parametrize("func", ("compress_block", "compress_block_into"))
 def test_lz4_compress_block_invalid_mode(func):
     args = (
