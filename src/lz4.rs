@@ -14,6 +14,35 @@ pub mod lz4 {
     use std::sync::Mutex;
 
     const DEFAULT_COMPRESSION_LEVEL: u32 = 4;
+    /// Default HC level for `mode="high_compression"`, as in python-lz4.
+    const DEFAULT_HC_COMPRESSION_LEVEL: i32 = 9;
+
+    /// Translate python-lz4's block `mode`, `acceleration` and `compression`
+    /// into the `level` and `acceleration` that libcramjam's block API takes.
+    /// As in python-lz4, `compression` only applies to `"high_compression"`
+    /// and `acceleration` only to `"fast"`.
+    fn block_options(
+        mode: Option<&str>,
+        acceleration: Option<i32>,
+        compression: Option<i32>,
+    ) -> PyResult<(Option<u32>, Option<i32>)> {
+        match mode.unwrap_or("default") {
+            "default" => Ok((None, None)),
+            "fast" => Ok((None, Some(acceleration.unwrap_or(1)))),
+            "high_compression" => {
+                let level = compression.unwrap_or(DEFAULT_HC_COMPRESSION_LEVEL);
+                if level < 0 {
+                    return Err(pyo3::exceptions::PyValueError::new_err(format!(
+                        "compression must be non-negative, got {level}"
+                    )));
+                }
+                Ok((Some(level as u32), None))
+            }
+            other => Err(pyo3::exceptions::PyValueError::new_err(format!(
+                "Invalid mode {other:?}, expected one of 'default', 'fast' or 'high_compression'"
+            ))),
+        }
+    }
 
     /// LZ4 decompression.
     ///
@@ -144,7 +173,9 @@ pub mod lz4 {
 
     /// LZ4 _block_ compression.
     ///
-    /// The kwargs mostly follow the same definition found in [python-lz4 block.compress](https://python-lz4.readthedocs.io/en/stable/lz4.block.html#module-lz4.block)
+    /// The kwargs mostly follow the same definition found in [python-lz4 block.compress](https://python-lz4.readthedocs.io/en/stable/lz4.block.html#module-lz4.block):
+    /// `mode` is one of `"default"`, `"fast"` (uses `acceleration`, default 1) or
+    /// `"high_compression"` (uses `compression`, default 9).
     ///
     /// Python Example
     /// --------------
@@ -170,8 +201,9 @@ pub mod lz4 {
         compression: Option<i32>,
         store_size: Option<bool>,
     ) -> PyResult<RustyBuffer> {
+        let (level, acceleration) = block_options(mode, acceleration, compression)?;
         let bytes: &[u8] = &data.as_bytes()?;
-        py.detach(|| libcramjam::lz4::block::compress_vec(bytes, compression.map(|v| v as _), acceleration, store_size))
+        py.detach(|| libcramjam::lz4::block::compress_vec(bytes, level, acceleration, store_size))
             .map_err(CompressionError::from_err)
             .map(RustyBuffer::from)
     }
@@ -247,19 +279,12 @@ pub mod lz4 {
         compression: Option<i32>,
         store_size: Option<bool>,
     ) -> PyResult<usize> {
+        let (level, acceleration) = block_options(mode, acceleration, compression)?;
         let bytes: &[u8] = &data.as_bytes()?;
         let out_bytes: &mut [u8] = &mut output.as_bytes_mut()?;
-        py.detach(|| {
-            libcramjam::lz4::block::compress_into(
-                bytes,
-                out_bytes,
-                compression.map(|v| v as _),
-                acceleration,
-                store_size,
-            )
-        })
-        .map_err(CompressionError::from_err)
-        .map(|v| v as _)
+        py.detach(|| libcramjam::lz4::block::compress_into(bytes, out_bytes, level, acceleration, store_size))
+            .map_err(CompressionError::from_err)
+            .map(|v| v as _)
     }
 
     /// Determine the size of a buffer which is guaranteed to hold the result of block compression, will error if

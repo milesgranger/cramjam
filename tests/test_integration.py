@@ -102,6 +102,88 @@ def test_lz4_decompress_block_into_non_prepended_size(data, set_output_len):
     assert same_same(bytes(out[:n]), data)
 
 
+def _lz4_block_text(n):
+    words = [b"alpha ", b"beta ", b"gamma ", b"delta ", b"lorem ", b"ipsum ", b"\n"]
+    state = 0x9E3779B9
+    out = bytearray()
+    while len(out) < n:
+        state = (state * 1103515245 + 12345) % 2**31
+        out += words[state % len(words)]
+    return bytes(out)
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    (
+        {},
+        {"mode": "default"},
+        {"mode": "fast"},
+        {"mode": "fast", "acceleration": 8},
+        {"mode": "high_compression"},
+        {"mode": "high_compression", "compression": 1},
+        {"mode": "high_compression", "compression": 4},
+        {"mode": "high_compression", "compression": 12},
+    ),
+)
+@pytest.mark.parametrize("store_size", (True, False))
+def test_lz4_compress_block_modes_round_trip(kwargs, store_size):
+    data = _lz4_block_text(100_000)
+    compressed = cramjam.lz4.compress_block(data, store_size=store_size, **kwargs)
+    output_len = None if store_size else len(data)
+    assert same_same(bytes(cramjam.lz4.decompress_block(compressed, output_len)), data)
+
+    out = bytearray(cramjam.lz4.compress_block_bound(data))
+    n = cramjam.lz4.compress_block_into(data, out, store_size=store_size, **kwargs)
+    assert bytes(out[:n]) == bytes(compressed)
+
+
+def test_lz4_compress_block_high_compression_level():
+    # https://github.com/milesgranger/cramjam/issues/265
+    data = _lz4_block_text(500_000)
+
+    def size(**kwargs):
+        return len(cramjam.lz4.compress_block(data, store_size=False, **kwargs))
+
+    default = size()
+    hc4 = size(mode="high_compression", compression=4)
+    hc9 = size(mode="high_compression", compression=9)
+    assert hc4 < default
+    assert hc9 < hc4
+    # as in python-lz4, `compression` only applies to mode="high_compression"
+    assert size(compression=9) == default
+    assert size(mode="high_compression") == hc9
+
+
+def test_lz4_compress_block_fast_acceleration():
+    data = _lz4_block_text(500_000)
+
+    def size(**kwargs):
+        return len(cramjam.lz4.compress_block(data, store_size=False, **kwargs))
+
+    default = size()
+    assert size(mode="fast") == default
+    assert size(mode="fast", acceleration=1) == default
+    assert size(mode="fast", acceleration=64) > default
+    # as in python-lz4, `acceleration` only applies to mode="fast"
+    assert size(acceleration=64) == default
+    assert size(mode="high_compression", acceleration=64) == size(
+        mode="high_compression"
+    )
+
+
+@pytest.mark.parametrize("func", ("compress_block", "compress_block_into"))
+def test_lz4_compress_block_invalid_mode(func):
+    args = (
+        (b"some bytes", bytearray(64))
+        if func == "compress_block_into"
+        else (b"some bytes",)
+    )
+    with pytest.raises(ValueError, match="Invalid mode"):
+        getattr(cramjam.lz4, func)(*args, mode="not-a-mode")
+    with pytest.raises(ValueError, match="non-negative"):
+        getattr(cramjam.lz4, func)(*args, mode="high_compression", compression=-1)
+
+
 def test_module_registration():
     import cramjam
 
