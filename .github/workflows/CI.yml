@@ -108,7 +108,10 @@ jobs:
           # Linux builds run in manylinux/musllinux containers; Rust is installed there by cibuildwheel's before-all.
             - { name: linux-x86_64-manylinux,  os: ubuntu-latest,    archs: x86_64,  build: '*-manylinux*' }
             - { name: linux-x86_64-musllinux,  os: ubuntu-latest,    archs: x86_64,  build: '*-musllinux*' }
-            - { name: linux-i686-manylinux,    os: ubuntu-latest,    archs: i686,    build: '*-manylinux*' }
+            # Pinned to 24.04: ubuntu-26.04 ships Docker 29.4.2, whose seccomp profile blocks socketcall(2),
+            # so i386 glibc containers can't resolve DNS (musl is fine). Back to ubuntu-latest once
+            # https://github.com/actions/runner-images/issues/14790 is fixed.
+            - { name: linux-i686-manylinux,    os: ubuntu-24.04,     archs: i686,    build: '*-manylinux*' }
             - { name: linux-i686-musllinux,    os: ubuntu-latest,    archs: i686,    build: '*-musllinux*' }
             - { name: linux-aarch64-manylinux, os: ubuntu-24.04-arm, archs: aarch64, build: '*-manylinux*' }
             - { name: linux-aarch64-musllinux, os: ubuntu-24.04-arm, archs: aarch64, build: '*-musllinux*' }
